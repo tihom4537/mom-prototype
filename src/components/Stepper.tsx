@@ -46,7 +46,7 @@ export default function Stepper({ activeState = 2, stepLabels, className }: Step
                     </div>
                   </div>
                 ) : step.status === 'active' ? (
-                  <div className="border-2 border-[rgba(60,151,24,0)] relative rounded-full shrink-0 size-8 flex items-center justify-center">
+                  <div className="border-2 border-[#3c9718] relative rounded-full shrink-0 size-8 flex items-center justify-center">
                     <span
                       className="font-medium text-sm text-[#212121] text-center leading-5 tracking-[0.1px]"
                       style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}

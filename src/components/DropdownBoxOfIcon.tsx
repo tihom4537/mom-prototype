@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import Icon from './Icon';
 
-const imgChevron = "https://www.figma.com/api/mcp/asset/6ae6d4dc-859c-4cc6-8de2-afef5388681e";
-
 interface DropdownBoxOfIconProps {
   menuLabel?: string;
   items?: string[];
@@ -48,9 +46,9 @@ export default function DropdownBoxOfIcon({
             <span className="font-normal text-sm text-[#999] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
               {menuLabel}
             </span>
-            <div className="relative size-5 flex items-center justify-center -scale-y-100">
-              <img alt="" className="absolute block max-w-none size-full" src={imgChevron} />
-            </div>
+            <svg width="14" height="8" viewBox="0 0 14 8" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleY(-1)' }}>
+              <path d="M1 1l6 6 6-6" />
+            </svg>
           </button>
           {/* Items */}
           <div className="bg-white flex flex-col rounded-bl-lg rounded-br-lg overflow-hidden">

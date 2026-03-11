@@ -7,8 +7,9 @@ const imgFileCopyVec2 = "https://www.figma.com/api/mcp/asset/eaa06f8e-ad84-41d1-
 const imgMenuVec = "https://www.figma.com/api/mcp/asset/c612b431-3463-427e-8eb6-3939538c2c44";
 const imgPeopleAlt = "https://www.figma.com/api/mcp/asset/6f256e0e-a211-48a6-82ae-fd302b68c275";
 const imgPeopleGroup = "https://www.figma.com/api/mcp/asset/5b52f57f-a36c-4095-9e22-910d88e65e84";
+const imgHome = "https://www.figma.com/api/mcp/asset/9a6e40d7-ca9e-41bb-b879-94e16be07ca5";
 
-export type IconType = 'arrow_drop_down' | 'arrow_drop_down_up' | 'file_copy' | 'menu' | 'people_alt';
+export type IconType = 'arrow_drop_down' | 'arrow_drop_down_up' | 'file_copy' | 'menu' | 'people_alt' | 'home';
 
 interface IconProps {
   type?: IconType;
@@ -16,6 +17,15 @@ interface IconProps {
 }
 
 export default function Icon({ type = 'arrow_drop_down', className }: IconProps) {
+  // home renders as a standalone image — no base overlay needed
+  if (type === 'home') {
+    return (
+      <div className={className ?? 'relative size-6'}>
+        <img alt="home" className="absolute block max-w-none size-full" src={imgHome} />
+      </div>
+    );
+  }
+
   return (
     <div className={className ?? 'relative size-6'}>
       {/* Base icon background */}

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-const imgChevron = "https://www.figma.com/api/mcp/asset/6ae6d4dc-859c-4cc6-8de2-afef5388681e";
 const imgAccountCircle = "https://www.figma.com/api/mcp/asset/386b84fa-111d-436d-a3e1-259e8c7aa80b";
 const imgProfileVec1 = "https://www.figma.com/api/mcp/asset/76b8e93b-7180-4156-aa1c-cd6a72368ad2";
 const imgProfileVec2 = "https://www.figma.com/api/mcp/asset/0320df26-878a-4ed8-8160-a439fa270065";
@@ -47,10 +46,10 @@ export default function DropdownBoxOfProfile({
             </div>
           </div>
           <div className="flex flex-1 flex-col gap-[3px] items-start min-h-px min-w-px text-[#212121]">
-            <p className="font-medium text-sm leading-7 w-full truncate" style={{ fontFamily: 'Noto Sans' }}>
+            <p className="font-medium text-sm leading-[18px] w-full truncate" style={{ fontFamily: 'Noto Sans' }}>
               {userName} <span className="font-light">({userRole})</span>
             </p>
-            <p className="font-light text-xs leading-7 w-full truncate" style={{ fontFamily: 'Noto Sans' }}>
+            <p className="font-light text-xs leading-[18px] w-full truncate" style={{ fontFamily: 'Noto Sans' }}>
               {gpInfo}
             </p>
           </div>
@@ -68,13 +67,9 @@ export default function DropdownBoxOfProfile({
             <span className="font-normal text-sm text-[#999] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
               {menuLabel}
             </span>
-            <div className="relative size-5 flex items-center justify-center">
-              <div className="flex inset-[29.17%_20.83%_37.5%_20.83%] items-center justify-center -scale-y-100">
-                <div className="relative h-[8px] w-[14px]">
-                  <img alt="" className="absolute block max-w-none size-full" src={imgChevron} />
-                </div>
-              </div>
-            </div>
+            <svg width="14" height="8" viewBox="0 0 14 8" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleY(-1)' }}>
+              <path d="M1 1l6 6 6-6" />
+            </svg>
           </button>
           {/* Items list */}
           <div className="bg-white flex flex-col rounded-bl-lg rounded-br-lg overflow-hidden">

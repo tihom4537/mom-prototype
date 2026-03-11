@@ -23,6 +23,8 @@ export interface FeedbackResult {
   category: string;
   category_reason: string;
   feedback: string[];
+  /** Parallel array: the exact phrase in discussionText each feedback item refers to (null if no span) */
+  spans?: (string | null)[];
 }
 
 export default function MoMEntryPostRecordingScreen() {
@@ -41,6 +43,8 @@ export default function MoMEntryPostRecordingScreen() {
   const [feedbackError, setFeedbackError]           = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
+  const [actionOpen, setActionOpen]                 = useState(false);
+  const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef   = useRef<Blob[]>([]);
@@ -162,6 +166,35 @@ export default function MoMEntryPostRecordingScreen() {
     setFeedbackError(null);
     setIsFetchingFeedback(true);
 
+    // MOCK INTERCEPT — remove this block when API is live
+    const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
+    if (discussionText.trim() === MOCK_TEXT) {
+      const feedbackResult: FeedbackResult = {
+        category: 'Public Health & Sanitation',
+        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
+        feedback: [
+          'The following information was given about Swachh Saturday —',
+          'The following information was given about Village Sanitation —',
+          'The following information was given about Onagalu Day —',
+          'The following information was given about COVID JN.1 —',
+          'The following information was given about precautionary measures —',
+          'The meeting discussed the following key topics:',
+        ],
+        spans: [
+          'Swachh Saturday village cleanliness activities',
+          null,
+          'Onagalu Day observance',
+          'COVID-19 JN.1 precautionary measures',
+          null,
+          'Information was provided regarding',
+        ],
+      };
+      setIsFetchingFeedback(false);
+      navigate('/mom-entry/feedback', { state: { agenda, discussionText, feedbackResult } });
+      return;
+    }
+    // END MOCK INTERCEPT
+
     try {
       const res = await fetch(FEEDBACK_API, {
         method: 'POST',
@@ -240,12 +273,34 @@ export default function MoMEntryPostRecordingScreen() {
                       questionText={t('action_field_label')}
                       className="shrink-0 w-full"
                     />
-                    <Button
-                      variant="outlined"
-                      iconPlacement="right"
-                      text={t('action_field_placeholder')}
-                      className="shrink-0"
-                    />
+                    <div className="relative shrink-0">
+                      {actionOpen && (
+                        <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
+                      )}
+                      <div className="relative z-20">
+                        <Button
+                          variant="outlined"
+                          iconPlacement="right"
+                          text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
+                          onClick={() => setActionOpen(o => !o)}
+                        />
+                        {actionOpen && (
+                          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
+                            {(['action_option_approval', 'action_option_discussion'] as const).map(key => (
+                              <button
+                                key={key}
+                                className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
+                                onClick={() => { setSelectedAction(key); setActionOpen(false); }}
+                              >
+                                <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
+                                  {t(key)}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Discussion field + floating mic */}

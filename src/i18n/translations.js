@@ -37,6 +37,10 @@ export const translations = {
     agenda_list_heading: "Agenda List for this Meeting",
     agenda_count_label: "Agendas",
     btn_list: "List",
+    btn_list_view: "List View",
+    btn_single_view: "Single View",
+    btn_previous: "Previous",
+    btn_next: "Next",
     tag_pending: "Pending",
     tag_completed: "Completed",
     btn_add_proceedings: "+ Add Proceedings",
@@ -48,6 +52,8 @@ export const translations = {
     mom_entry_heading: "Enter the Meeting Proceedings",
     action_field_label: "Select the Action taken for this Agenda",
     action_field_placeholder: "Select Action Assigned",
+    action_option_approval: "Approval",
+    action_option_discussion: "Discussion",
     discussion_field_label: "Enter the Agenda discussion points",
     discussion_field_info: "You can use dictation, typing, or both together to record the discussion and decisions.",
     discussion_field_placeholder: "Type agenda discussion here, or click the mic button to dictate the agenda discussion....",
@@ -64,6 +70,10 @@ export const translations = {
     tag_add_missing_details: "Add Missing Details",
     tag_rephrase: "Rephrase",
     tag_make_concise: "Make Concise",
+
+    // --- Feedback Card Interactive ---
+    feedback_card_placeholder: "Type your notes here, or use the mic to dictate...",
+    feedback_card_push: "Add to Discussion",
 
     // --- Language Tab ---
     lang_english: "English",
@@ -105,6 +115,10 @@ export const translations = {
     agenda_list_heading: "ಈ ಸಭೆಯ ಕಾರ್ಯಸೂಚಿ ಪಟ್ಟಿ",
     agenda_count_label: "ಕಾರ್ಯಸೂಚಿಗಳು",
     btn_list: "ಪಟ್ಟಿ",
+    btn_list_view: "ಪಟ್ಟಿ ನೋಟ",
+    btn_single_view: "ಒಂದೊಂದೇ ನೋಟ",
+    btn_previous: "ಹಿಂದಿನ",
+    btn_next: "ಮುಂದಿನ",
     tag_pending: "ಬಾಕಿ ಇದೆ",
     tag_completed: "ಪೂರ್ಣಗೊಂಡಿದೆ",
     btn_add_proceedings: "+ ಕಲಾಪಗಳನ್ನು ಸೇರಿಸಿ",
@@ -116,6 +130,8 @@ export const translations = {
     mom_entry_heading: "ಸಭೆಯ ಕಲಾಪಗಳನ್ನು ನಮೂದಿಸಿ",
     action_field_label: "ಈ ಕಾರ್ಯಸೂಚಿಗೆ ತೆಗೆದುಕೊಂಡ ಕ್ರಮವನ್ನು ಆಯ್ಕೆ ಮಾಡಿ",
     action_field_placeholder: "ನಿಯೋಜಿತ ಕ್ರಮ ಆಯ್ಕೆ ಮಾಡಿ",
+    action_option_approval: "ಅನುಮೋದನೆ",
+    action_option_discussion: "ಚರ್ಚೆ",
     discussion_field_label: "ಕಾರ್ಯಸೂಚಿ ಚರ್ಚಾ ವಿಷಯಗಳನ್ನು ನಮೂದಿಸಿ",
     discussion_field_info: "ಚರ್ಚೆ ಮತ್ತು ನಿರ್ಧಾರಗಳನ್ನು ದಾಖಲಿಸಲು ನೀವು ಧ್ವನಿ ನಿರ್ದೇಶನ, ಟೈಪಿಂಗ್ ಅಥವಾ ಎರಡನ್ನೂ ಒಟ್ಟಿಗೆ ಬಳಸಬಹುದು.",
     discussion_field_placeholder: "ಇಲ್ಲಿ ಕಾರ್ಯಸೂಚಿ ಚರ್ಚೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ, ಅಥವಾ ಕಾರ್ಯಸೂಚಿ ಚರ್ಚೆಯನ್ನು ನಿರ್ದೇಶಿಸಲು ಮೈಕ್ ಬಟನ್ ಒತ್ತಿ....",
@@ -132,6 +148,10 @@ export const translations = {
     tag_add_missing_details: "ಕಾಣೆಯಾದ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ",
     tag_rephrase: "ಮರುರೂಪಿಸಿ",
     tag_make_concise: "ಸಂಕ್ಷಿಪ್ತಗೊಳಿಸಿ",
+
+    // --- Feedback Card Interactive ---
+    feedback_card_placeholder: "ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಮೈಕ್ ಬಳಸಿ...",
+    feedback_card_push: "ಚರ್ಚೆಗೆ ಸೇರಿಸಿ",
 
     // --- Language Tab ---
     lang_english: "English",

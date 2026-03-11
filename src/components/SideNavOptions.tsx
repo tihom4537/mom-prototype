@@ -46,7 +46,7 @@ export default function SideNavOptions({
         {/* Label */}
         <div className="flex flex-1 flex-col items-start justify-center min-h-px min-w-px rounded-xl">
           <span
-            className={`text-sm font-medium leading-6 tracking-[0px] whitespace-nowrap
+            className={`text-sm font-medium leading-6 tracking-[0px]
               ${isClickedOpen ? 'text-[#f7f0ee]' : 'text-[#6a3e31]'}`}
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >

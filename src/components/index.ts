@@ -49,7 +49,7 @@ export type { AgendaStage } from './AgendaCard';
 export type { NumberCircleType } from './NumberCircle';
 export type { InfoBoxType } from './InfoBox';
 export type { QuestionFieldType } from './QuestionFieldsSmall';
-export type { TextAreaState } from './TextAreaContainer';
+export type { TextAreaState, HighlightSpan } from './TextAreaContainer';
 export type { FeedbackCardType } from './FeedbackCard';
 export type { StepperActiveState } from './Stepper';
 export type { MoMPopUpState } from './MoMEntryPopUp';

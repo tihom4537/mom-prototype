@@ -6,6 +6,48 @@ const imgCheckVec = "https://www.figma.com/api/mcp/asset/faadd345-05a2-4359-ac39
 
 export type TextAreaState = 'default' | 'filled' | 'recording';
 
+export interface HighlightSpan {
+  text: string;
+  type: 'add-missing-details' | 'rephrase';
+  cardId: string;
+  isActive: boolean;
+}
+
+interface Segment {
+  text: string;
+  highlight?: HighlightSpan;
+}
+
+function buildSegments(value: string, highlights: HighlightSpan[]): Segment[] {
+  const ranges: Array<{ start: number; end: number; highlight: HighlightSpan }> = [];
+  for (const h of highlights) {
+    if (!h.text) continue;
+    let idx = 0;
+    while (true) {
+      const pos = value.indexOf(h.text, idx);
+      if (pos === -1) break;
+      ranges.push({ start: pos, end: pos + h.text.length, highlight: h });
+      idx = pos + 1;
+    }
+  }
+  ranges.sort((a, b) => a.start - b.start);
+
+  const segments: Segment[] = [];
+  let pos = 0;
+  for (const range of ranges) {
+    if (range.start < pos) continue; // overlapping, skip
+    if (range.start > pos) {
+      segments.push({ text: value.slice(pos, range.start) });
+    }
+    segments.push({ text: value.slice(range.start, range.end), highlight: range.highlight });
+    pos = range.end;
+  }
+  if (pos < value.length) {
+    segments.push({ text: value.slice(pos) });
+  }
+  return segments;
+}
+
 interface TextAreaContainerProps {
   state?: TextAreaState;
   placeholder?: string;
@@ -14,6 +56,11 @@ interface TextAreaContainerProps {
   onStopRecording?: () => void;
   onAcceptRecording?: () => void;
   analyserNode?: AnalyserNode;
+  /** When provided, renders a rich-text view with highlighted spans instead of a plain textarea */
+  highlights?: HighlightSpan[];
+  onSpanHoverEnter?: (cardId: string) => void;
+  onSpanHoverLeave?: (cardId: string) => void;
+  onSpanClick?: (cardId: string) => void;
   className?: string;
 }
 
@@ -25,6 +72,10 @@ export default function TextAreaContainer({
   onStopRecording,
   onAcceptRecording,
   analyserNode,
+  highlights,
+  onSpanHoverEnter,
+  onSpanHoverLeave,
+  onSpanClick,
   className,
 }: TextAreaContainerProps) {
   const isFilled = state === 'filled';
@@ -48,10 +99,9 @@ export default function TextAreaContainer({
     let animId: number;
 
     analyserNode.fftSize = 256;
-    const bufferLength = analyserNode.frequencyBinCount; // 128
+    const bufferLength = analyserNode.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
-    // Sync canvas pixel dimensions to its CSS display size once
     canvas.width = canvas.offsetWidth || 240;
     canvas.height = canvas.offsetHeight || 45;
     const W = canvas.width;
@@ -69,12 +119,12 @@ export default function TextAreaContainer({
       ctx.clearRect(0, 0, W, H);
       for (let i = 0; i < barCount; i++) {
         const idx = Math.min(i * step, bufferLength - 1);
-        const value = dataArray[idx] / 255;
-        const barH = Math.max(2, value * H * 0.85);
+        const val = dataArray[idx] / 255;
+        const barH = Math.max(2, val * H * 0.85);
         const x = Math.round(i * (barW + gap));
         const y = (H - barH) / 2;
-        ctx.fillStyle = value > 0.45 ? '#ff7468' : '#ff9a6c';
-        ctx.globalAlpha = 0.55 + value * 0.45;
+        ctx.fillStyle = val > 0.45 ? '#ff7468' : '#ff9a6c';
+        ctx.globalAlpha = 0.55 + val * 0.45;
         ctx.fillRect(x, y, barW, barH);
       }
       ctx.globalAlpha = 1;
@@ -84,6 +134,8 @@ export default function TextAreaContainer({
     return () => cancelAnimationFrame(animId);
   }, [analyserNode]);
 
+  const useRichText = highlights !== undefined;
+
   return (
     <div
       className={`border border-[#c6c6c6] flex flex-col items-center pl-1 pr-[10px] pt-1 rounded-lg
@@ -91,9 +143,46 @@ export default function TextAreaContainer({
         ${isFilled ? 'bg-[rgba(201,201,201,0.2)]' : ''}
         ${className ?? 'w-full'}`}
     >
-      {/* Text input area */}
+      {/* Text display area */}
       <div className="flex items-start px-2 py-1 shrink-0 w-full">
-        {onChange ? (
+        {useRichText ? (
+          /* Rich-text view: highlighted spans, read-only */
+          <div
+            className="flex-1 font-normal text-sm leading-5 tracking-[0.25px] text-[#212121] min-h-[60px] whitespace-pre-wrap break-words"
+            style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+          >
+            {value
+              ? buildSegments(value, highlights ?? []).map((seg, i) =>
+                  seg.highlight ? (
+                    <span
+                      key={i}
+                      style={{
+                        backgroundColor: seg.highlight.isActive
+                          ? (seg.highlight.type === 'add-missing-details'
+                              ? 'rgba(255,116,104,0.5)'
+                              : 'rgba(97,58,245,0.4)')
+                          : (seg.highlight.type === 'add-missing-details'
+                              ? 'rgba(255,116,104,0.2)'
+                              : 'rgba(97,58,245,0.18)'),
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        padding: '0 2px',
+                        transition: 'background-color 0.15s',
+                      }}
+                      onMouseEnter={() => onSpanHoverEnter?.(seg.highlight!.cardId)}
+                      onMouseLeave={() => onSpanHoverLeave?.(seg.highlight!.cardId)}
+                      onClick={() => onSpanClick?.(seg.highlight!.cardId)}
+                    >
+                      {seg.text}
+                    </span>
+                  ) : (
+                    <span key={i}>{seg.text}</span>
+                  )
+                )
+              : <span className="text-[#727272]">{placeholder}</span>
+            }
+          </div>
+        ) : onChange ? (
           <textarea
             ref={textareaRef}
             className={`flex-1 font-normal text-sm leading-5 tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-hidden min-h-[60px]
@@ -118,12 +207,10 @@ export default function TextAreaContainer({
       {isRecording && (
         <div className="bg-[#f3f3f3] flex items-center px-[15px] py-2 rounded-[15px] shrink-0 w-full">
           <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
-            {/* Live waveform canvas */}
             <canvas
               ref={canvasRef}
               className="h-[45px] flex-1 min-w-0"
             />
-            {/* Controls */}
             <div className="flex gap-3 items-center shrink-0">
               {/* Cancel */}
               <button

@@ -60,7 +60,7 @@ Located in `/src/components`, organised by group:
 |---|---|
 | `Button` | variant: `default-outlined`, `filled` / state: `default`, `hover`, `pressed`, `focused`, `disabled` / iconPlacement: `none`, `left`, `right` |
 | `CompletionTag` | state: `pending`, `completed` |
-| `FeedbackCardTag` | type: `add-missing-details`, `rephrase`, `make-concise` |
+| `FeedbackCardTag` | type: `add-missing-details`, `rephrase` |
 
 ### Meeting / MoM Specific
 | Component | Notes |
@@ -142,18 +142,82 @@ Always pass state as a prop, never manage visual states with local Tailwind cond
 - **"Save" button** remains disabled until at least one round of feedback has been completed. It does not enable on text entry alone.
 
 ### MoM Entry Sub Page — Post One Round of Feedback
-- On clicking "Get Feedback", the feedback API is called with the current text
-- Screen switches to a **left-right split view**:
-  - **Left:** `TextAreaContainer` with error/keyword highlights in the text
-  - **Right:** Feedback cards column using `FeedbackCardTag` + feedback content
-- **Highlight linking behaviour (bidirectional):**
-  - Hovering or clicking a highlighted error in the text → corresponding feedback card on the right gets highlighted
-  - Clicking a feedback card on the right → corresponding error/keyword in the text gets highlighted
-- **Feedback card actions:**
-  - `rephrase` and `make-concise` cards: user can accept or reject the suggestion
-  - `add-missing-details` cards: user can **record or type** the missing detail directly within the feedback card, then push that addition into the `TextAreaContainer`
-- After acting on feedback, user can still continue typing or recording in the main text area
-- When satisfied, user clicks **"Save"** → redirected back to Agenda List Screen
+
+**Route:** `/mom-entry/feedback`
+**Route state received:** `{ agenda, discussionText, feedbackResult: { category, category_reason, feedback: string[] } }`
+
+#### Screen layout
+- Same shared shell: `MeetingShellLayout` with `stepperActiveState={2}` (Navbar, Language tab, Sidebar, Breadcrumb, Stepper, MeetingDetailsCard all fixed)
+- Main content: outer white card containing `GoBackToPreviousPage` + a **left-right split**:
+  - **Left card** — bordered (`border-[rgba(106,62,49,0.24)]`), flex-1: full MoM entry form (AgendaCard, Action field, Discussion field + floating MicButton)
+  - **Right card** — muted background (`bg-[rgba(134,134,134,0.08)]`), fixed width `w-[360px]`, `self-stretch`: Feedback heading + suggestion count badge + list of `FeedbackCard` components
+
+#### Feedback items
+- `feedbackResult.feedback` is a `string[]` where each element is a plain actionable suggestion — **no span/position data is returned by the API**
+- Each string is classified into a type using a **keyword heuristic** in `inferType()`:
+  - Keywords like "add", "include", "specify", "document", "mention", "provide", "timeline", "name", "cost", "estimate", "detail", "missing" → `add-missing-details`
+  - All others → `rephrase`
+- Each item becomes a `CardState` object with: `id`, `text`, `type`, `dismissed`, `accepted`, `inputText`, `recordingState`, `sttError`
+- Cards are stored in local state; dismissed cards are filtered out of `visibleCards` for rendering
+
+#### Bidirectional linking (left ↔ right)
+- `activeCardId: string | null` tracks the currently active card
+- **Hovering** a `FeedbackCard` → sets `activeCardId` to that card's id via `onHoverEnter`; clears it on `onHoverLeave` (unless another card was clicked)
+- **Clicking** a `FeedbackCard` → toggles `activeCardId` (click same card again to deactivate)
+- The **left card's border and box-shadow** respond to `activeCardId`:
+  - `add-missing-details` active → border/glow `#ff7468` (coral)
+  - `rephrase` active → border/glow `#613af5` (purple)
+  - No active card → default border `rgba(106,62,49,0.24)`
+- This is the visual "highlight" linking: the `TextAreaContainer` itself is not span-highlighted (the API returns no position data), but the entire left card's border signals which type of feedback is active
+
+#### FeedbackCard — visual active state
+- `isActive` prop drives an elevated appearance: matching `borderColor` + `boxShadow` glow on the card itself
+
+#### FeedbackCard — rephrase type
+- Body: shows `originalText` (the feedback suggestion) in a bordered div
+- **Accept (✓):** dismisses card, sets `accepted: true`
+- **Reject (✕):** dismisses card, `accepted` remains false
+
+#### FeedbackCard — add-missing-details type
+- Body: shows `originalText` then:
+  - **Idle state:** auto-resizing `<textarea>` input + floating mic button (36 px, `#ff7468`)
+  - **Recording state:** waveform canvas (live analyser animation) + cancel (red) and confirm (green) buttons — identical pattern to `TextAreaContainer`
+  - **Processing state:** "Transcribing…" text in place of the canvas
+- **Accept (✓) in header:** enabled only when `inputText` is non-empty; acts as push (same as "Add to Discussion" button)
+- **"Add to Discussion" button:** appears below the input when `inputText` is non-empty and not recording; calls `handlePushText` — appends `inputText` (trimmed, with a space separator) to main `discussionText`, then dismisses the card
+- **Reject (✕):** dismisses card without pushing any text
+- STT flow inside card: identical to main textarea STT — `MediaRecorder` → base64 → `POST /speech-to-text` → transcription **appended** to `inputText` (never replaces); error shown inline above input via `micError` prop
+
+#### Per-card recording state management
+- Each card has its own `recordingState: 'idle' | 'recording' | 'processing'` in `CardState`
+- Media refs are stored in `Map`s keyed by card id: `cardMediaRecordersRef`, `cardAudioChunksRef`, `cardAudioCtxRef`
+- `cardAnalysers: Map<string, AnalyserNode | null>` state drives the waveform canvas in each card
+
+#### Main TextAreaContainer on this screen
+- Fully editable — user can continue typing or recording after feedback is shown
+- Main mic recording works identically to the Post Recording screen (STT appends to `discussionText`)
+- STT errors shown via `InfoBox type="default"` (replaces the outlined info box)
+- **"Get Feedback" button:** `state="disabled"` — feedback has already been obtained; a second round is not triggered from this screen
+- **"Save" button:** `state="default"`, always enabled on this screen (feedback round is complete)
+
+#### Save behaviour
+- Calls `markCompleted(agenda.id)` from `useAgenda()` context
+- Navigates to `/` (Agenda List Screen)
+- The agenda card on the list changes to `completed` state
+
+#### FeedbackCard component props (extended)
+The `FeedbackCard` component in `/src/components/FeedbackCard.tsx` was extended to support full interactivity. Key props added beyond the original:
+- `isActive`, `onHoverEnter`, `onHoverLeave`, `onClick` — bidirectional linking
+- `addedText`, `onAddedTextChange` — controlled input for add-details
+- `onPushText`, `pushLabel` — "Add to Discussion" action + i18n label
+- `isMicRecording`, `isMicProcessing`, `onMicClick`, `onCancelRecording`, `onConfirmRecording`, `micAnalyserNode` — recording lifecycle
+- `micError` — inline STT error display
+- `addPlaceholder` — i18n placeholder for the add-details textarea
+
+#### i18n keys added for this screen
+Both `en` and `kn` keys added to `translations.js`:
+- `feedback_card_placeholder` — placeholder text for the add-details input textarea
+- `feedback_card_push` — label for the "Add to Discussion" push button
 
 ---
 
