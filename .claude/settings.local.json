@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_Figma__get_design_context",
+      "Bash(source ~/.zshrc 2>/dev/null; which node 2>/dev/null || echo \"still not found\"; source ~/.nvm/nvm.sh 2>/dev/null && which node || echo \"nvm not found either\")",
+      "Bash(curl -fsSL https://nodejs.org/dist/v20.11.0/node-v20.11.0-darwin-arm64.tar.gz -o /tmp/node.tar.gz 2>&1 | tail -3 && echo \"downloaded\")",
+      "Bash(tar -xzf /tmp/node.tar.gz -C /tmp/)",
+      "Read(//tmp/node-v20.11.0-darwin-arm64/**)",
+      "Bash(chmod +x /tmp/node-v20.11.0-darwin-arm64/bin/* && /tmp/node-v20.11.0-darwin-arm64/bin/node --version)",
+      "Bash(open http://localhost:5173/)"
+    ]
+  }
+}

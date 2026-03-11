@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-50: #f7f0ee;
+  --primary-100: #efe0dc;
+  --primary-200: #dfc2b9;
+  --primary-source: #6a3e31;
+  --secondary-50: #ffe8e5;
+  --secondary-300: #ff7266;
+  --secondary-source: #ff7468;
+  --secondary-600: #cc1000;
+  --success-source: #3c9718;
+  --neutral-source: #212121;
+  --neutral-400: #c6c6c6;
+  --neutral-600: #727272;
+  --text-dark: #212121;
+  --text-light: #ffffff;
+  --text-hint: #727272;
+  --stroke-100: #dddddd;
+  --stroke-200: #c6c6c6;
+  --stroke-300: #b0b0b0;
+  --font-family-headings: 'Noto Sans', sans-serif;
+  --font-family-body: 'Noto Sans', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans', sans-serif;
+  background-color: #f5f5f5;
+  margin: 0;
+}
