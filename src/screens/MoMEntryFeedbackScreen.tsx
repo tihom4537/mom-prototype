@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -16,9 +16,7 @@ import {
 } from '../components';
 import type { HighlightSpan } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-
-const STT_API      = 'http://localhost:8000/speech-to-text';
-const FEEDBACK_API = 'http://localhost:8000/feedback';
+import { STT_API, FEEDBACK_API, TRANSLATE_API } from '../config/api';
 
 type MainEntryState = 'idle' | 'recording' | 'processing';
 type CardEntryState = 'idle' | 'recording' | 'processing';
@@ -37,17 +35,14 @@ interface CardState {
   sttError: string | null;
 }
 
-/** Simple heuristic: classify each feedback string into a type */
+/**
+ * Classify each feedback string by its trailing character:
+ * - Sentence starters ending with "—" or "–" → add-missing-details (secretary completes it)
+ * - Complete improved sentences → rephrase
+ */
 function inferType(text: string): 'add-missing-details' | 'rephrase' {
-  const lower = text.toLowerCase();
-  if (
-    lower.includes('add') || lower.includes('include') || lower.includes('specify') ||
-    lower.includes('document') || lower.includes('mention') || lower.includes('provide') ||
-    lower.includes('state') || lower.includes('timeline') || lower.includes('name') ||
-    lower.includes('cost') || lower.includes('missing') || lower.includes('who') ||
-    lower.includes('when') || lower.includes('where') || lower.includes('estimate') ||
-    lower.includes('detail') || lower.includes('information was given')
-  ) {
+  const trimmed = text.trimEnd();
+  if (trimmed.endsWith('—') || trimmed.endsWith('–') || trimmed.endsWith('...')) {
     return 'add-missing-details';
   }
   return 'rephrase';
@@ -76,6 +71,8 @@ export default function MoMEntryFeedbackScreen() {
   const [mainAnalyserNode, setMainAnalyserNode] = useState<AnalyserNode | null>(null);
   const [actionOpen, setActionOpen]             = useState(false);
   const [selectedAction, setSelectedAction]     = useState<'action_option_approval' | 'action_option_discussion' | null>(null);
+  const [isTranslating, setIsTranslating]           = useState(false);
+  const prevLangRef = useRef<string>(lang);
   const mainMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mainAudioChunksRef   = useRef<Blob[]>([]);
   const mainAudioCtxRef      = useRef<AudioContext | null>(null);
@@ -129,6 +126,36 @@ export default function MoMEntryFeedbackScreen() {
     cardAudioCtxRef.current.delete(cardId);
     setCardAnalysers(prev => { const m = new Map(prev); m.set(cardId, null); return m; });
   }, []);
+
+  // ── Translate discussion text when language tab switches ─────────────────
+
+  useEffect(() => {
+    const prevLang = prevLangRef.current;
+    prevLangRef.current = lang;
+    if (prevLang === lang || !discussionText.trim()) return;
+
+    const doTranslate = async () => {
+      setIsTranslating(true);
+      try {
+        const res = await fetch(TRANSLATE_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: discussionText, from_locale: prevLang, to_locale: lang }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        const data: { translation: string } = await res.json();
+        setDiscussionText(data.translation);
+        // Clear feedback cards — their spans reference the old-language text
+        setCards([]);
+        setActiveCardId(null);
+      } catch {
+        setMainSttError(t('translation_error'));
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+    doTranslate();
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateCard = useCallback((id: string, updates: Partial<CardState>) => {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
@@ -318,7 +345,8 @@ export default function MoMEntryFeedbackScreen() {
   const handlePushText = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
-    const textToAdd = card.inputText.trim();
+    // Strip trailing em-dash (sentence starter left unfinished) before pushing
+    const textToAdd = card.inputText.trim().replace(/\s*[—–]\s*$/, '').trim();
     if (textToAdd) {
       const sep = discussionText.trim() ? ' ' : '';
       setDiscussionText(prev => prev + sep + textToAdd);
@@ -346,23 +374,16 @@ export default function MoMEntryFeedbackScreen() {
     setActiveCardId(prev => prev === cardId ? null : cardId);
   };
 
-  // ── Span-level hover/click handlers ─────────────────────────────────────
+  // ── Span-level hover/click handlers (from TextAreaContainer highlights) ───
 
   const handleSpanHoverEnter = (cardId: string) => setActiveCardId(cardId);
   const handleSpanHoverLeave = (cardId: string) => {
     setActiveCardId(prev => prev === cardId ? null : prev);
   };
-
-  /**
-   * Span click: update active state AND smoothly scroll the card to the
-   * top of the feedback list. Card stays in its fixed list position.
-   * Uses offsetTop (relative to the `relative`-positioned list container)
-   * so the scroll amount is always exact regardless of current scroll state.
-   */
   const handleSpanClick = (cardId: string) => {
     setActiveCardId(prev => prev === cardId ? null : cardId);
     const cardWrapperEl = cardRefsMap.current.get(cardId);
-    const listEl        = feedbackListRef.current;
+    const listEl = feedbackListRef.current;
     if (cardWrapperEl && listEl) {
       listEl.scrollTo({ top: cardWrapperEl.offsetTop, behavior: 'smooth' });
     }
@@ -397,23 +418,23 @@ export default function MoMEntryFeedbackScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
-        category: 'Public Health & Sanitation',
-        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
+        category: 'Information / Intimation',
+        category_reason: 'The agenda shares updates and announcements regarding sanitation, observances, and health precautions.',
         feedback: [
-          'The following information was given about Swachh Saturday —',
-          'The following information was given about Village Sanitation —',
-          'The following information was given about Onagalu Day —',
-          'The following information was given about COVID JN.1 —',
-          'The following information was given about precautionary measures —',
-          'The meeting discussed the following key topics:',
+          'The following information was shared regarding Swachh Saturday village cleanliness activities —',
+          'The following information was shared regarding Onagalu Day observance —',
+          'The following information was shared regarding COVID-19 JN.1 precautionary measures —',
+          'Members were informed about the actions to be taken for —',
+          'Information was provided to the Gram Sabha regarding the status of —',
+          'The Gram Sabha acknowledged the information and resolved that —',
         ],
         spans: [
           'Swachh Saturday village cleanliness activities',
-          null,
           'Onagalu Day observance',
           'COVID-19 JN.1 precautionary measures',
           null,
           'Information was provided regarding',
+          null,
         ],
       };
       setCards(buildCards(feedbackResult));
@@ -455,10 +476,17 @@ export default function MoMEntryFeedbackScreen() {
     navigate('/');
   };
 
-  // ── Build highlights for TextAreaContainer ────────────────────────────────
+  // ── Left card border glow + span highlights ──────────────────────────────
+
+  const activeCard = activeCardId ? visibleCards.find(c => c.id === activeCardId) : null;
+  const leftCardStyle: React.CSSProperties = activeCard?.type === 'add-missing-details'
+    ? { border: '1px solid #ff7468', boxShadow: '0 0 0 3px rgba(255,116,104,0.2)' }
+    : activeCard?.type === 'rephrase'
+      ? { border: '1px solid #613af5', boxShadow: '0 0 0 3px rgba(97,58,245,0.15)' }
+      : { border: '1px solid rgba(106,62,49,0.24)' };
 
   const highlights: HighlightSpan[] = visibleCards
-    .filter(c => c.spanText !== null)
+    .filter(c => c.spanText !== null && c.spanText !== undefined)
     .map(c => ({
       text:     c.spanText!,
       type:     c.type === 'add-missing-details' ? 'add-missing-details' : 'rephrase',
@@ -480,8 +508,8 @@ export default function MoMEntryFeedbackScreen() {
         {/* Two-column layout */}
         <div className="flex gap-5 items-start">
 
-          {/* ── Left: entry card — no whole-card glow, spans handle highlighting ── */}
-          <div className="bg-white border border-[rgba(106,62,49,0.24)] flex flex-col gap-9 items-start pb-[30px] pt-5 px-5 rounded-[15px] flex-1 min-w-0">
+          {/* ── Left: entry card — border glows based on active feedback card type ── */}
+          <div className="bg-white flex flex-col gap-9 items-start pb-[30px] pt-5 px-5 rounded-[15px] flex-1 min-w-0" style={{ transition: 'border 0.2s, box-shadow 0.2s', ...leftCardStyle }}>
 
             {/* Card body */}
             <div className="flex flex-col gap-5 items-start shrink-0 w-full">
@@ -551,15 +579,15 @@ export default function MoMEntryFeedbackScreen() {
                       <InfoBox type="outlined" text={t('discussion_field_info')} className="shrink-0 w-full" />
                     )}
 
-                    {/* Rich-text view in feedback mode — no direct editing */}
                     <TextAreaContainer
                       state={isMainRecording || isMainProcessing ? 'recording' : hasText ? 'filled' : 'default'}
                       placeholder={t('discussion_field_placeholder')}
                       value={discussionText}
+                      onChange={!isMainRecording && !isMainProcessing && highlights.length === 0 ? setDiscussionText : undefined}
                       onStopRecording={handleMainCancelRecording}
                       onAcceptRecording={handleMainConfirmRecording}
                       analyserNode={mainAnalyserNode ?? undefined}
-                      highlights={highlights}
+                      highlights={highlights.length > 0 ? highlights : undefined}
                       onSpanHoverEnter={handleSpanHoverEnter}
                       onSpanHoverLeave={handleSpanHoverLeave}
                       onSpanClick={handleSpanClick}
@@ -571,7 +599,7 @@ export default function MoMEntryFeedbackScreen() {
                       <MicButton
                         pulse
                         isRecording={isMainRecording}
-                        disabled={isMainProcessing}
+                        disabled={isMainProcessing || isTranslating}
                         onClick={handleMainMicClick}
                       />
                     </div>
@@ -591,6 +619,11 @@ export default function MoMEntryFeedbackScreen() {
               {isFetchingFeedback && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   {t('feedback_fetching')}
+                </span>
+              )}
+              {isTranslating && (
+                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
+                  {t('translating')}
                 </span>
               )}
               <Button
@@ -662,6 +695,7 @@ export default function MoMEntryFeedbackScreen() {
                       <FeedbackCard
                         type={card.type === 'add-missing-details' ? 'add-details' : 'rephrase'}
                         originalText={card.text}
+                        spanText={card.spanText}
                         isActive={activeCardId === card.id}
                         onHoverEnter={() => setActiveCardId(card.id)}
                         onHoverLeave={() => setActiveCardId(prev => prev === card.id ? null : prev)}

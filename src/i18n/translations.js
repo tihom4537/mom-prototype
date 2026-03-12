@@ -74,6 +74,8 @@ export const translations = {
     // --- Feedback Card Interactive ---
     feedback_card_placeholder: "Type your notes here, or use the mic to dictate...",
     feedback_card_push: "Add to Discussion",
+    translating: "Translating…",
+    translation_error: "Translation failed. Your text is unchanged.",
 
     // --- Language Tab ---
     lang_english: "English",
@@ -152,6 +154,8 @@ export const translations = {
     // --- Feedback Card Interactive ---
     feedback_card_placeholder: "ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಮೈಕ್ ಬಳಸಿ...",
     feedback_card_push: "ಚರ್ಚೆಗೆ ಸೇರಿಸಿ",
+    translating: "ಅನುವಾದಿಸಲಾಗುತ್ತಿದೆ…",
+    translation_error: "ಅನುವಾದ ವಿಫಲವಾಯಿತು. ನಿಮ್ಮ ಪಠ್ಯ ಬದಲಾಗಿಲ್ಲ.",
 
     // --- Language Tab ---
     lang_english: "English",

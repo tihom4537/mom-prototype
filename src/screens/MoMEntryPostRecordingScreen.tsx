@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -13,9 +13,7 @@ import {
   MicButton,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-
-const STT_API      = 'http://localhost:8000/speech-to-text';
-const FEEDBACK_API = 'http://localhost:8000/feedback';
+import { STT_API, FEEDBACK_API, TRANSLATE_API } from '../config/api';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
@@ -45,6 +43,8 @@ export default function MoMEntryPostRecordingScreen() {
   const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
   const [actionOpen, setActionOpen]                 = useState(false);
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const prevLangRef = useRef<string>(lang);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef   = useRef<Blob[]>([]);
@@ -57,12 +57,39 @@ export default function MoMEntryPostRecordingScreen() {
     setAnalyserNode(null);
   }, []);
 
+  // ── Translate discussion text when language tab switches ─────────────────
+
+  useEffect(() => {
+    const prevLang = prevLangRef.current;
+    prevLangRef.current = lang;
+    if (prevLang === lang || !discussionText.trim()) return;
+
+    const doTranslate = async () => {
+      setIsTranslating(true);
+      try {
+        const res = await fetch(TRANSLATE_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: discussionText, from_locale: prevLang, to_locale: lang }),
+        });
+        if (!res.ok) throw new Error(`${res.status}`);
+        const data: { translation: string } = await res.json();
+        setDiscussionText(data.translation);
+      } catch {
+        setSttError(t('translation_error'));
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+    doTranslate();
+  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const isRecording  = entryState === 'recording';
   const isProcessing = entryState === 'processing';
   const isIdle       = entryState === 'idle';
   const hasText      = discussionText.trim().length > 0;
 
-  const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback;
+  const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback && !isTranslating;
   const isSaveEnabled     = hasText && isIdle && feedbackCompleted && !isFetchingFeedback;
 
   // ── Start recording ──────────────────────────────────────────────────────
@@ -170,23 +197,23 @@ export default function MoMEntryPostRecordingScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
-        category: 'Public Health & Sanitation',
-        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
+        category: 'Information / Intimation',
+        category_reason: 'The agenda shares updates and announcements regarding sanitation, observances, and health precautions.',
         feedback: [
-          'The following information was given about Swachh Saturday —',
-          'The following information was given about Village Sanitation —',
-          'The following information was given about Onagalu Day —',
-          'The following information was given about COVID JN.1 —',
-          'The following information was given about precautionary measures —',
-          'The meeting discussed the following key topics:',
+          'The following information was shared regarding Swachh Saturday village cleanliness activities —',
+          'The following information was shared regarding Onagalu Day observance —',
+          'The following information was shared regarding COVID-19 JN.1 precautionary measures —',
+          'Members were informed about the actions to be taken for —',
+          'Information was provided to the Gram Sabha regarding the status of —',
+          'The Gram Sabha acknowledged the information and resolved that —',
         ],
         spans: [
           'Swachh Saturday village cleanliness activities',
-          null,
           'Onagalu Day observance',
           'COVID-19 JN.1 precautionary measures',
           null,
           'Information was provided regarding',
+          null,
         ],
       };
       setIsFetchingFeedback(false);
@@ -342,7 +369,7 @@ export default function MoMEntryPostRecordingScreen() {
                       <MicButton
                         pulse
                         isRecording={isRecording}
-                        disabled={isProcessing || isFetchingFeedback}
+                        disabled={isProcessing || isFetchingFeedback || isTranslating}
                         onClick={handleMicClick}
                       />
                     </div>
@@ -368,6 +395,11 @@ export default function MoMEntryPostRecordingScreen() {
                   style={{ fontFamily: 'Noto Sans' }}
                 >
                   {t('feedback_fetching')}
+                </span>
+              )}
+              {isTranslating && (
+                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
+                  {t('translating')}
                 </span>
               )}
               <Button

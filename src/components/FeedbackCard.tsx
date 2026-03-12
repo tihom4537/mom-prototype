@@ -17,6 +17,8 @@ const typeToTagType: Record<FeedbackCardType, FeedbackTagType> = {
 export interface FeedbackCardProps {
   type?: FeedbackCardType;
   originalText?: string;
+  /** The vague/problematic phrase from the original text this card refers to */
+  spanText?: string | null;
   onAccept?: () => void;
   onReject?: () => void;
   /** Visually elevate card (bidirectional linking) */
@@ -44,6 +46,7 @@ export interface FeedbackCardProps {
 export default function FeedbackCard({
   type = 'add-details',
   originalText = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+  spanText,
   onAccept,
   onReject,
   isActive = false,
@@ -178,6 +181,21 @@ export default function FeedbackCard({
         className="bg-white flex flex-col pt-3 px-4 shrink-0 w-full"
         onClick={e => e.stopPropagation()}
       >
+        {/* ── Span reference — shows which phrase in the text this refers to ── */}
+        {spanText && (
+          <div className="mb-2 flex items-start gap-1">
+            <div
+              className="shrink-0 w-[3px] rounded-full self-stretch"
+              style={{ backgroundColor: type === 'add-details' ? '#ff7468' : '#613af5' }}
+            />
+            <p
+              className="text-xs text-[#727272] italic leading-5 tracking-[0.25px]"
+              style={{ fontFamily: 'Noto Sans' }}
+            >
+              "{spanText}"
+            </p>
+          </div>
+        )}
         {/* ── Add-details: full-width editable field, mic centered at bottom edge ── */}
         {isAddDetails && (
           <div className="flex flex-col gap-2 w-full pb-3">
