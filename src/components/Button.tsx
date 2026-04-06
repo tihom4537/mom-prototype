@@ -1,9 +1,4 @@
-// Icon asset URLs
-const imgIconBase = "https://www.figma.com/api/mcp/asset/d6ffc2b5-0ecb-4fb2-80d4-600939b833f3";
-const imgPlusWhite = "https://www.figma.com/api/mcp/asset/2cdf1fd2-b86a-476d-a23c-f524cd1f2de3";
-const imgPlusOrange = "https://www.figma.com/api/mcp/asset/6e4b385b-f73e-4bb7-a021-24b17cb992a5";
-const imgChevronDown = "https://www.figma.com/api/mcp/asset/446744b9-d62c-44e9-9bfa-423ce004b4bd";
-const imgChevronDownOrange = "https://www.figma.com/api/mcp/asset/e460d4e9-2eac-4184-9f70-5a53b3be01c1";
+import Icon from './Icon';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'save';
 export type ButtonState = 'default' | 'hover' | 'pressed' | 'focused' | 'disabled';
@@ -13,6 +8,8 @@ interface ButtonProps {
   variant?: ButtonVariant;
   state?: ButtonState;
   iconPlacement?: ButtonIconPlacement;
+  /** Override the icon used for iconPlacement. Defaults: left→"add", right→"arrow_drop_down" */
+  iconName?: string;
   text?: string;
   onClick?: () => void;
   className?: string;
@@ -23,6 +20,7 @@ export default function Button({
   variant = 'filled',
   state = 'default',
   iconPlacement = 'none',
+  iconName,
   text = 'Button',
   onClick,
   className,
@@ -73,8 +71,7 @@ export default function Button({
   }
 
   const textColor = (isFilled || isSave) ? 'text-white' : 'text-[#ff7468]';
-  const iconSrc = isFilled ? imgPlusWhite : imgPlusOrange;
-  const chevronSrc = isFilled ? imgChevronDown : imgChevronDownOrange;
+  const iconColor = (isFilled || isSave) ? 'white' : '#ff7468';
 
   return (
     <button
@@ -85,12 +82,7 @@ export default function Button({
     >
       {/* Left icon */}
       {iconPlacement === 'left' && (
-        <div className="overflow-clip relative shrink-0 size-[18px]">
-          <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-          <div className="absolute inset-[20.83%]">
-            <img alt="" className="absolute block max-w-none size-full" src={iconSrc} />
-          </div>
-        </div>
+        <Icon name={iconName ?? 'add'} size="small" color={iconColor} />
       )}
 
       {/* Label */}
@@ -101,14 +93,9 @@ export default function Button({
         {text}
       </span>
 
-      {/* Right icon (chevron down) */}
+      {/* Right icon */}
       {iconPlacement === 'right' && (
-        <div className="overflow-clip relative shrink-0 size-[18px]">
-          <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-          <div className="absolute inset-[41.67%_29.17%_37.5%_29.17%]">
-            <img alt="" className="absolute block max-w-none size-full" src={chevronSrc} />
-          </div>
-        </div>
+        <Icon name={iconName ?? 'arrow_drop_down'} size="small" color={iconColor} />
       )}
     </button>
   );

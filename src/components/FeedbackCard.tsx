@@ -1,35 +1,29 @@
 import { useRef, useEffect } from 'react';
 import FeedbackCardTags, { FeedbackTagType } from './FeedbackCardTags';
+import Icon from './Icon';
 
-// Recording control assets
-const imgIconBase = "https://www.figma.com/api/mcp/asset/1752d8dc-e842-4f52-9aba-6410f66e82be";
-const imgCloseVec = "https://www.figma.com/api/mcp/asset/3604a723-50e4-461e-b7eb-17f1c801523e";
-const imgCheckVec = "https://www.figma.com/api/mcp/asset/faadd345-05a2-4359-ac39-16e650cb75a4";
-const imgMicFloat = "https://www.figma.com/api/mcp/asset/ad7b6587-ba59-4a34-b438-aff05e8d913a";
-
-export type FeedbackCardType = 'add-details' | 'rephrase';
+export type FeedbackCardType = 'add-details' | 'rephrase' | 'make-concise';
 
 const typeToTagType: Record<FeedbackCardType, FeedbackTagType> = {
-  'add-details': 'add-missing-details',
-  rephrase:      'rephrase',
+  'add-details':  'add-missing-details',
+  rephrase:       'rephrase',
+  'make-concise': 'make-concise',
 };
 
 export interface FeedbackCardProps {
   type?: FeedbackCardType;
   originalText?: string;
-  /** The vague/problematic phrase from the original text this card refers to */
-  spanText?: string | null;
   onAccept?: () => void;
   onReject?: () => void;
-  /** Visually elevate card (bidirectional linking) */
+  /** Switches the card between default (collapsed) and clicked (expanded) state */
   isActive?: boolean;
   onHoverEnter?: () => void;
   onHoverLeave?: () => void;
   onClick?: () => void;
-  /** Add-details: current edited text (pre-populated with suggestion) */
+  /** The text filled into the inline blank by typing or STT */
   addedText?: string;
   onAddedTextChange?: (text: string) => void;
-  /** Push addedText to main textarea — called by ✓ button for add-details */
+  /** Push addedText to main TextAreaContainer — called by ✓ button */
   onPushText?: () => void;
   addPlaceholder?: string;
   /** Recording state within the card */
@@ -43,10 +37,15 @@ export interface FeedbackCardProps {
   className?: string;
 }
 
+/** Strip a trailing " —" or "—" and report whether one was present. */
+function splitAtDash(text: string): [string, boolean] {
+  const cleaned = text.replace(/\s*—\s*$/, '');
+  return [cleaned, cleaned.length < text.length];
+}
+
 export default function FeedbackCard({
   type = 'add-details',
   originalText = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-  spanText,
   onAccept,
   onReject,
   isActive = false,
@@ -56,7 +55,7 @@ export default function FeedbackCard({
   addedText = '',
   onAddedTextChange,
   onPushText,
-  addPlaceholder = 'Type your notes here, or use the mic to dictate...',
+  addPlaceholder = '________',
   isMicRecording = false,
   isMicProcessing = false,
   onMicClick,
@@ -67,16 +66,20 @@ export default function FeedbackCard({
   className,
 }: FeedbackCardProps) {
   const isAddDetails = type === 'add-details';
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isStaticBody = type === 'rephrase' || type === 'make-concise';
 
-  // Auto-resize the inline textarea
+  // For add-details: strip trailing "—" so the blank replaces it visually
+  const [cleanText] = isAddDetails ? splitAtDash(originalText) : [originalText];
+
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const blankInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-focus the inline blank when card becomes active
   useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [addedText]);
+    if (isActive && isAddDetails && !isMicRecording && !isMicProcessing) {
+      blankInputRef.current?.focus();
+    }
+  }, [isActive, isAddDetails, isMicRecording, isMicProcessing]);
 
   // Live waveform animation when recording inside card
   useEffect(() => {
@@ -123,8 +126,8 @@ export default function FeedbackCard({
 
   const activeStyle = isActive
     ? {
-        borderColor: type === 'add-details' ? '#ff7468' : '#613af5',
-        boxShadow:   type === 'add-details'
+        borderColor: isAddDetails ? '#ff7468' : '#613af5',
+        boxShadow:   isAddDetails
           ? '0 0 0 2px rgba(255,116,104,0.25)'
           : '0 0 0 2px rgba(97,58,245,0.2)',
       }
@@ -132,7 +135,7 @@ export default function FeedbackCard({
 
   return (
     <div
-      className={`border border-[#ddd] flex flex-col items-start overflow-clip rounded-lg transition-all duration-200 cursor-pointer ${className ?? ''}`}
+      className={`border border-[#ddd] flex flex-col items-start overflow-hidden rounded-lg transition-all duration-200 cursor-pointer ${className ?? ''}`}
       style={activeStyle}
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
@@ -143,139 +146,134 @@ export default function FeedbackCard({
         <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
           <FeedbackCardTags type={typeToTagType[type]} />
           <div className="flex gap-[9px] items-center shrink-0">
-            {/* Accept (✓) — green */}
+            {/* Accept (✓) — outlined */}
             <button
               onClick={e => {
                 e.stopPropagation();
                 if (isAddDetails) { onPushText?.(); } else { onAccept?.(); }
               }}
-              className="bg-[#3c9718] flex items-center justify-center rounded-lg shrink-0 size-7 cursor-pointer border-none hover:opacity-85 transition-opacity"
+              className="border border-[#ddd] flex items-center justify-center rounded-lg shrink-0 size-6 cursor-pointer bg-white hover:bg-[#f5f5f5] transition-colors"
               title="Accept"
             >
-              <div className="overflow-clip relative size-5 shrink-0">
-                <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                <div className="absolute inset-[23.29%_12.5%_20.83%_14.21%]">
-                  <img alt="" className="absolute block max-w-none size-full" src={imgCheckVec} />
-                </div>
-              </div>
+              <Icon name="check" size="small" color="#3c9718" />
             </button>
-            {/* Reject (✕) — red */}
+            {/* Reject (✕) — outlined */}
             <button
               onClick={e => { e.stopPropagation(); onReject?.(); }}
-              className="bg-[#b7131a] flex items-center justify-center overflow-clip rounded-lg shrink-0 size-7 cursor-pointer border-none hover:opacity-85 transition-opacity"
+              className="border border-[#ddd] flex items-center justify-center rounded-lg shrink-0 size-6 cursor-pointer bg-white hover:bg-[#f5f5f5] transition-colors"
               title="Dismiss"
             >
-              <div className="overflow-clip relative size-5 shrink-0">
-                <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                <div className="absolute inset-[20.83%]">
-                  <img alt="" className="absolute block max-w-none size-full" src={imgCloseVec} />
-                </div>
-              </div>
+              <Icon name="close" size="small" color="#b7131a" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Body ── */}
+      {/* ── Body ──
+          Stop propagation only when active so that clicking the body in
+          default state bubbles up to the card's onClick and activates it,
+          but clicking while already active doesn't toggle it off. */}
       <div
         className="bg-white flex flex-col pt-3 px-4 shrink-0 w-full"
-        onClick={e => e.stopPropagation()}
+        onClick={isActive ? e => e.stopPropagation() : undefined}
       >
-        {/* ── Span reference — shows which phrase in the text this refers to ── */}
-        {spanText && (
-          <div className="mb-2 flex items-start gap-1">
-            <div
-              className="shrink-0 w-[3px] rounded-full self-stretch"
-              style={{ backgroundColor: type === 'add-details' ? '#ff7468' : '#613af5' }}
-            />
-            <p
-              className="text-xs text-[#727272] italic leading-5 tracking-[0.25px]"
-              style={{ fontFamily: 'Noto Sans' }}
-            >
-              "{spanText}"
-            </p>
-          </div>
-        )}
-        {/* ── Add-details: full-width editable field, mic centered at bottom edge ── */}
+
+        {/* ── Add-details ── */}
         {isAddDetails && (
-          <div className="flex flex-col gap-2 w-full pb-3">
+          <>
+            {/* Suggestion text + blank — one unified block, always visible.
+                The blank is a static underline in default state and becomes
+                an editable input when active. No repeated text ever. */}
+            <div
+              className="flex flex-wrap items-baseline font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] pb-3 w-full"
+              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            >
+              <span className="mr-1">{cleanText}</span>
 
-            {micError && (
-              <p className="text-xs text-[#b7131a] w-full" style={{ fontFamily: 'Noto Sans' }}>
-                {micError}
-              </p>
-            )}
+              {/* DEFAULT: static underlined blank — not editable, full card width */}
+              {!isActive && (
+                <span
+                  className="inline-block border-b-2 border-[#bbb] align-middle w-full"
+                  style={{ height: '1em' }}
+                />
+              )}
 
-            {/* When recording: waveform + controls */}
-            {isRecOrProc ? (
-              <div className="bg-[#f3f3f3] flex items-center px-3 py-2 rounded-[15px] w-full mb-3">
-                <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
-                  {isMicProcessing ? (
-                    <span className="flex-1 text-xs text-[#727272]" style={{ fontFamily: 'Noto Sans' }}>
-                      Transcribing…
-                    </span>
-                  ) : (
-                    <canvas ref={canvasRef} className="h-9 flex-1 min-w-0" />
-                  )}
-                  {!isMicProcessing && (
-                    <div className="flex gap-2 items-center shrink-0 ml-2">
-                      <button
-                        onClick={onCancelRecording}
-                        className="bg-[#b7131a] flex items-center justify-center overflow-clip p-2 rounded-lg size-[28px] cursor-pointer border-none"
-                      >
-                        <div className="overflow-clip relative size-5 shrink-0">
-                          <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                          <div className="absolute inset-[20.83%]">
-                            <img alt="" className="absolute block max-w-none size-full" src={imgCloseVec} />
-                          </div>
+              {/* ACTIVE: same blank becomes an editable input */}
+              {isActive && (
+                <input
+                  ref={blankInputRef}
+                  className="border-0 border-b-2 border-[#bbb] bg-transparent outline-none text-sm text-[#212121] placeholder-[#bbb] w-full"
+                  style={{
+                    fontFamily: 'Noto Sans',
+                    fontVariationSettings: "'CTGR' 0, 'wdth' 100",
+                  }}
+                  value={addedText}
+                  onChange={e => onAddedTextChange?.(e.target.value)}
+                  placeholder={addPlaceholder}
+                  onClick={e => e.stopPropagation()}
+                />
+              )}
+            </div>
+
+            {/* ACTIVE only: mic error + recording UI + mic button */}
+            {isActive && (
+              <div className="flex flex-col items-center w-full pb-[30px] gap-2">
+
+                {micError && (
+                  <p className="text-xs text-[#b7131a] w-full" style={{ fontFamily: 'Noto Sans' }}>
+                    {micError}
+                  </p>
+                )}
+
+                {/* Recording: waveform + cancel/confirm */}
+                {isRecOrProc && (
+                  <div className="bg-[#f3f3f3] flex items-center px-3 py-2 rounded-[15px] w-full">
+                    <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
+                      {isMicProcessing ? (
+                        <span className="flex-1 text-xs text-[#727272]" style={{ fontFamily: 'Noto Sans' }}>
+                          Transcribing…
+                        </span>
+                      ) : (
+                        <canvas ref={canvasRef} className="h-9 flex-1 min-w-0" />
+                      )}
+                      {!isMicProcessing && (
+                        <div className="flex gap-2 items-center shrink-0 ml-2">
+                          <button
+                            onClick={e => { e.stopPropagation(); onCancelRecording?.(); }}
+                            className="bg-[#b7131a] flex items-center justify-center overflow-clip p-2 rounded-lg size-[28px] cursor-pointer border-none"
+                          >
+                            <Icon name="close" size="small" color="white" />
+                          </button>
+                          <button
+                            onClick={e => { e.stopPropagation(); onConfirmRecording?.(); }}
+                            className="bg-[#3c9718] flex items-center justify-center overflow-clip p-2 rounded-lg size-[28px] cursor-pointer border-none"
+                          >
+                            <Icon name="check" size="small" color="white" />
+                          </button>
                         </div>
-                      </button>
-                      <button
-                        onClick={onConfirmRecording}
-                        className="bg-[#3c9718] flex items-center justify-center overflow-clip p-2 rounded-lg size-[28px] cursor-pointer border-none"
-                      >
-                        <div className="overflow-clip relative size-5 shrink-0">
-                          <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                          <div className="absolute inset-[23.29%_12.5%_20.83%_14.21%]">
-                            <img alt="" className="absolute block max-w-none size-full" src={imgCheckVec} />
-                          </div>
-                        </div>
-                      </button>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* Full-width textarea + compact mic button centred below */
-              <div className="flex flex-col items-center gap-[10px] w-full">
-                <div className="border border-[#c6c6c6] rounded-lg bg-[rgba(201,201,201,0.08)] px-3 py-2 w-full">
-                  <textarea
-                    ref={textareaRef}
-                    className="w-full font-normal text-sm leading-5 tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-hidden min-h-[60px] text-[#212121] placeholder-[#727272]"
-                    style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                    placeholder={addPlaceholder}
-                    value={addedText}
-                    onChange={e => onAddedTextChange?.(e.target.value)}
-                  />
-                </div>
-                {/* Compact coral mic button — secondary inline action */}
-                <button
-                  onClick={onMicClick}
-                  className="bg-[#ff7468] flex items-center justify-center rounded-full shadow-[0_1px_8px_0_rgba(255,116,104,0.55)] size-8 border-none cursor-pointer hover:opacity-85 active:scale-95 transition-all shrink-0"
-                  title="Dictate"
-                >
-                  <div className="h-[15px] relative w-[11px]">
-                    <img alt="mic" className="absolute block max-w-none size-full" src={imgMicFloat} />
                   </div>
-                </button>
+                )}
+
+                {/* Idle: mic button */}
+                {!isRecOrProc && (
+                  <button
+                    onClick={e => { e.stopPropagation(); onMicClick?.(); }}
+                    className="bg-[#ff7468] flex items-center justify-center rounded-full shadow-[0px_1px_10.3px_0px_#ff7468] size-9 border-none cursor-pointer hover:opacity-85 active:scale-95 transition-all shrink-0"
+                    title="Dictate"
+                  >
+                    <Icon name="mic" size="small" color="white" />
+                  </button>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* ── Rephrase: static suggestion text ── */}
-        {!isAddDetails && (
-          <div className="pb-4">
+        {/* ── Rephrase / Make Concise: static suggestion text (always shown) ── */}
+        {isStaticBody && (
+          <div className="pb-[15px]">
             <div className="border border-[#ddd] flex items-start rounded-[5px] w-full p-[10px]">
               <p
                 className="flex-1 font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] min-h-px min-w-px"
@@ -286,6 +284,7 @@ export default function FeedbackCard({
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

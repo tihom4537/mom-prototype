@@ -31,7 +31,11 @@ export const translations = {
     nav_meeting_list: "Meeting List",
     nav_start_meeting: "Start Meeting",
     nav_reports: "Reports",
+    nav_summary_report: "Summary Report",
+    nav_meeting_report: "Meeting Report",
+    nav_attendance_report: "Attendance Report",
     nav_committee_mapping: "Committee mapping",
+    toast_coming_soon: "Coming soon",
 
     // --- Agenda List Screen ---
     agenda_list_heading: "Agenda List for this Meeting",
@@ -54,6 +58,7 @@ export const translations = {
     action_field_placeholder: "Select Action Assigned",
     action_option_approval: "Approval",
     action_option_discussion: "Discussion",
+    action_option_information: "Information",
     discussion_field_label: "Enter the Agenda discussion points",
     discussion_field_info: "You can use dictation, typing, or both together to record the discussion and decisions.",
     discussion_field_placeholder: "Type agenda discussion here, or click the mic button to dictate the agenda discussion....",
@@ -72,14 +77,38 @@ export const translations = {
     tag_make_concise: "Make Concise",
 
     // --- Feedback Card Interactive ---
-    feedback_card_placeholder: "Type your notes here, or use the mic to dictate...",
+    feedback_card_placeholder: "type / dictate details",
     feedback_card_push: "Add to Discussion",
-    translating: "Translating…",
-    translation_error: "Translation failed. Your text is unchanged.",
 
     // --- Language Tab ---
     lang_english: "English",
     lang_kannada: "ಕನ್ನಡ",
+
+    // --- Meeting List Screen ---
+    meeting_list_heading: "Meeting List",
+    meeting_list_subtext: "Find all scheduled meetings for your Gram Panchayat here — past meetings, today's meetings, and upcoming meetings.",
+    start_meeting_heading: "Start Meetings — Today's Meetings",
+    start_meeting_subtext: "These are the meetings scheduled for today. You will be able to start a meeting once it is the scheduled time.",
+    tab_today: "Today",
+    tab_upcoming: "Upcoming",
+    tab_past: "Past",
+    meeting_step_1: "Meeting Attendance",
+    meeting_step_2: "Meeting Proceedings Entry",
+    meeting_step_3: "Proceedings Review",
+    meeting_step_4: "Send for President Approval",
+    meeting_quorum_heading: "Minimum Participation Requirements",
+    meeting_elected_quorum_label: "Elected Representative Quorum:",
+    meeting_participants_quorum_label: "People Participants Attendance (%):",
+    meeting_mode_in_person: "IN PERSON",
+    meeting_mode_online: "ONLINE",
+    meeting_gp_label: "Gram Panchayat:",
+    btn_start_meeting: "Start Meeting",
+    btn_add_proceedings_list: "Add Proceedings",
+    btn_review_proceedings: "Review Proceedings",
+    btn_send_approval: "Send for Approval",
+    btn_view_meeting: "View Meeting",
+    breadcrumb_meeting_list: "Meeting List",
+    meeting_list_empty: "No meetings for this period.",
 
   },
 
@@ -111,7 +140,11 @@ export const translations = {
     nav_meeting_list: "ಸಭೆ ಪಟ್ಟಿ",
     nav_start_meeting: "ಸಭೆ ಆರಂಭಿಸಿ",
     nav_reports: "ವರದಿಗಳು",
+    nav_summary_report: "ಸಾರಾಂಶ ವರದಿ",
+    nav_meeting_report: "ಸಭೆ ವರದಿ",
+    nav_attendance_report: "ಹಾಜರಾತಿ ವರದಿ",
     nav_committee_mapping: "ಸಮಿತಿ ಮ್ಯಾಪಿಂಗ್",
+    toast_coming_soon: "ಶೀಘ್ರದಲ್ಲಿ ಬರಲಿದೆ",
 
     // --- Agenda List Screen ---
     agenda_list_heading: "ಈ ಸಭೆಯ ಕಾರ್ಯಸೂಚಿ ಪಟ್ಟಿ",
@@ -134,6 +167,7 @@ export const translations = {
     action_field_placeholder: "ನಿಯೋಜಿತ ಕ್ರಮ ಆಯ್ಕೆ ಮಾಡಿ",
     action_option_approval: "ಅನುಮೋದನೆ",
     action_option_discussion: "ಚರ್ಚೆ",
+    action_option_information: "ಮಾಹಿತಿ",
     discussion_field_label: "ಕಾರ್ಯಸೂಚಿ ಚರ್ಚಾ ವಿಷಯಗಳನ್ನು ನಮೂದಿಸಿ",
     discussion_field_info: "ಚರ್ಚೆ ಮತ್ತು ನಿರ್ಧಾರಗಳನ್ನು ದಾಖಲಿಸಲು ನೀವು ಧ್ವನಿ ನಿರ್ದೇಶನ, ಟೈಪಿಂಗ್ ಅಥವಾ ಎರಡನ್ನೂ ಒಟ್ಟಿಗೆ ಬಳಸಬಹುದು.",
     discussion_field_placeholder: "ಇಲ್ಲಿ ಕಾರ್ಯಸೂಚಿ ಚರ್ಚೆಯನ್ನು ಟೈಪ್ ಮಾಡಿ, ಅಥವಾ ಕಾರ್ಯಸೂಚಿ ಚರ್ಚೆಯನ್ನು ನಿರ್ದೇಶಿಸಲು ಮೈಕ್ ಬಟನ್ ಒತ್ತಿ....",
@@ -152,14 +186,38 @@ export const translations = {
     tag_make_concise: "ಸಂಕ್ಷಿಪ್ತಗೊಳಿಸಿ",
 
     // --- Feedback Card Interactive ---
-    feedback_card_placeholder: "ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ ಅಥವಾ ಮೈಕ್ ಬಳಸಿ...",
+    feedback_card_placeholder: "ಟೈಪ್ / ನಿರ್ದೇಶಿಸಿ ವಿವರಗಳು",
     feedback_card_push: "ಚರ್ಚೆಗೆ ಸೇರಿಸಿ",
-    translating: "ಅನುವಾದಿಸಲಾಗುತ್ತಿದೆ…",
-    translation_error: "ಅನುವಾದ ವಿಫಲವಾಯಿತು. ನಿಮ್ಮ ಪಠ್ಯ ಬದಲಾಗಿಲ್ಲ.",
 
     // --- Language Tab ---
     lang_english: "English",
     lang_kannada: "ಕನ್ನಡ",
+
+    // --- Meeting List Screen ---
+    meeting_list_heading: "ಸಭೆ ಪಟ್ಟಿ",
+    meeting_list_subtext: "ನಿಮ್ಮ ಗ್ರಾಮ ಪಂಚಾಯತಿಯ ಎಲ್ಲಾ ನಿಗದಿತ ಸಭೆಗಳನ್ನು ಇಲ್ಲಿ ನೋಡಿ — ಹಿಂದಿನ ಸಭೆಗಳು, ಇಂದಿನ ಸಭೆಗಳು ಮತ್ತು ಮುಂಬರುವ ಸಭೆಗಳು.",
+    start_meeting_heading: "ಸಭೆ ಆರಂಭಿಸಿ — ಇಂದಿನ ಸಭೆಗಳು",
+    start_meeting_subtext: "ಇವು ಇಂದು ನಿಗದಿಪಡಿಸಿದ ಸಭೆಗಳು. ನಿಗದಿತ ಸಮಯ ಆದ ನಂತರ ನೀವು ಸಭೆ ಆರಂಭಿಸಬಹುದು.",
+    tab_today: "ಇಂದು",
+    tab_upcoming: "ಮುಂಬರುವ",
+    tab_past: "ಹಿಂದಿನ",
+    meeting_step_1: "ಸಭೆಯ ಹಾಜರಾತಿ",
+    meeting_step_2: "ಸಭೆಯ ಕಲಾಪಗಳ ನಮೂದು",
+    meeting_step_3: "ಕಲಾಪಗಳ ಪರಿಶೀಲನೆ",
+    meeting_step_4: "ಅಧ್ಯಕ್ಷರ ಅನುಮೋದನೆಗೆ ಕಳುಹಿಸಿ",
+    meeting_quorum_heading: "ಕನಿಷ್ಠ ಭಾಗವಹಿಸುವಿಕೆ ಅವಶ್ಯಕತೆಗಳು",
+    meeting_elected_quorum_label: "ಚುನಾಯಿತ ಪ್ರತಿನಿಧಿ ಕೋರಮ್:",
+    meeting_participants_quorum_label: "ಜನ ಭಾಗವಹಿಸುವಿಕೆ ಹಾಜರಾತಿ (%):",
+    meeting_mode_in_person: "ನೇರ ಸಭೆ",
+    meeting_mode_online: "ಆನ್ಲೈನ್",
+    meeting_gp_label: "ಗ್ರಾಮ ಪಂಚಾಯತಿ:",
+    btn_start_meeting: "ಸಭೆ ಆರಂಭಿಸಿ",
+    btn_add_proceedings_list: "ಕಲಾಪಗಳನ್ನು ಸೇರಿಸಿ",
+    btn_review_proceedings: "ಕಲಾಪಗಳನ್ನು ಪರಿಶೀಲಿಸಿ",
+    btn_send_approval: "ಅನುಮೋದನೆಗೆ ಕಳುಹಿಸಿ",
+    btn_view_meeting: "ಸಭೆ ವೀಕ್ಷಿಸಿ",
+    breadcrumb_meeting_list: "ಸಭೆ ಪಟ್ಟಿ",
+    meeting_list_empty: "ಈ ಅವಧಿಯಲ್ಲಿ ಯಾವುದೇ ಸಭೆಗಳಿಲ್ಲ.",
 
   }
 };

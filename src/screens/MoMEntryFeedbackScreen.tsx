@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -16,7 +16,7 @@ import {
 } from '../components';
 import type { HighlightSpan } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API, TRANSLATE_API } from '../config/api';
+import { STT_API, FEEDBACK_API } from '../config/api';
 
 type MainEntryState = 'idle' | 'recording' | 'processing';
 type CardEntryState = 'idle' | 'recording' | 'processing';
@@ -35,14 +35,17 @@ interface CardState {
   sttError: string | null;
 }
 
-/**
- * Classify each feedback string by its trailing character:
- * - Sentence starters ending with "—" or "–" → add-missing-details (secretary completes it)
- * - Complete improved sentences → rephrase
- */
+/** Simple heuristic: classify each feedback string into a type */
 function inferType(text: string): 'add-missing-details' | 'rephrase' {
-  const trimmed = text.trimEnd();
-  if (trimmed.endsWith('—') || trimmed.endsWith('–') || trimmed.endsWith('...')) {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes('add') || lower.includes('include') || lower.includes('specify') ||
+    lower.includes('document') || lower.includes('mention') || lower.includes('provide') ||
+    lower.includes('state') || lower.includes('timeline') || lower.includes('name') ||
+    lower.includes('cost') || lower.includes('missing') || lower.includes('who') ||
+    lower.includes('when') || lower.includes('where') || lower.includes('estimate') ||
+    lower.includes('detail') || lower.includes('information was given')
+  ) {
     return 'add-missing-details';
   }
   return 'rephrase';
@@ -70,9 +73,7 @@ export default function MoMEntryFeedbackScreen() {
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [mainAnalyserNode, setMainAnalyserNode] = useState<AnalyserNode | null>(null);
   const [actionOpen, setActionOpen]             = useState(false);
-  const [selectedAction, setSelectedAction]     = useState<'action_option_approval' | 'action_option_discussion' | null>(null);
-  const [isTranslating, setIsTranslating]           = useState(false);
-  const prevLangRef = useRef<string>(lang);
+  const [selectedAction, setSelectedAction]     = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
   const mainMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mainAudioChunksRef   = useRef<Blob[]>([]);
   const mainAudioCtxRef      = useRef<AudioContext | null>(null);
@@ -87,7 +88,7 @@ export default function MoMEntryFeedbackScreen() {
       type:           inferType(text),
       dismissed:      false,
       accepted:       false,
-      inputText:      text,           // pre-populate with API suggestion
+      inputText:      '',
       spanText:       spans[i] ?? null,
       recordingState: 'idle' as CardEntryState,
       sttError:       null,
@@ -126,36 +127,6 @@ export default function MoMEntryFeedbackScreen() {
     cardAudioCtxRef.current.delete(cardId);
     setCardAnalysers(prev => { const m = new Map(prev); m.set(cardId, null); return m; });
   }, []);
-
-  // ── Translate discussion text when language tab switches ─────────────────
-
-  useEffect(() => {
-    const prevLang = prevLangRef.current;
-    prevLangRef.current = lang;
-    if (prevLang === lang || !discussionText.trim()) return;
-
-    const doTranslate = async () => {
-      setIsTranslating(true);
-      try {
-        const res = await fetch(TRANSLATE_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: discussionText, from_locale: prevLang, to_locale: lang }),
-        });
-        if (!res.ok) throw new Error(`${res.status}`);
-        const data: { translation: string } = await res.json();
-        setDiscussionText(data.translation);
-        // Clear feedback cards — their spans reference the old-language text
-        setCards([]);
-        setActiveCardId(null);
-      } catch {
-        setMainSttError(t('translation_error'));
-      } finally {
-        setIsTranslating(false);
-      }
-    };
-    doTranslate();
-  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateCard = useCallback((id: string, updates: Partial<CardState>) => {
     setCards(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
@@ -345,8 +316,7 @@ export default function MoMEntryFeedbackScreen() {
   const handlePushText = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
-    // Strip trailing em-dash (sentence starter left unfinished) before pushing
-    const textToAdd = card.inputText.trim().replace(/\s*[—–]\s*$/, '').trim();
+    const textToAdd = card.inputText.trim();
     if (textToAdd) {
       const sep = discussionText.trim() ? ' ' : '';
       setDiscussionText(prev => prev + sep + textToAdd);
@@ -374,16 +344,23 @@ export default function MoMEntryFeedbackScreen() {
     setActiveCardId(prev => prev === cardId ? null : cardId);
   };
 
-  // ── Span-level hover/click handlers (from TextAreaContainer highlights) ───
+  // ── Span-level hover/click handlers ─────────────────────────────────────
 
   const handleSpanHoverEnter = (cardId: string) => setActiveCardId(cardId);
   const handleSpanHoverLeave = (cardId: string) => {
     setActiveCardId(prev => prev === cardId ? null : prev);
   };
+
+  /**
+   * Span click: update active state AND smoothly scroll the card to the
+   * top of the feedback list. Card stays in its fixed list position.
+   * Uses offsetTop (relative to the `relative`-positioned list container)
+   * so the scroll amount is always exact regardless of current scroll state.
+   */
   const handleSpanClick = (cardId: string) => {
     setActiveCardId(prev => prev === cardId ? null : cardId);
     const cardWrapperEl = cardRefsMap.current.get(cardId);
-    const listEl = feedbackListRef.current;
+    const listEl        = feedbackListRef.current;
     if (cardWrapperEl && listEl) {
       listEl.scrollTo({ top: cardWrapperEl.offsetTop, behavior: 'smooth' });
     }
@@ -407,7 +384,7 @@ export default function MoMEntryFeedbackScreen() {
         type:           inferType(text),
         dismissed:      false,
         accepted:       false,
-        inputText:      text,
+        inputText:      '',
         spanText:       spans[i] ?? null,
         recordingState: 'idle' as CardEntryState,
         sttError:       null,
@@ -418,23 +395,23 @@ export default function MoMEntryFeedbackScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
-        category: 'Information / Intimation',
-        category_reason: 'The agenda shares updates and announcements regarding sanitation, observances, and health precautions.',
+        category: 'Public Health & Sanitation',
+        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
         feedback: [
-          'The following information was shared regarding Swachh Saturday village cleanliness activities —',
-          'The following information was shared regarding Onagalu Day observance —',
-          'The following information was shared regarding COVID-19 JN.1 precautionary measures —',
-          'Members were informed about the actions to be taken for —',
-          'Information was provided to the Gram Sabha regarding the status of —',
-          'The Gram Sabha acknowledged the information and resolved that —',
+          'The following information was given about Swachh Saturday —',
+          'The following information was given about Village Sanitation —',
+          'The following information was given about Onagalu Day —',
+          'The following information was given about COVID JN.1 —',
+          'The following information was given about precautionary measures —',
+          'The meeting discussed the following key topics:',
         ],
         spans: [
           'Swachh Saturday village cleanliness activities',
+          null,
           'Onagalu Day observance',
           'COVID-19 JN.1 precautionary measures',
           null,
           'Information was provided regarding',
-          null,
         ],
       };
       setCards(buildCards(feedbackResult));
@@ -473,20 +450,13 @@ export default function MoMEntryFeedbackScreen() {
 
   const handleSave = () => {
     if (agenda) markCompleted(agenda.id);
-    navigate('/');
+    navigate('/agenda-list');
   };
 
-  // ── Left card border glow + span highlights ──────────────────────────────
-
-  const activeCard = activeCardId ? visibleCards.find(c => c.id === activeCardId) : null;
-  const leftCardStyle: React.CSSProperties = activeCard?.type === 'add-missing-details'
-    ? { border: '1px solid #ff7468', boxShadow: '0 0 0 3px rgba(255,116,104,0.2)' }
-    : activeCard?.type === 'rephrase'
-      ? { border: '1px solid #613af5', boxShadow: '0 0 0 3px rgba(97,58,245,0.15)' }
-      : { border: '1px solid rgba(106,62,49,0.24)' };
+  // ── Build highlights for TextAreaContainer ────────────────────────────────
 
   const highlights: HighlightSpan[] = visibleCards
-    .filter(c => c.spanText !== null && c.spanText !== undefined)
+    .filter(c => c.spanText !== null)
     .map(c => ({
       text:     c.spanText!,
       type:     c.type === 'add-missing-details' ? 'add-missing-details' : 'rephrase',
@@ -497,120 +467,113 @@ export default function MoMEntryFeedbackScreen() {
   return (
     <MeetingShellLayout stepperActiveState={2}>
 
-      {/* ── Outer white card ── */}
-      <div className="bg-white flex flex-col gap-5 p-5 rounded-[15px]">
+      <div className="flex flex-col gap-[3px]">
 
-        <GoBackToPreviousPage
-          label={t('go_back')}
-          onClick={() => navigate('/')}
-        />
+        {/* Header bar */}
+        <div className="bg-white pl-[20px] pr-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 w-full">
+          <GoBackToPreviousPage
+            label={t('go_back')}
+            onClick={() => navigate('/agenda-list')}
+          />
+        </div>
 
-        {/* Two-column layout */}
-        <div className="flex gap-5 items-start">
+        {/* Body */}
+        <div className="bg-white flex gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
 
-          {/* ── Left: entry card — border glows based on active feedback card type ── */}
-          <div className="bg-white flex flex-col gap-9 items-start pb-[30px] pt-5 px-5 rounded-[15px] flex-1 min-w-0" style={{ transition: 'border 0.2s, box-shadow 0.2s', ...leftCardStyle }}>
+          {/* ── Left column ── */}
+          <div className="flex flex-col gap-[20px] flex-1 min-w-0">
 
-            {/* Card body */}
-            <div className="flex flex-col gap-5 items-start shrink-0 w-full">
-              <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
+            <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
-              <div className="flex flex-col gap-[25px] items-end shrink-0 w-full">
+            {/* Agenda card */}
+            <AgendaCard
+              stage="subpage"
+              agendaNumber={agenda ? String(agenda.id) : '1'}
+              agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
+              agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
+              className="shrink-0 w-full"
+            />
 
-                {/* Agenda card */}
-                <AgendaCard
-                  stage="inside"
-                  agendaNumber={agenda ? String(agenda.id) : '1'}
-                  agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
-                  agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
-                  className="shrink-0 w-full"
-                />
-
-                <div className="flex flex-col gap-[25px] items-start shrink-0 w-full">
-
-                  {/* Action field */}
-                  <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-                    <QuestionFieldsSmall
-                      type="mandatory"
-                      questionText={t('action_field_label')}
-                      className="shrink-0 w-full"
-                    />
-                    <div className="relative shrink-0">
-                      {actionOpen && (
-                        <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
-                      )}
-                      <div className="relative z-20">
-                        <Button
-                          variant="outlined"
-                          iconPlacement="right"
-                          text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                          onClick={() => setActionOpen(o => !o)}
-                        />
-                        {actionOpen && (
-                          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                            {(['action_option_approval', 'action_option_discussion'] as const).map(key => (
-                              <button
-                                key={key}
-                                className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                                onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                              >
-                                <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
-                                  {t(key)}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+            {/* Action field */}
+            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
+              <QuestionFieldsSmall
+                type="mandatory"
+                questionText={t('action_field_label')}
+                className="shrink-0 w-full"
+              />
+              <div className="relative shrink-0">
+                {actionOpen && (
+                  <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
+                )}
+                <div className="relative z-20">
+                  <Button
+                    variant="outlined"
+                    iconPlacement="right"
+                    text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
+                    onClick={() => setActionOpen(o => !o)}
+                  />
+                  {actionOpen && (
+                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
+                      {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
+                        <button
+                          key={key}
+                          className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
+                          onClick={() => { setSelectedAction(key); setActionOpen(false); }}
+                        >
+                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
+                            {t(key)}
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Discussion field + floating mic */}
-                  <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
-                    <QuestionFieldsSmall
-                      type="mandatory"
-                      questionText={t('discussion_field_label')}
-                      className="shrink-0"
-                    />
-
-                    {(mainSttError ?? feedbackError) ? (
-                      <InfoBox type="default" text={(mainSttError ?? feedbackError)!} className="shrink-0 w-full" />
-                    ) : (
-                      <InfoBox type="outlined" text={t('discussion_field_info')} className="shrink-0 w-full" />
-                    )}
-
-                    <TextAreaContainer
-                      state={isMainRecording || isMainProcessing ? 'recording' : hasText ? 'filled' : 'default'}
-                      placeholder={t('discussion_field_placeholder')}
-                      value={discussionText}
-                      onChange={!isMainRecording && !isMainProcessing && highlights.length === 0 ? setDiscussionText : undefined}
-                      onStopRecording={handleMainCancelRecording}
-                      onAcceptRecording={handleMainConfirmRecording}
-                      analyserNode={mainAnalyserNode ?? undefined}
-                      highlights={highlights.length > 0 ? highlights : undefined}
-                      onSpanHoverEnter={handleSpanHoverEnter}
-                      onSpanHoverLeave={handleSpanHoverLeave}
-                      onSpanClick={handleSpanClick}
-                      className="shrink-0 w-full"
-                    />
-
-                    {/* Mic button — floats centred below textarea */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                      <MicButton
-                        pulse
-                        isRecording={isMainRecording}
-                        disabled={isMainProcessing || isTranslating}
-                        onClick={handleMainMicClick}
-                      />
-                    </div>
-                  </div>
-
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Discussion field + floating mic */}
+            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
+              <QuestionFieldsSmall
+                type="mandatory"
+                questionText={t('discussion_field_label')}
+                className="shrink-0"
+              />
+
+              {(mainSttError ?? feedbackError) ? (
+                <InfoBox type="default" text={(mainSttError ?? feedbackError)!} className="shrink-0 w-full" />
+              ) : (
+                <InfoBox type="outlined" text={t('discussion_field_info')} className="shrink-0 w-full" />
+              )}
+
+              <TextAreaContainer
+                state={isMainRecording || isMainProcessing ? 'recording' : hasText ? 'filled' : 'default'}
+                placeholder={t('discussion_field_placeholder')}
+                value={discussionText}
+                onChange={setDiscussionText}
+                onStopRecording={handleMainCancelRecording}
+                onAcceptRecording={handleMainConfirmRecording}
+                analyserNode={mainAnalyserNode ?? undefined}
+                highlights={highlights}
+                onSpanHoverEnter={handleSpanHoverEnter}
+                onSpanHoverLeave={handleSpanHoverLeave}
+                onSpanClick={handleSpanClick}
+                highlighted
+                className="shrink-0 w-full"
+              />
+
+              {/* Mic button — floats centred below textarea */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                <MicButton
+                  pulse
+                  isRecording={isMainRecording}
+                  disabled={isMainProcessing}
+                  onClick={handleMainMicClick}
+                />
+              </div>
+            </div>
+
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-center justify-end shrink-0 w-full">
+            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
               {isMainProcessing && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   Transcribing…
@@ -619,11 +582,6 @@ export default function MoMEntryFeedbackScreen() {
               {isFetchingFeedback && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   {t('feedback_fetching')}
-                </span>
-              )}
-              {isTranslating && (
-                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
-                  {t('translating')}
                 </span>
               )}
               <Button
@@ -681,7 +639,8 @@ export default function MoMEntryFeedbackScreen() {
               {visibleCards.length > 0 && (
                 <div
                   ref={feedbackListRef}
-                  className="flex flex-col gap-[15px] items-start w-full overflow-y-auto pb-[30px] flex-1 relative"
+                  className="flex flex-col gap-[15px] items-start w-full overflow-y-auto pb-[30px] flex-1 relative pr-3"
+                  style={{ scrollbarGutter: 'stable' }}
                 >
                   {visibleCards.map(card => (
                     <div
@@ -695,10 +654,7 @@ export default function MoMEntryFeedbackScreen() {
                       <FeedbackCard
                         type={card.type === 'add-missing-details' ? 'add-details' : 'rephrase'}
                         originalText={card.text}
-                        spanText={card.spanText}
                         isActive={activeCardId === card.id}
-                        onHoverEnter={() => setActiveCardId(card.id)}
-                        onHoverLeave={() => setActiveCardId(prev => prev === card.id ? null : prev)}
                         onClick={() => handleCardClick(card.id)}
                         onAccept={() => handleCardAccept(card.id)}
                         onReject={() => handleCardReject(card.id)}

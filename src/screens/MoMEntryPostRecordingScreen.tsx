@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -11,9 +11,10 @@ import {
   InfoBox,
   TextAreaContainer,
   MicButton,
+  SmallDetailsText,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API, TRANSLATE_API } from '../config/api';
+import { STT_API, FEEDBACK_API } from '../config/api';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
@@ -42,9 +43,7 @@ export default function MoMEntryPostRecordingScreen() {
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
   const [actionOpen, setActionOpen]                 = useState(false);
-  const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | null>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
-  const prevLangRef = useRef<string>(lang);
+  const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef   = useRef<Blob[]>([]);
@@ -57,39 +56,12 @@ export default function MoMEntryPostRecordingScreen() {
     setAnalyserNode(null);
   }, []);
 
-  // ── Translate discussion text when language tab switches ─────────────────
-
-  useEffect(() => {
-    const prevLang = prevLangRef.current;
-    prevLangRef.current = lang;
-    if (prevLang === lang || !discussionText.trim()) return;
-
-    const doTranslate = async () => {
-      setIsTranslating(true);
-      try {
-        const res = await fetch(TRANSLATE_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: discussionText, from_locale: prevLang, to_locale: lang }),
-        });
-        if (!res.ok) throw new Error(`${res.status}`);
-        const data: { translation: string } = await res.json();
-        setDiscussionText(data.translation);
-      } catch {
-        setSttError(t('translation_error'));
-      } finally {
-        setIsTranslating(false);
-      }
-    };
-    doTranslate();
-  }, [lang]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const isRecording  = entryState === 'recording';
   const isProcessing = entryState === 'processing';
   const isIdle       = entryState === 'idle';
   const hasText      = discussionText.trim().length > 0;
 
-  const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback && !isTranslating;
+  const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback;
   const isSaveEnabled     = hasText && isIdle && feedbackCompleted && !isFetchingFeedback;
 
   // ── Start recording ──────────────────────────────────────────────────────
@@ -197,23 +169,23 @@ export default function MoMEntryPostRecordingScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
-        category: 'Information / Intimation',
-        category_reason: 'The agenda shares updates and announcements regarding sanitation, observances, and health precautions.',
+        category: 'Public Health & Sanitation',
+        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
         feedback: [
-          'The following information was shared regarding Swachh Saturday village cleanliness activities —',
-          'The following information was shared regarding Onagalu Day observance —',
-          'The following information was shared regarding COVID-19 JN.1 precautionary measures —',
-          'Members were informed about the actions to be taken for —',
-          'Information was provided to the Gram Sabha regarding the status of —',
-          'The Gram Sabha acknowledged the information and resolved that —',
+          'The following information was given about Swachh Saturday —',
+          'The following information was given about Village Sanitation —',
+          'The following information was given about Onagalu Day —',
+          'The following information was given about COVID JN.1 —',
+          'The following information was given about precautionary measures —',
+          'The meeting discussed the following key topics:',
         ],
         spans: [
           'Swachh Saturday village cleanliness activities',
+          null,
           'Onagalu Day observance',
           'COVID-19 JN.1 precautionary measures',
           null,
           'Information was provided regarding',
-          null,
         ],
       };
       setIsFetchingFeedback(false);
@@ -228,7 +200,7 @@ export default function MoMEntryPostRecordingScreen() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           agenda_id:      agenda ? String(agenda.id) : '1',
-          agenda_subject: agenda?.heading ?? '',
+          agenda_subject: agenda?.heading || 'General Discussion',
           mom_discussion: discussionText,
         }),
       });
@@ -253,7 +225,7 @@ export default function MoMEntryPostRecordingScreen() {
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     if (agenda) markCompleted(agenda.id);
-    navigate('/');
+    navigate('/agenda-list');
   };
 
   // Determine the active error message to show (STT takes priority)
@@ -262,125 +234,118 @@ export default function MoMEntryPostRecordingScreen() {
   return (
     <MeetingShellLayout stepperActiveState={2}>
 
-      {/* ── Outer white card ── */}
-      <div className="bg-white flex flex-col gap-5 p-5 rounded-[15px]">
+      <div className="flex flex-col gap-[3px]">
 
-        <GoBackToPreviousPage
-          label={t('go_back')}
-          onClick={() => navigate('/')}
-        />
+        {/* Header bar */}
+        <div className="bg-white pl-[20px] pr-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 w-full">
+          <GoBackToPreviousPage
+            label={t('go_back')}
+            onClick={() => navigate('/agenda-list')}
+          />
+        </div>
 
-        {/* Two-column layout */}
-        <div className="flex gap-5 items-start">
+        {/* Body */}
+        <div className="bg-white flex gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
 
-          {/* ── Left: entry card ── */}
-          <div className="bg-white border border-[rgba(106,62,49,0.24)] flex flex-col gap-9 items-start pb-[30px] pt-5 px-5 rounded-[15px] flex-1 min-w-0">
+          {/* ── Left column ── */}
+          <div className="flex flex-col gap-[20px] flex-1 min-w-0">
 
-            {/* Card body */}
-            <div className="flex flex-col gap-5 items-start shrink-0 w-full">
-              <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
+            <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
-              <div className="flex flex-col gap-[25px] items-end shrink-0 w-full">
+            {/* Agenda card */}
+            <AgendaCard
+              stage="subpage"
+              agendaNumber={agenda ? String(agenda.id) : '1'}
+              agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
+              agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
+              className="shrink-0 w-full"
+            />
 
-                {/* Agenda card */}
-                <AgendaCard
-                  stage="inside"
-                  agendaNumber={agenda ? String(agenda.id) : '1'}
-                  agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
-                  agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
-                  className="shrink-0 w-full"
-                />
-
-                <div className="flex flex-col gap-[25px] items-start shrink-0 w-full">
-
-                  {/* Action field */}
-                  <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-                    <QuestionFieldsSmall
-                      type="mandatory"
-                      questionText={t('action_field_label')}
-                      className="shrink-0 w-full"
-                    />
-                    <div className="relative shrink-0">
-                      {actionOpen && (
-                        <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
-                      )}
-                      <div className="relative z-20">
-                        <Button
-                          variant="outlined"
-                          iconPlacement="right"
-                          text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                          onClick={() => setActionOpen(o => !o)}
-                        />
-                        {actionOpen && (
-                          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                            {(['action_option_approval', 'action_option_discussion'] as const).map(key => (
-                              <button
-                                key={key}
-                                className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                                onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                              >
-                                <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
-                                  {t(key)}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+            {/* Action field */}
+            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
+              <QuestionFieldsSmall
+                type="mandatory"
+                questionText={t('action_field_label')}
+                className="shrink-0 w-full"
+              />
+              <div className="relative shrink-0">
+                {actionOpen && (
+                  <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
+                )}
+                <div className="relative z-20">
+                  <Button
+                    variant="outlined"
+                    iconPlacement="right"
+                    text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
+                    onClick={() => setActionOpen(o => !o)}
+                  />
+                  {actionOpen && (
+                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
+                      {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
+                        <button
+                          key={key}
+                          className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
+                          onClick={() => { setSelectedAction(key); setActionOpen(false); }}
+                        >
+                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
+                            {t(key)}
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  </div>
-
-                  {/* Discussion field + floating mic */}
-                  <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
-                    <QuestionFieldsSmall
-                      type="mandatory"
-                      questionText={t('discussion_field_label')}
-                      className="shrink-0"
-                    />
-
-                    {/* Info / error box */}
-                    {activeError ? (
-                      <InfoBox
-                        type="default"
-                        text={activeError}
-                        className="shrink-0 w-full"
-                      />
-                    ) : (
-                      <InfoBox
-                        type="outlined"
-                        text={t('discussion_field_info')}
-                        className="shrink-0 w-full"
-                      />
-                    )}
-
-                    <TextAreaContainer
-                      state={isRecording || isProcessing ? 'recording' : hasText ? 'filled' : 'default'}
-                      placeholder={t('discussion_field_placeholder')}
-                      value={discussionText}
-                      onChange={isIdle ? setDiscussionText : undefined}
-                      onStopRecording={handleCancelRecording}
-                      onAcceptRecording={handleConfirmRecording}
-                      analyserNode={analyserNode ?? undefined}
-                      className="shrink-0 w-full"
-                    />
-
-                    {/* Mic button — floats centred below textarea */}
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                      <MicButton
-                        pulse
-                        isRecording={isRecording}
-                        disabled={isProcessing || isFetchingFeedback || isTranslating}
-                        onClick={handleMicClick}
-                      />
-                    </div>
-                  </div>
-
+                  )}
                 </div>
               </div>
             </div>
 
+            {/* Discussion field + floating mic */}
+            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
+              <QuestionFieldsSmall
+                type="mandatory"
+                questionText={t('discussion_field_label')}
+                className="shrink-0"
+              />
+
+              {/* Info / error box */}
+              {activeError ? (
+                <InfoBox
+                  type="default"
+                  text={activeError}
+                  className="shrink-0 w-full"
+                />
+              ) : (
+                <InfoBox
+                  type="outlined"
+                  text={t('discussion_field_info')}
+                  className="shrink-0 w-full"
+                />
+              )}
+
+              <TextAreaContainer
+                state={isRecording || isProcessing ? 'recording' : hasText ? 'filled' : 'default'}
+                placeholder={t('discussion_field_placeholder')}
+                value={discussionText}
+                onChange={setDiscussionText}
+                onStopRecording={handleCancelRecording}
+                onAcceptRecording={handleConfirmRecording}
+                analyserNode={analyserNode ?? undefined}
+                highlighted
+                className="shrink-0 w-full"
+              />
+
+              {/* Mic button — floats centred below textarea */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                <MicButton
+                  pulse
+                  isRecording={isRecording}
+                  disabled={isProcessing || isFetchingFeedback}
+                  onClick={handleMicClick}
+                />
+              </div>
+            </div>
+
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-center justify-end shrink-0 w-full">
+            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
               {isProcessing && (
                 <span
                   className="text-sm text-[#727272] mr-2"
@@ -395,11 +360,6 @@ export default function MoMEntryPostRecordingScreen() {
                   style={{ fontFamily: 'Noto Sans' }}
                 >
                   {t('feedback_fetching')}
-                </span>
-              )}
-              {isTranslating && (
-                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
-                  {t('translating')}
                 </span>
               )}
               <Button
@@ -420,14 +380,9 @@ export default function MoMEntryPostRecordingScreen() {
           </div>
 
           {/* ── Right: feedback panel (empty state) ── */}
-          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-5 items-start pb-[30px] pt-5 px-5 rounded-[15px] w-[300px] shrink-0 self-stretch">
+          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch">
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
-            <p
-              className="font-normal text-xs leading-[18px] text-[#3b3b3b] shrink-0"
-              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-            >
-              {t('feedback_empty_state')}
-            </p>
+            <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
           </div>
 
         </div>

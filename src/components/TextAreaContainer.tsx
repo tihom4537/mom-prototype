@@ -1,8 +1,6 @@
 import { useRef, useEffect } from 'react';
 
-const imgIconBase = "https://www.figma.com/api/mcp/asset/1752d8dc-e842-4f52-9aba-6410f66e82be";
-const imgCloseVec = "https://www.figma.com/api/mcp/asset/3604a723-50e4-461e-b7eb-17f1c801523e";
-const imgCheckVec = "https://www.figma.com/api/mcp/asset/faadd345-05a2-4359-ac39-16e650cb75a4";
+import Icon from './Icon';
 
 export type TextAreaState = 'default' | 'filled' | 'recording';
 
@@ -61,6 +59,8 @@ interface TextAreaContainerProps {
   onSpanHoverEnter?: (cardId: string) => void;
   onSpanHoverLeave?: (cardId: string) => void;
   onSpanClick?: (cardId: string) => void;
+  /** Applies permanent coral border + subtle tint (for MoM Entry screens) */
+  highlighted?: boolean;
   className?: string;
 }
 
@@ -76,20 +76,13 @@ export default function TextAreaContainer({
   onSpanHoverEnter,
   onSpanHoverLeave,
   onSpanClick,
+  highlighted = false,
   className,
 }: TextAreaContainerProps) {
   const isFilled = state === 'filled';
   const isRecording = state === 'recording';
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  // Auto-resize textarea to fit content — no internal scrollbar ever
-  useEffect(() => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
 
   useEffect(() => {
     if (!analyserNode || !canvasRef.current) return;
@@ -134,59 +127,76 @@ export default function TextAreaContainer({
     return () => cancelAnimationFrame(animId);
   }, [analyserNode]);
 
-  const useRichText = highlights !== undefined;
+  const useRichText = highlights !== undefined && highlights.length > 0;
 
   return (
     <div
-      className={`border border-[#c6c6c6] flex flex-col items-center pl-1 pr-[10px] pt-1 rounded-lg
-        ${isRecording ? 'bg-[rgba(201,201,201,0.08)] gap-[49px] pb-[10px]' : 'bg-[rgba(201,201,201,0.08)] justify-center pb-[30px]'}
-        ${isFilled ? 'bg-[rgba(201,201,201,0.2)]' : ''}
+      className={`flex flex-col items-center pl-[4px] pr-[10px] pt-[4px] rounded-[8px]
+        ${isRecording
+          ? 'border border-[#ff7266] bg-[rgba(201,201,201,0.1)]'
+          : (highlighted || !isFilled)
+            ? 'border border-[#c6c6c6] bg-[rgba(201,201,201,0.1)]'
+            : 'border border-[#727272] bg-[rgba(201,201,201,0.2)]'}
+        ${isRecording ? 'gap-[49px] pb-[10px]' : 'justify-center pb-[30px]'}
         ${className ?? 'w-full'}`}
     >
       {/* Text display area */}
-      <div className="flex items-start px-2 py-1 shrink-0 w-full">
+      <div className="flex items-start px-[8px] py-[4px] shrink-0 w-full">
         {useRichText ? (
-          /* Rich-text view: highlighted spans, read-only */
-          <div
-            className="flex-1 font-normal text-sm leading-5 tracking-[0.25px] text-[#212121] min-h-[60px] whitespace-pre-wrap break-words"
-            style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-          >
-            {value
-              ? buildSegments(value, highlights ?? []).map((seg, i) =>
-                  seg.highlight ? (
-                    <span
-                      key={i}
-                      style={{
-                        backgroundColor: seg.highlight.isActive
-                          ? (seg.highlight.type === 'add-missing-details'
-                              ? 'rgba(255,116,104,0.5)'
-                              : 'rgba(97,58,245,0.4)')
-                          : (seg.highlight.type === 'add-missing-details'
-                              ? 'rgba(255,116,104,0.2)'
-                              : 'rgba(97,58,245,0.18)'),
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        padding: '0 2px',
-                        transition: 'background-color 0.15s',
-                      }}
-                      onMouseEnter={() => onSpanHoverEnter?.(seg.highlight!.cardId)}
-                      onMouseLeave={() => onSpanHoverLeave?.(seg.highlight!.cardId)}
-                      onClick={() => onSpanClick?.(seg.highlight!.cardId)}
-                    >
-                      {seg.text}
-                    </span>
-                  ) : (
-                    <span key={i}>{seg.text}</span>
+          /* Rich-text view: highlighted spans overlay — editable textarea sits beneath */
+          <div className="flex-1 relative min-h-[160px] max-h-[300px]">
+            {/* Editable textarea (transparent text, always editable) */}
+            {onChange && (
+              <textarea
+                ref={textareaRef}
+                className="absolute inset-0 w-full h-full font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none text-transparent caret-[#212121] z-10"
+                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                value={value}
+                onChange={e => onChange(e.target.value)}
+              />
+            )}
+            {/* Visual highlight layer */}
+            <div
+              className="w-full h-full font-normal text-sm leading-[20px] tracking-[0.25px] text-[#212121] whitespace-pre-wrap break-words overflow-y-auto pointer-events-none"
+              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            >
+              {value
+                ? buildSegments(value, highlights ?? []).map((seg, i) =>
+                    seg.highlight ? (
+                      <span
+                        key={i}
+                        className="pointer-events-auto"
+                        style={{
+                          backgroundColor: seg.highlight.isActive
+                            ? (seg.highlight.type === 'add-missing-details'
+                                ? 'rgba(255,116,104,0.5)'
+                                : 'rgba(97,58,245,0.4)')
+                            : (seg.highlight.type === 'add-missing-details'
+                                ? 'rgba(255,116,104,0.2)'
+                                : 'rgba(97,58,245,0.18)'),
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          padding: '0 2px',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={() => onSpanHoverEnter?.(seg.highlight!.cardId)}
+                        onMouseLeave={() => onSpanHoverLeave?.(seg.highlight!.cardId)}
+                        onClick={() => onSpanClick?.(seg.highlight!.cardId)}
+                      >
+                        {seg.text}
+                      </span>
+                    ) : (
+                      <span key={i}>{seg.text}</span>
+                    )
                   )
-                )
-              : <span className="text-[#727272]">{placeholder}</span>
-            }
+                : <span className="text-[#727272]">{placeholder}</span>
+              }
+            </div>
           </div>
         ) : onChange ? (
           <textarea
             ref={textareaRef}
-            className={`flex-1 font-normal text-sm leading-5 tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-hidden min-h-[60px]
-              ${isFilled ? 'text-[#212121]' : 'text-[#727272]'}`}
+            className="flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-y-auto min-h-[160px] max-h-[300px] text-[#212121] placeholder:text-[#727272]"
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
             placeholder={placeholder}
             value={value}
@@ -194,8 +204,8 @@ export default function TextAreaContainer({
           />
         ) : (
           <p
-            className={`flex-1 font-normal text-sm leading-5 tracking-[0.25px] overflow-hidden text-ellipsis whitespace-nowrap min-h-px min-w-px
-              ${isFilled ? 'text-[#212121]' : 'text-[#727272]'}`}
+            className={`flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] min-h-px min-w-px
+              ${isFilled ? 'text-[#212121]' : 'text-[#727272] overflow-hidden text-ellipsis whitespace-nowrap'}`}
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >
             {value ?? placeholder}
@@ -217,24 +227,14 @@ export default function TextAreaContainer({
                 onClick={onStopRecording}
                 className="bg-[#b7131a] flex gap-2 items-center justify-center overflow-clip p-2 rounded-lg size-[33px] cursor-pointer border-none"
               >
-                <div className="overflow-clip relative size-6 shrink-0">
-                  <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                  <div className="absolute inset-[20.83%]">
-                    <img alt="" className="absolute block max-w-none size-full" src={imgCloseVec} />
-                  </div>
-                </div>
+                <Icon name="close" size="small" color="white" />
               </button>
               {/* Accept */}
               <button
                 onClick={onAcceptRecording}
                 className="bg-[#3c9718] flex gap-2 items-center justify-center overflow-clip p-2 rounded-lg size-[33px] cursor-pointer border-none"
               >
-                <div className="overflow-clip relative size-6 shrink-0">
-                  <img alt="" className="absolute block max-w-none size-full" src={imgIconBase} />
-                  <div className="absolute inset-[23.29%_12.5%_20.83%_14.21%]">
-                    <img alt="" className="absolute block max-w-none size-full" src={imgCheckVec} />
-                  </div>
-                </div>
+                <Icon name="check" size="small" color="white" />
               </button>
             </div>
           </div>

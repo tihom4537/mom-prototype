@@ -1,8 +1,5 @@
 import { useState } from 'react';
-
-const imgAccountCircle = "https://www.figma.com/api/mcp/asset/386b84fa-111d-436d-a3e1-259e8c7aa80b";
-const imgProfileVec1 = "https://www.figma.com/api/mcp/asset/76b8e93b-7180-4156-aa1c-cd6a72368ad2";
-const imgProfileVec2 = "https://www.figma.com/api/mcp/asset/0320df26-878a-4ed8-8160-a439fa270065";
+import Icon from './Icon';
 
 export type DropdownLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -36,14 +33,8 @@ export default function DropdownBoxOfProfile({
       {/* Closed state - shows profile pill */}
       {!isExpanded && (
         <div className="bg-[#f7f0ee] flex gap-[11px] items-center p-[10px] rounded-xl w-full cursor-pointer" onClick={toggle}>
-          <div className="overflow-clip relative shrink-0 size-[38px]">
-            <img alt="" className="absolute block max-w-none size-full" src={imgAccountCircle} />
-            <div className="absolute inset-[16.67%_16.67%_29.88%_16.67%]">
-              <img alt="" className="absolute block max-w-none size-full" src={imgProfileVec1} />
-            </div>
-            <div className="absolute inset-[8.33%]">
-              <img alt="" className="absolute block max-w-none size-full" src={imgProfileVec2} />
-            </div>
+          <div className="flex items-center justify-center shrink-0 size-[38px]">
+            <Icon name="account_circle" size="large" color="#6a3e31" />
           </div>
           <div className="flex flex-1 flex-col gap-[3px] items-start min-h-px min-w-px text-[#212121]">
             <p className="font-medium text-sm leading-[18px] w-full truncate" style={{ fontFamily: 'Noto Sans' }}>

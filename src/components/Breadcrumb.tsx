@@ -1,4 +1,4 @@
-const imgChevronRight = "https://www.figma.com/api/mcp/asset/2123c961-4d39-444a-9572-b219cf8e5cb9";
+import Icon from './Icon';
 
 interface BreadcrumbProps {
   level?: 3 | 4;
@@ -28,9 +28,7 @@ export default function Breadcrumb({ level = 3, items, className }: BreadcrumbPr
               {crumb}
             </span>
             {!isLast && (
-              <div className="relative shrink-0 size-[6px]">
-                <img alt="›" className="absolute block max-w-none size-full" src={imgChevronRight} />
-              </div>
+              <Icon name="chevron_right" size="small" color="#727272" />
             )}
           </div>
         );

@@ -3,15 +3,17 @@ export type SidenavDropdownState = 'no-hover' | 'hover' | 'selected';
 interface DropdownOptionsInSidenavProps {
   state?: SidenavDropdownState;
   text?: string;
+  onClick?: () => void;
   className?: string;
 }
 
 export default function DropdownOptionsInSidenav({
   state = 'no-hover',
   text = 'Meeting List',
+  onClick,
   className,
 }: DropdownOptionsInSidenavProps) {
-  const borderColor =
+  const barColor =
     state === 'selected'
       ? 'bg-[#6a3e31]'
       : state === 'hover'
@@ -26,12 +28,16 @@ export default function DropdownOptionsInSidenav({
       : '';
 
   return (
-    <div className={className ?? 'flex gap-[5px] items-center w-[166px]'}>
+    <div
+      className={`${className ?? 'flex gap-[5px] items-center w-[166px]'} cursor-pointer`}
+      onClick={onClick}
+    >
       {/* Left vertical bar */}
-      <div className={`self-stretch shrink-0 w-[1.667px] ${borderColor}`} />
+      <div className={`self-stretch shrink-0 w-[1.667px] ${barColor}`} />
       {/* Content */}
       <div
-        className={`flex flex-1 flex-wrap gap-y-3 items-center min-h-px min-w-px px-3 py-2 rounded-xl ${contentBg}`}
+        className={`flex flex-1 flex-wrap gap-y-3 items-center min-h-px min-w-px px-3 py-2 rounded-xl transition-colors
+          ${contentBg || 'hover:bg-[#f7f0ee]'}`}
       >
         <div className="flex flex-1 flex-col items-start justify-center min-h-px min-w-px rounded-xl">
           <span

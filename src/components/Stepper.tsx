@@ -1,4 +1,4 @@
-const imgCheck = "https://www.figma.com/api/mcp/asset/c227c8a0-4ee7-4b2c-bf5d-a0a7f545e2f8";
+import Icon from './Icon';
 
 export type StepperActiveState = 2 | 3;
 
@@ -41,9 +41,7 @@ export default function Stepper({ activeState = 2, stepLabels, className }: Step
               <div className="flex items-center p-0 shrink-0">
                 {step.status === 'completed' ? (
                   <div className="bg-[#3c9718] flex flex-col items-center justify-center px-1 py-[6px] rounded-full shrink-0 size-8">
-                    <div className="relative shrink-0 size-5">
-                      <img alt="✓" className="absolute block max-w-none size-full" src={imgCheck} />
-                    </div>
+                    <Icon name="check" size="small" color="white" />
                   </div>
                 ) : step.status === 'active' ? (
                   <div className="border-2 border-[#3c9718] relative rounded-full shrink-0 size-8 flex items-center justify-center">

@@ -1,76 +1,82 @@
 import Icon from './Icon';
 import DropdownOptionsInSidenav from './DropdownOptionsInSidenav';
 
-export type SideNavState = 'default' | 'hover' | 'clicked-open';
+export interface SubNavItem {
+  label: string;
+  onClick?: () => void;
+  isActive?: boolean;
+}
 
 interface SideNavOptionsProps {
-  state?: SideNavState;
-  text?: string;
-  subItems?: string[];
+  icon?: string;
+  label?: string;
+  subItems?: SubNavItem[];
+  isOpen?: boolean;
+  isActive?: boolean;
+  onClick?: () => void;
   className?: string;
 }
 
-const imgPeopleAlt = "https://www.figma.com/api/mcp/asset/6f256e0e-a211-48a6-82ae-fd302b68c275";
-const imgPeopleGroup = "https://www.figma.com/api/mcp/asset/5b52f57f-a36c-4095-9e22-910d88e65e84";
-
 export default function SideNavOptions({
-  state = 'default',
-  text = 'Reports',
-  subItems = ['Create Meeting', 'Meeting List', 'Start Meeting'],
+  icon = 'people_alt',
+  label = 'Meetings',
+  subItems = [],
+  isOpen = false,
+  isActive = false,
+  onClick,
   className,
 }: SideNavOptionsProps) {
-  const isClickedOpen = state === 'clicked-open';
-  const isHover = state === 'hover';
+  const hasSubItems = subItems.length > 0;
+  const isHighlighted = isOpen || isActive;
 
   return (
-    <div className={className ?? 'flex flex-col gap-2 items-start w-[188px]'}>
-      {/* Main nav item */}
-      <div
-        className={`flex flex-wrap gap-3 items-center px-3 py-[9px] rounded-2xl w-full
-          ${isClickedOpen ? 'bg-[#ff7266]' : isHover ? 'bg-[#f7f0ee]' : ''}`}
+    <div className={className ?? 'flex flex-col items-start w-[188px]'}>
+      {/* Main nav row */}
+      <button
+        onClick={onClick}
+        className={`flex gap-3 items-center px-3 py-[9px] rounded-2xl w-full cursor-pointer border-none text-left transition-colors
+          ${isHighlighted ? 'bg-[#ff7266]' : 'bg-transparent hover:bg-[#f7f0ee]'}`}
       >
-        {/* Icon */}
-        <div className="flex h-[35px] items-center overflow-clip shrink-0">
-          {isClickedOpen ? (
-            <div className="relative overflow-clip size-6">
-              <img alt="" className="absolute block max-w-none size-full" src={imgPeopleAlt} />
-              <div className="absolute inset-[16.67%_4.17%]">
-                <img alt="" className="absolute block max-w-none size-full" src={imgPeopleGroup} />
-              </div>
-            </div>
-          ) : (
-            <Icon type="file_copy" className="relative overflow-clip size-6" />
-          )}
+        <div className="flex h-[35px] items-center shrink-0">
+          <Icon name={icon} size="medium" color={isHighlighted ? 'white' : '#6a3e31'} />
         </div>
 
-        {/* Label */}
-        <div className="flex flex-1 flex-col items-start justify-center min-h-px min-w-px rounded-xl">
+        <div className="flex flex-1 flex-col items-start justify-center min-h-px min-w-px">
           <span
-            className={`text-sm font-medium leading-6 tracking-[0px]
-              ${isClickedOpen ? 'text-[#f7f0ee]' : 'text-[#6a3e31]'}`}
+            className={`text-sm font-medium leading-6 tracking-[0px] ${isHighlighted ? 'text-[#f7f0ee]' : 'text-[#6a3e31]'}`}
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >
-            {isClickedOpen ? 'Meetings' : text}
+            {label}
           </span>
         </div>
 
-        {/* Chevron */}
-        <div className={`flex items-center justify-center shrink-0 ${isClickedOpen ? '-scale-y-100' : ''}`}>
-          <Icon type="arrow_drop_down" className="relative overflow-clip size-6" />
-        </div>
-      </div>
+        {hasSubItems && (
+          <div
+            className="flex items-center justify-center shrink-0 transition-transform duration-200"
+            style={{ transform: isOpen ? 'scaleY(-1)' : 'scaleY(1)' }}
+          >
+            <Icon name="arrow_drop_down" size="medium" color={isHighlighted ? 'white' : '#6a3e31'} />
+          </div>
+        )}
+      </button>
 
-      {/* Dropdown sub-items (shown when clicked open) */}
-      {isClickedOpen && (
-        <div className="flex flex-col gap-2 items-start pl-[22px] w-full">
-          {subItems.map((item, i) => (
-            <DropdownOptionsInSidenav
-              key={i}
-              text={item}
-              state={i === subItems.length - 1 ? 'hover' : 'no-hover'}
-              className="flex gap-[5px] items-center shrink-0 w-[166px]"
-            />
-          ))}
+      {/* Sub-items — animated expand/collapse */}
+      {hasSubItems && (
+        <div
+          className="w-full overflow-hidden transition-all duration-200 ease-in-out"
+          style={{ maxHeight: isOpen ? `${subItems.length * 52}px` : '0px' }}
+        >
+          <div className="flex flex-col gap-2 items-start pl-[22px] w-full pt-2 pb-1">
+            {subItems.map((item, i) => (
+              <DropdownOptionsInSidenav
+                key={i}
+                text={item.label}
+                state={item.isActive ? 'selected' : 'no-hover'}
+                onClick={item.onClick}
+                className="flex gap-[5px] items-center shrink-0 w-[166px]"
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

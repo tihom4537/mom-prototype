@@ -2,7 +2,7 @@ import NumberCircle from './NumberCircle';
 import CompletionTag from './CompletionTag';
 import Button from './Button';
 
-export type AgendaStage = 'default' | 'completed' | 'inside';
+export type AgendaStage = 'default' | 'completed' | 'inside' | 'subpage';
 
 interface AgendaCardProps {
   stage?: AgendaStage;
@@ -31,31 +31,55 @@ export default function AgendaCard({
   onEditProceedings,
   className,
 }: AgendaCardProps) {
-  const isInside = stage === 'inside';
+  const isDefault   = stage === 'default';
   const isCompleted = stage === 'completed';
+  const isInside    = stage === 'inside';
+  const isSubpage   = stage === 'subpage';
+  const isCompact   = isInside || isSubpage;
+
+  // ── Container styles ──────────────────────────────────────────────────────
+  // default/completed: white card, 15px radius, px-25 py-20, border rgba(106,62,49,0.32)
+  // inside:           #f7f0ee bg, 8px radius, px-15 pt-8 pb-10, NO border
+  // subpage/grey:     #f8f8f8 bg, 8px radius, px-15 pt-8 pb-10, border #ddd
+  const containerCls = isSubpage
+    ? 'border border-[rgba(106,62,49,0.24)] px-[15px] pt-[8px] pb-[10px] rounded-[8px]'
+    : isInside
+    ? 'bg-[#f7f0ee] px-[15px] pt-[8px] pb-[10px] rounded-[8px]'
+    : 'bg-white border border-[rgba(106,62,49,0.32)] px-[25px] py-[20px] gap-[16px] rounded-[15px]';
+
+  // ── NumberCircle type ─────────────────────────────────────────────────────
+  // default/completed/subpage: type5 — #efe0dc 32px NO border
+  // inside:                    proceedings — #efe0dc 32px WITH border #6a3e31
+  const circleType = isInside ? 'proceedings' : 'subpage';
+
+  // ── Heading color ─────────────────────────────────────────────────────────
+  // subpage/grey: #4b4b4b  |  all others: #6a3e31
+  const headingColor = isSubpage ? 'text-[#4b4b4b]' : 'text-[#6a3e31]';
 
   return (
-    <div
-      className={`border border-[rgba(106,62,49,0.32)] flex flex-col items-end rounded-[15px]
-        ${isInside ? 'bg-[#f7f0ee] p-[15px] w-[810px]' : 'bg-white gap-4 p-[25px] w-full'}
-        ${className ?? ''}`}
-    >
-      {/* Header row */}
-      <div className={`flex items-start pt-[3px] shrink-0 w-full ${!isInside ? 'justify-between' : ''}`}>
-        <div className={`flex gap-[15px] items-start max-w-[780px] ${isInside ? 'shrink-0 w-[780px]' : 'flex-1 min-h-px min-w-px'}`}>
-          <NumberCircle
-            type={isInside ? 'proceedings' : 'agenda'}
-            number={agendaNumber}
-          />
-          <div className="flex flex-col gap-[9px] items-start justify-center shrink-0 w-[727px] py-[3px]">
+    <div className={`flex flex-col items-end w-full ${containerCls} ${className ?? ''}`}>
+
+      {/* ── Header row ── */}
+      <div className={`flex items-start pt-[3px] shrink-0 w-full ${!isCompact ? 'justify-between' : ''}`}>
+
+        {/* Left: circle + text */}
+        <div className={`flex gap-[15px] items-start ${isCompact ? 'w-full' : 'flex-1 min-h-px min-w-px'}`}>
+
+          {/* Number circle — always 32px; inside adds border */}
+          <NumberCircle type={circleType} number={agendaNumber} />
+
+          {/* Text block */}
+          {/* compact: no gap/padding between heading & desc */}
+          {/* default/completed: gap-[9px] + py-[3px] on the block */}
+          <div className={`flex flex-col items-start justify-center flex-1 min-w-0 ${!isCompact ? 'gap-[9px] py-[3px]' : ''}`}>
             <p
-              className="font-medium leading-6 text-[#6a3e31] text-lg w-full"
+              className={`font-medium leading-6 w-full ${!isCompact ? 'text-[18px]' : 'text-[14px]'} ${headingColor}`}
               style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
             >
               {agendaHeading}
             </p>
             <p
-              className="font-normal leading-[21px] text-[#3b3b3b] text-sm w-full"
+              className={`font-normal leading-[21px] text-[#3b3b3b] w-full ${!isCompact ? 'text-[14px]' : 'text-[12px]'}`}
               style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
             >
               {agendaDescription}
@@ -63,14 +87,14 @@ export default function AgendaCard({
           </div>
         </div>
 
-        {/* Completion tag (not shown for inside stage) */}
-        {!isInside && (
-          <CompletionTag state={isCompleted ? 'completed' : 'pending'} className="shrink-0" />
+        {/* Completion tag — default/completed only */}
+        {!isCompact && (
+          <CompletionTag state={isCompleted ? 'completed' : 'pending'} className="shrink-0 ml-[15px]" />
         )}
       </div>
 
-      {/* Actions row */}
-      {stage === 'default' && (
+      {/* ── CTA — default: Add Proceedings ── */}
+      {isDefault && (
         <Button
           variant="filled"
           iconPlacement="left"
@@ -79,11 +103,14 @@ export default function AgendaCard({
           className="shrink-0"
         />
       )}
+
+      {/* ── CTA — completed: View + Edit ── */}
       {isCompleted && (
-        <div className="flex gap-4 items-start justify-end shrink-0">
+        <div className="flex gap-[16px] items-center justify-end shrink-0">
           <Button
             variant="outlined"
             iconPlacement="left"
+            iconName="visibility"
             text={viewProceedingsText}
             onClick={onViewProceedings}
             className="shrink-0"
@@ -91,12 +118,14 @@ export default function AgendaCard({
           <Button
             variant="filled"
             iconPlacement="left"
+            iconName="edit_note"
             text={editProceedingsText}
             onClick={onEditProceedings}
             className="shrink-0"
           />
         </div>
       )}
+
     </div>
   );
 }
