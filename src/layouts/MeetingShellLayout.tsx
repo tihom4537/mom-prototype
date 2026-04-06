@@ -5,8 +5,6 @@ import {
   Sidebar,
   Breadcrumb,
   Stepper,
-  MeetingDetailsCard,
-  Button,
   DropdownBoxOfProfile,
   DropdownBoxOfIcon,
 } from '../components';
@@ -21,7 +19,7 @@ export default function MeetingShellLayout({
   children,
   stepperActiveState = 2,
 }: MeetingShellLayoutProps) {
-  const { lang, setLang, t } = useLanguage();
+  const { t } = useLanguage();
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -72,25 +70,7 @@ export default function MeetingShellLayout({
         )}
       </div>
 
-      {/* ── Row 2: Language tab (fixed) ── */}
-      <div className="shrink-0 bg-white border-b border-[#eeeeee] flex gap-2 items-center px-6 py-2">
-        <Button
-          variant={lang === 'en' ? 'filled' : 'outlined'}
-          state="default"
-          iconPlacement="none"
-          text={t('lang_english')}
-          onClick={() => setLang('en')}
-        />
-        <Button
-          variant={lang === 'kn' ? 'filled' : 'outlined'}
-          state="default"
-          iconPlacement="none"
-          text={t('lang_kannada')}
-          onClick={() => setLang('kn')}
-        />
-      </div>
-
-      {/* ── Row 3: Sidebar + main column ── */}
+      {/* ── Row 2: Sidebar + main column ── */}
       <div className="flex flex-1 min-h-0">
 
         {/* Sidebar (fixed left column) */}
@@ -104,7 +84,7 @@ export default function MeetingShellLayout({
         <div className="flex flex-col flex-1 min-h-0 min-w-0">
 
           {/* Fixed upper section: breadcrumb + stepper */}
-          <div className="shrink-0 flex flex-col gap-5 px-6 pt-6 pb-5 shadow-[0_4px_12px_0_rgba(0,0,0,0.06)]">
+          <div className="shrink-0 flex flex-col gap-2 px-6 pt-5 pb-3 shadow-[0_1px_4px_0_rgba(0,0,0,0.04)]">
             <Breadcrumb
               level={3}
               items={[
@@ -119,13 +99,9 @@ export default function MeetingShellLayout({
             />
           </div>
 
-          {/* Scrollable lower section — meeting card + screen-specific content */}
-          <div className="flex-1 overflow-y-auto px-6 pt-6 pb-6">
+          {/* Scrollable lower section */}
+          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
             <div className="flex flex-col gap-5">
-              <MeetingDetailsCard
-                venue={`${t('meeting_venue_label')} HOSAKOTE GP office (1522007034027)`}
-                participants={`${t('meeting_participants_label')} 16`}
-              />
               {children}
             </div>
           </div>

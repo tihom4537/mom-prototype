@@ -7,7 +7,17 @@
       "Bash(tar -xzf /tmp/node.tar.gz -C /tmp/)",
       "Read(//tmp/node-v20.11.0-darwin-arm64/**)",
       "Bash(chmod +x /tmp/node-v20.11.0-darwin-arm64/bin/* && /tmp/node-v20.11.0-darwin-arm64/bin/node --version)",
-      "Bash(open http://localhost:5173/)"
+      "Bash(open http://localhost:5173/)",
+      "Bash(export PATH=\"/tmp/node-v20.11.0-darwin-x64/bin:$PATH\" && cd \"/Users/anusharajesh/Desktop/Panchatantra MoM prototype\" && npx tsc --noEmit 2>&1 | head -60)",
+      "Bash(export PATH=\"/tmp/node-v20.11.0-darwin-x64/bin:$PATH\" && cd \"/Users/anusharajesh/Desktop/Panchatantra MoM prototype\" && npx tsc --noEmit 2>&1)",
+      "Bash(export PATH=\"/tmp/node-v20.11.0-darwin-x64/bin:$PATH\" && cd \"/Users/anusharajesh/Desktop/Panchatantra MoM prototype\" && npm run build 2>&1)",
+      "Bash(cd \"/Users/anusharajesh/Desktop/Panchatantra MoM prototype\" && npm run build 2>&1 | tail -30)",
+      "Bash(export PATH=\"/tmp/node-v20.11.0-darwin-x64/bin:$PATH\")",
+      "Bash(timeout 10 npm run dev)",
+      "WebSearch",
+      "WebFetch(domain:doc.ux4g.gov.in)",
+      "WebFetch(domain:img1.digitallocker.gov.in)",
+      "WebFetch(domain:cdn.ux4g.gov.in)"
     ]
   }
 }

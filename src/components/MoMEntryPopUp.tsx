@@ -6,8 +6,7 @@ import TextAreaContainer from './TextAreaContainer';
 import MicButton from './MicButton';
 import Button from './Button';
 
-const imgCloseIcon = "https://www.figma.com/api/mcp/asset/769e6c03-6760-41e9-8eab-4f8d4cb977d1";
-const imgCloseVec = "https://www.figma.com/api/mcp/asset/3d6c8936-d4ce-4d8c-aa10-326cfa118f24";
+import Icon from './Icon';
 
 export type MoMPopUpState = 'default' | 'after-1-entry' | 'audio-recording';
 
@@ -42,14 +41,9 @@ export default function MoMEntryPopUp({
           {/* Close */}
           <button
             onClick={onClose}
-            className="flex gap-0 h-[27px] items-center justify-center p-2 rounded-lg shrink-0 w-[26px] cursor-pointer bg-transparent border-none"
+            className="flex items-center justify-center p-2 rounded-lg shrink-0 cursor-pointer bg-transparent border-none"
           >
-            <div className="overflow-clip relative size-6 shrink-0">
-              <img alt="" className="absolute block max-w-none size-full" src={imgCloseIcon} />
-              <div className="absolute inset-[20.83%]">
-                <img alt="" className="absolute block max-w-none size-full" src={imgCloseVec} />
-              </div>
-            </div>
+            <Icon name="close" size="medium" color="#212121" />
           </button>
         </div>
 

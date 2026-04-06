@@ -8,12 +8,12 @@ interface FeedbackCardTagsProps {
 const tagConfig: Record<FeedbackTagType, { label: string; bg: string; text: string }> = {
   'add-missing-details': {
     label: 'Add Missing Details',
-    bg: 'bg-[#ffe8e5]',
+    bg: 'bg-[#ffeeda]',
     text: 'text-[#b7131a]',
   },
   rephrase: {
     label: 'Rephrase',
-    bg: 'bg-[#f7f0ee]',
+    bg: 'bg-[#faefff]',
     text: 'text-[#613af5]',
   },
   'make-concise': {

@@ -1,4 +1,4 @@
-const imgMicIcon = "https://www.figma.com/api/mcp/asset/ad7b6587-ba59-4a34-b438-aff05e8d913a";
+import Icon from './Icon';
 
 interface MicButtonProps {
   onClick?: () => void;
@@ -70,9 +70,7 @@ export default function MicButton({
           ${className ?? ''}`}
         aria-label={isRecording ? 'Recording…' : 'Start recording'}
       >
-        <div className="relative h-[29px] w-[21px] shrink-0">
-          <img alt="" className="absolute block max-w-none size-full" src={imgMicIcon} />
-        </div>
+        <Icon name="mic" size="medium" color="white" />
       </button>
 
     </div>

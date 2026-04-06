@@ -1,13 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Icon from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
 
-// Figma asset URLs
-const imgLogo           = "https://www.figma.com/api/mcp/asset/566277a8-39a2-4add-8299-0e455fda30e5";
-const imgAccountCircle  = "https://www.figma.com/api/mcp/asset/386b84fa-111d-436d-a3e1-259e8c7aa80b";
-const imgProfileVec1    = "https://www.figma.com/api/mcp/asset/76b8e93b-7180-4156-aa1c-cd6a72368ad2";
-const imgProfileVec2    = "https://www.figma.com/api/mcp/asset/0320df26-878a-4ed8-8160-a439fa270065";
-const imgSettings       = "https://www.figma.com/api/mcp/asset/a7eae9e0-6a51-4753-abe9-b8714d458bcc";
-const imgSettingsVec1   = "https://www.figma.com/api/mcp/asset/95a3ea03-5fa4-4396-99aa-e95e9fc851c0";
-const imgSettingsVec2   = "https://www.figma.com/api/mcp/asset/3e05d1d7-d894-4082-841b-320b36f42ad0";
+// Karnataka government logo — saved locally in /public to avoid broken remote URLs
+const imgLogo = "/karnataka-emblem.png";
 
 export type NavbarVersion = 'default-with-welcome' | 'no-welcome';
 
@@ -21,6 +18,11 @@ interface NavbarProps {
   className?: string;
 }
 
+const LANG_OPTIONS: Array<{ code: 'en' | 'kn'; label: string; short: string }> = [
+  { code: 'en', label: 'English',  short: 'EN'     },
+  { code: 'kn', label: 'ಕನ್ನಡ',    short: 'ಕನ್ನಡ' },
+];
+
 export default function Navbar({
   version = 'default-with-welcome',
   userName = 'MANOJ MANDYA MANDYA',
@@ -31,6 +33,10 @@ export default function Navbar({
   className,
 }: NavbarProps) {
   const navigate = useNavigate();
+  const { lang, setLang } = useLanguage();
+  const [langOpen, setLangOpen] = useState(false);
+
+  const currentOption = LANG_OPTIONS.find(o => o.code === lang)!;
 
   return (
     <div
@@ -40,7 +46,7 @@ export default function Navbar({
     >
       {/* Left: Logo + Org name */}
       <div className="flex gap-[15px] items-center shrink-0">
-        {/* Logo — object-contain preserves aspect ratio without cropping */}
+        {/* Logo — branding asset, kept as img */}
         <div className="relative h-[57px] w-[66px] shrink-0">
           <img
             alt="Karnataka Logo"
@@ -48,7 +54,7 @@ export default function Navbar({
             src={imgLogo}
           />
         </div>
-        {/* Org name block — gap-[4px] between lines, subtitle uses leading-[18px] */}
+        {/* Org name block */}
         <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
           <p
             className="font-medium text-sm leading-7 w-full"
@@ -65,7 +71,7 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Right: Profile pill + Home + Settings */}
+      {/* Right: Profile pill → Language → Settings → Home */}
       <div className="flex gap-[26px] items-center justify-end shrink-0">
 
         {/* Profile pill */}
@@ -75,16 +81,10 @@ export default function Navbar({
             className="bg-[#f7f0ee] flex gap-[11px] items-center p-[10px] rounded-xl w-full cursor-pointer border-none text-left"
           >
             {/* Avatar */}
-            <div className="overflow-clip relative shrink-0 size-[38px]">
-              <img alt="" className="absolute block max-w-none size-full" src={imgAccountCircle} />
-              <div className="absolute inset-[16.67%_16.67%_29.88%_16.67%]">
-                <img alt="" className="absolute block max-w-none size-full" src={imgProfileVec1} />
-              </div>
-              <div className="absolute inset-[8.33%]">
-                <img alt="" className="absolute block max-w-none size-full" src={imgProfileVec2} />
-              </div>
+            <div className="flex items-center justify-center shrink-0 size-[38px]">
+              <Icon name="account_circle" size="large" color="#6a3e31" />
             </div>
-            {/* User info — leading-[18px] keeps pill height ≈ 58px → navbar ≈ 95px */}
+            {/* User info */}
             <div className="flex flex-1 flex-col gap-[3px] items-start min-h-px min-w-px text-[#212121]">
               <p
                 className="font-medium text-sm leading-[18px] w-full truncate"
@@ -105,40 +105,68 @@ export default function Navbar({
           </button>
         </div>
 
-        {/* Home icon — inline SVG, navigates to modules list page */}
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0"
-          aria-label="Home"
-          style={{ width: 34, height: 33 }}
-        >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#6a3e31"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        {/* Language dropdown */}
+        <div className="relative shrink-0">
+          {/* Outside-click overlay */}
+          {langOpen && (
+            <div className="fixed inset-0 z-10" onClick={() => setLangOpen(false)} />
+          )}
+
+          {/* Trigger button — shows current lang short name */}
+          <button
+            onClick={() => setLangOpen(o => !o)}
+            className="relative z-20 flex items-center gap-[2px] border border-[#6a3e31] rounded-lg px-3 py-[6px] bg-transparent cursor-pointer hover:bg-[#f7f0ee] transition-colors"
+            aria-label="Select language"
           >
-            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
-            <path d="M9 21V12h6v9" />
-          </svg>
-        </button>
+            <span
+              className="font-medium text-sm text-[#6a3e31] leading-5 whitespace-nowrap"
+              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            >
+              {currentOption.short}
+            </span>
+            <Icon name="arrow_drop_down" size="small" color="#6a3e31" />
+          </button>
+
+          {/* Dropdown panel */}
+          {langOpen && (
+            <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden z-20 min-w-[140px]">
+              {LANG_OPTIONS.map(({ code, label }) => (
+                <button
+                  key={code}
+                  onClick={() => { setLang(code); setLangOpen(false); }}
+                  className="flex items-center justify-between w-full px-4 py-[10px] bg-white hover:bg-[#f7f0ee] transition-colors border-none cursor-pointer"
+                >
+                  <span
+                    className={`text-sm text-[#212121] leading-5 ${lang === code ? 'font-semibold' : 'font-normal'}`}
+                    style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                  >
+                    {label}
+                  </span>
+                  {lang === code && (
+                    <Icon name="check" size="small" color="#6a3e31" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Settings icon */}
         <button
           onClick={onSettingsClick}
-          className="h-[33px] overflow-clip relative shrink-0 w-[34px] cursor-pointer bg-transparent border-none p-0"
+          className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0"
+          aria-label="Settings"
         >
-          <img alt="" className="absolute block max-w-none size-full" src={imgSettings} />
-          <div className="absolute inset-[16.67%_19.67%]">
-            <img alt="" className="absolute block max-w-none size-full" src={imgSettingsVec1} />
-          </div>
-          <div className="absolute inset-[8.33%_9.48%_8.33%_9.46%]">
-            <img alt="" className="absolute block max-w-none size-full" src={imgSettingsVec2} />
-          </div>
+          <Icon name="settings" size="medium" color="#6a3e31" />
+        </button>
+
+        {/* Home icon */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0"
+          aria-label="Home"
+        >
+          <Icon name="home" size="medium" color="#6a3e31" />
         </button>
 
       </div>

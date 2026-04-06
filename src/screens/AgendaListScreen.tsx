@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda } from '../context/AgendaContext';
-import { SectionHeading, AgendaNoLabel, Button, AgendaCard } from '../components';
+import { AgendaCard, AgendaListCard, MeetingDetailsCard } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 export default function AgendaListScreen() {
@@ -30,21 +30,21 @@ export default function AgendaListScreen() {
 
   return (
     <MeetingShellLayout stepperActiveState={2}>
-      <div className="bg-white flex flex-col gap-5 p-6 rounded-[15px]">
-        {/* Header row */}
-        <div className="flex items-center justify-between shrink-0 w-full">
-          <div className="flex items-center gap-4">
-            <SectionHeading text={t('agenda_list_heading')} />
-            <AgendaNoLabel text={`${agendaItems.length} ${t('agenda_count_label')}`} />
-          </div>
-          <Button
-            variant="filled"
-            iconPlacement="left"
-            text={viewMode === 'list' ? t('btn_single_view') : t('btn_list_view')}
-            onClick={toggleView}
-          />
-        </div>
-
+      <MeetingDetailsCard
+        meetingTitle="2nd GP General Body Meeting 2026"
+        modeOfMeeting="IN PERSON"
+        date="19/03/2026"
+        time="10:00 a.m"
+        venue="Venue: Kakanur GP Office (1501001003)"
+        participants="Participants: 14"
+      />
+      <AgendaListCard
+        heading={t('agenda_list_heading')}
+        countLabel={`${agendaItems.length} ${t('agenda_count_label')}`}
+        viewToggleLabel={viewMode === 'list' ? t('btn_single_view') : t('btn_list_view')}
+        viewToggleIcon={viewMode === 'list' ? 'web_asset' : 'format_list_bulleted'}
+        onViewToggle={toggleView}
+      >
         {/* List view — all cards stacked */}
         {viewMode === 'list' && agendaItems.map(item => (
           <AgendaCard
@@ -110,7 +110,7 @@ export default function AgendaListScreen() {
             </>
           );
         })()}
-      </div>
+      </AgendaListCard>
     </MeetingShellLayout>
   );
 }

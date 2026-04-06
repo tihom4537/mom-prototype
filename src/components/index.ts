@@ -23,6 +23,7 @@ export { default as SectionHeading } from './SectionHeading';
 export { default as MeetingDetailsTag } from './MeetingDetailsTag';
 export { default as SmallDetailsText } from './SmallDetailsText';
 export { default as AgendaCard } from './AgendaCard';
+export { default as AgendaListCard } from './AgendaListCard';
 export { default as AgendaNoLabel } from './AgendaNoLabel';
 export { default as NumberCircle } from './NumberCircle';
 export { default as MoMEntryPopUp } from './MoMEntryPopUp';
@@ -39,8 +40,8 @@ export { default as FeedbackCard } from './FeedbackCard';
 // Types
 export type { NavbarVersion } from './Navbar';
 export type { SidebarState } from './Sidebar';
-export type { SideNavState } from './SideNavOptions';
 export type { SidenavDropdownState } from './DropdownOptionsInSidenav';
+export type { SubNavItem } from './SideNavOptions';
 export type { IconType } from './Icon';
 export type { ButtonVariant, ButtonState, ButtonIconPlacement } from './Button';
 export type { CompletionState } from './CompletionTag';

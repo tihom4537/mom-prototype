@@ -1,6 +1,4 @@
-const imgReport = "https://www.figma.com/api/mcp/asset/eb1bfe87-f117-4c7e-b28e-893bb7671315";
-const imgReportFill = "https://www.figma.com/api/mcp/asset/f52d4b2d-7ead-48d1-bd53-b02d97718b46";
-const imgCheckCircle = "https://www.figma.com/api/mcp/asset/f28cfd19-f0d8-4eee-aae7-09ca06449744";
+import Icon from './Icon';
 
 export type CompletionState = 'pending' | 'completed';
 
@@ -18,41 +16,11 @@ export default function CompletionTag({ state = 'pending', className }: Completi
         ${className ?? ''}`}
     >
       {/* Icon */}
-      <div className="relative shrink-0 size-6">
-        {state === 'pending' ? (
-          <div
-            className="absolute inset-[12.5%]"
-            style={{
-              maskImage: `url('${imgReport}')`,
-              maskSize: '24px 24px',
-              maskPosition: '-3px -3px',
-              maskRepeat: 'no-repeat',
-              WebkitMaskImage: `url('${imgReport}')`,
-              WebkitMaskSize: '24px 24px',
-              WebkitMaskPosition: '-3px -3px',
-              WebkitMaskRepeat: 'no-repeat',
-            }}
-          >
-            <img alt="" className="absolute block max-w-none size-full" src={imgReportFill} />
-          </div>
-        ) : (
-          <div
-            className="absolute inset-[8.33%]"
-            style={{
-              maskImage: `url('${imgReport}')`,
-              maskSize: '24px 24px',
-              maskPosition: '-2px -2px',
-              maskRepeat: 'no-repeat',
-              WebkitMaskImage: `url('${imgReport}')`,
-              WebkitMaskSize: '24px 24px',
-              WebkitMaskPosition: '-2px -2px',
-              WebkitMaskRepeat: 'no-repeat',
-            }}
-          >
-            <img alt="" className="absolute block max-w-none size-full" src={imgCheckCircle} />
-          </div>
-        )}
-      </div>
+      {state === 'pending' ? (
+        <Icon name="warning_amber" size="small" color="#b7131a" />
+      ) : (
+        <Icon name="check_circle" size="small" color="#3c9718" />
+      )}
 
       {/* Label */}
       <span

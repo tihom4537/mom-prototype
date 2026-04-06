@@ -47,7 +47,9 @@ Located in `/src/components`, organised by group:
 ### Icons
 | Component | Notes |
 |---|---|
-| `Icon` | Accepts `name` prop — values: `arrow_drop_down`, `arrow_drop_down_up`, `file_copy`, `people_alt`, `menu` |
+| `Icon` | Accepts `name` prop — any Material Icons icon name, e.g. `arrow_drop_down`, `file_copy`, `people_alt`, `menu`, `home`, `settings` |
+
+Icons are rendered using the **UX4G design system** icon library, which is based on Material Icons. The `Icon` component at `/src/components/Icon.tsx` uses the Material Icons font loaded via Google Fonts. Always use icon names exactly as they appear in the UX4G / Material Icons library. **Never use emoji, external icon libraries, or inline SVGs for icons that exist in Material Icons.**
 
 ### Dropdowns
 | Component | Variants / States |
