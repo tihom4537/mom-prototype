@@ -199,9 +199,10 @@ export default function MoMEntryPostRecordingScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agenda_id:      agenda ? String(agenda.id) : '1',
-          agenda_subject: agenda?.heading || 'General Discussion',
-          mom_discussion: discussionText,
+          agenda_id:         agenda ? String(agenda.id) : '1',
+          agenda_subject:    agenda?.heading || 'General Discussion',
+          mom_discussion:    discussionText,
+          feedback_language: /[\u0C80-\u0CFF]/.test(discussionText) ? 'kn' : 'en',
         }),
       });
 

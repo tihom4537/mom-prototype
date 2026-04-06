@@ -1,4 +1,4 @@
-export type FeedbackTagType = 'add-missing-details' | 'rephrase' | 'make-concise';
+export type FeedbackTagType = 'fill-blanks' | 'rephrase';
 
 interface FeedbackCardTagsProps {
   type?: FeedbackTagType;
@@ -6,8 +6,8 @@ interface FeedbackCardTagsProps {
 }
 
 const tagConfig: Record<FeedbackTagType, { label: string; bg: string; text: string }> = {
-  'add-missing-details': {
-    label: 'Add Missing Details',
+  'fill-blanks': {
+    label: 'Fill in Details',
     bg: 'bg-[#ffeeda]',
     text: 'text-[#b7131a]',
   },
@@ -16,14 +16,9 @@ const tagConfig: Record<FeedbackTagType, { label: string; bg: string; text: stri
     bg: 'bg-[#faefff]',
     text: 'text-[#613af5]',
   },
-  'make-concise': {
-    label: 'Make Concise',
-    bg: 'bg-[#ffeeda]',
-    text: 'text-[#f5633a]',
-  },
 };
 
-export default function FeedbackCardTags({ type = 'add-missing-details', className }: FeedbackCardTagsProps) {
+export default function FeedbackCardTags({ type = 'fill-blanks', className }: FeedbackCardTagsProps) {
   const config = tagConfig[type];
   return (
     <div

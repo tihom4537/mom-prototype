@@ -51,6 +51,6 @@ export type { NumberCircleType } from './NumberCircle';
 export type { InfoBoxType } from './InfoBox';
 export type { QuestionFieldType } from './QuestionFieldsSmall';
 export type { TextAreaState, HighlightSpan } from './TextAreaContainer';
-export type { FeedbackCardType } from './FeedbackCard';
+export type { FeedbackCardType, Segment } from './FeedbackCard';
 export type { StepperActiveState } from './Stepper';
 export type { MoMPopUpState } from './MoMEntryPopUp';

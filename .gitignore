@@ -22,3 +22,12 @@ dist/
 # Logs
 *.log
 npm-debug.log*
+
+# Backend (FASTAPI-MoM copy)
+FASTAPI-MoM/__pycache__/
+FASTAPI-MoM/**/__pycache__/
+FASTAPI-MoM/.env
+FASTAPI-MoM/**/*.pyc
+FASTAPI-MoM/.specstory/
+FASTAPI-MoM/.claude/
+FASTAPI-MoM/.DS_Store
