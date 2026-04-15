@@ -24,6 +24,12 @@ export interface FeedbackResult {
   feedback: string[];
   /** Parallel array: the exact phrase in discussionText each feedback item refers to (null if no span) */
   spans?: (string | null)[];
+  /** Parallel array: mode for each feedback item — REPLACE | APPEND | REPHRASE */
+  modes?: string[];
+  /** Special flag when minutes need no changes or are invalid */
+  flag?: 'good_to_go' | 'poor_quality' | 'agenda_copy' | 'mismatch' | string | null;
+  /** Human-readable message to show when flag is set */
+  flag_message?: string | null;
 }
 
 export default function MoMEntryPostRecordingScreen() {

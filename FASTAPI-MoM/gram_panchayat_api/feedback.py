@@ -27,12 +27,12 @@ async def get_feedback(
     agenda_subject: str,
     mom_discussion: str,
     feedback_language: str = 'en',
-) -> Tuple[str, str, List[str], str, bool, List[Optional[str]]]:
+) -> Tuple[str, str, List[str], str, bool, List[Optional[str]], List[str], Optional[str], Optional[str]]:
     """
     Single LLM call that both categorizes and generates feedback.
 
     Returns:
-        (category, reason, feedback_list, feedback_raw, failed)
+        (category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message)
     """
     prompt = build_single_call_prompt(agenda_subject, mom_discussion, feedback_language)
 
@@ -43,36 +43,46 @@ async def get_feedback(
         category = (data.get("category") or "").strip()
         reason = (data.get("reason") or data.get("category_reason") or "").strip()
         feedback_raw_value = data.get("feedback") or []
+        flag = data.get("flag") or None
+        flag_message = data.get("flag_message") or None
 
         if category not in CATEGORIES:
             category = DEFAULT_CATEGORY
 
         spans_list: List[Optional[str]] = []
+        modes_list: List[str] = []
+
         if isinstance(feedback_raw_value, list):
             if feedback_raw_value and isinstance(feedback_raw_value[0], dict):
-                # New format: list of {span, suggestion} objects
+                # New format: list of {span, suggestion, mode} objects
                 feedback_list = []
                 for item in feedback_raw_value:
                     suggestion = str(item.get("suggestion") or "").strip()
                     span = item.get("span") or None
                     if isinstance(span, str):
                         span = span.strip() or None
+                    mode = str(item.get("mode") or "REPLACE").strip().upper()
+                    if mode not in ("REPLACE", "APPEND", "REPHRASE"):
+                        mode = "REPLACE"
                     if suggestion:
                         feedback_list.append(suggestion)
                         spans_list.append(span)
+                        modes_list.append(mode)
                 feedback_raw = "\n".join(f"- {s}" for s in feedback_list)
             else:
                 # Legacy format: plain list of strings
                 feedback_list = [str(item).strip() for item in feedback_raw_value if str(item).strip()]
                 spans_list = [None] * len(feedback_list)
+                modes_list = ["REPLACE"] * len(feedback_list)
                 feedback_raw = "\n".join(f"- {item}" for item in feedback_list)
         else:
             feedback_raw = str(feedback_raw_value).strip()
             feedback_list = parse_bulleted_feedback(feedback_raw)
             spans_list = [None] * len(feedback_list)
+            modes_list = ["REPLACE"] * len(feedback_list)
 
         failed = False
-        return category, reason, feedback_list, feedback_raw, failed, spans_list
+        return category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message
 
     except (LLMClientError, Exception) as exc:
         logger.exception(
@@ -84,5 +94,5 @@ async def get_feedback(
         reason = f"Categorization+feedback failed: {exc}"
         feedback_raw = f"ERROR: {exc}"
         feedback_list: List[str] = []
-        return category, reason, feedback_list, feedback_raw, True, []
+        return category, reason, feedback_list, feedback_raw, True, [], [], None, None
 

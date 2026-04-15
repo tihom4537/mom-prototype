@@ -24,6 +24,9 @@ class FeedbackResult(BaseModel):
     category_reason: str
     feedback: List[str]
     spans: List[Optional[str]] = []
+    modes: List[str] = []
+    flag: Optional[str] = None
+    flag_message: Optional[str] = None
 
 
 class SpeechToTextRequest(BaseModel):

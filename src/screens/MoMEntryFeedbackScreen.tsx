@@ -111,16 +111,19 @@ export default function MoMEntryFeedbackScreen() {
   const buildCards = (feedbackResult: FeedbackResult): CardState[] => {
     const feedback = feedbackResult.feedback ?? [];
     const spans    = feedbackResult.spans ?? [];
+    const modes    = feedbackResult.modes ?? [];
     return feedback.map((text, i) => {
-      const blanks = hasBlanks(text);
+      const mode   = (modes[i] ?? 'REPLACE').toUpperCase();
+      // REPHRASE mode never has blanks; REPLACE and APPEND always do
+      const isFill = mode !== 'REPHRASE' && hasBlanks(text);
       return {
         id:         `card-${i}`,
         suggestion: text,
-        type:       blanks ? 'fill-blanks' : 'rephrase',
+        type:       isFill ? 'fill-blanks' : 'rephrase',
         spanText:   spans[i] ?? null,
         dismissed:  false,
         accepted:   false,
-        segments:   blanks ? parseSegments(text) : [],
+        segments:   isFill ? parseSegments(text) : [],
       };
     });
   };
@@ -129,6 +132,9 @@ export default function MoMEntryFeedbackScreen() {
     routeState?.feedbackResult ? buildCards(routeState.feedbackResult) : []
   );
 
+  const [flagMessage, setFlagMessage]     = useState<string | null>(
+    routeState?.feedbackResult?.flag_message ?? null
+  );
   const [activeCardId, setActiveCardId]   = useState<string | null>(null);
   const feedbackListRef                   = useRef<HTMLDivElement>(null);
   const cardRefsMap                       = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -292,6 +298,7 @@ export default function MoMEntryFeedbackScreen() {
   const handleGetFeedback = async () => {
     if (!isFeedbackEnabled) return;
     setFeedbackError(null);
+    setFlagMessage(null);
     setIsFetchingFeedback(true);
 
     // MOCK INTERCEPT — remove when API is live
@@ -334,6 +341,7 @@ export default function MoMEntryFeedbackScreen() {
         throw new Error(`Feedback API returned ${res.status}${detail ? `: ${detail}` : ''}`);
       }
       const feedbackResult: FeedbackResult = await res.json();
+      setFlagMessage(feedbackResult.flag_message ?? null);
       setCards(buildCards(feedbackResult));
       setActiveCardId(null);
     } catch (err) {
@@ -518,7 +526,7 @@ export default function MoMEntryFeedbackScreen() {
                     className="font-normal text-xs leading-[18px] text-[#3b3b3b] shrink-0 w-full"
                     style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                   >
-                    {t('feedback_empty_state')}
+                    {flagMessage ?? t('feedback_empty_state')}
                   </p>
                 )}
               </div>

@@ -70,6 +70,10 @@ export const translations = {
     feedback_empty_state: "Click on \"Get Feedback\" to get suggestions",
     feedback_fetching: "Fetching feedback…",
     feedback_suggestions_label: "Suggestions",
+    feedback_flag_good_to_go: "This entry is good to go. No changes or additions are needed.",
+    feedback_flag_poor_quality: "Poor quality minutes. Please write a more descriptive account of what was discussed in the meeting with respect to this agenda item.",
+    feedback_flag_agenda_copy: "It looks like the agenda item has been re-entered here. Please enter the actual minutes of what was discussed and decided during the meeting.",
+    feedback_flag_mismatch: "There seems to be a mismatch between the agenda item and the minutes entered. Please enter relevant meeting minutes for this agenda topic.",
 
     // --- Feedback Card Tags ---
     tag_add_missing_details: "Add Missing Details",
@@ -179,6 +183,10 @@ export const translations = {
     feedback_empty_state: "ಸಲಹೆಗಳನ್ನು ಪಡೆಯಲು \"ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಿರಿ\" ಕ್ಲಿಕ್ ಮಾಡಿ",
     feedback_fetching: "ಪ್ರತಿಕ್ರಿಯೆ ತರಲಾಗುತ್ತಿದೆ…",
     feedback_suggestions_label: "ಸಲಹೆಗಳು",
+    feedback_flag_good_to_go: "ಈ ನಮೂದು ಸರಿಯಾಗಿದೆ. ಯಾವುದೇ ಬದಲಾವಣೆಗಳು ಅಥವಾ ಸೇರ್ಪಡೆಗಳ ಅಗತ್ಯವಿಲ್ಲ.",
+    feedback_flag_poor_quality: "ಕಳಪೆ ಗುಣಮಟ್ಟದ ಕಲಾಪಗಳು. ಈ ಕಾರ್ಯಸೂಚಿ ವಿಷಯದ ಬಗ್ಗೆ ಸಭೆಯಲ್ಲಿ ಚರ್ಚಿಸಿದ ವಿಷಯಗಳ ಹೆಚ್ಚು ವಿವರಣಾತ್ಮಕ ವಿವರಣೆಯನ್ನು ಬರೆಯಿರಿ.",
+    feedback_flag_agenda_copy: "ಕಾರ್ಯಸೂಚಿ ವಿಷಯವನ್ನು ಮತ್ತೆ ನಮೂದಿಸಿದಂತೆ ಕಾಣುತ್ತದೆ. ಸಭೆಯಲ್ಲಿ ಚರ್ಚಿಸಿ ನಿರ್ಧರಿಸಿದ ನಿಜವಾದ ಕಲಾಪಗಳನ್ನು ನಮೂದಿಸಿ.",
+    feedback_flag_mismatch: "ಕಾರ್ಯಸೂಚಿ ವಿಷಯ ಮತ್ತು ನಮೂದಿಸಿದ ಕಲಾಪಗಳ ನಡುವೆ ಹೊಂದಾಣಿಕೆ ಇಲ್ಲದಂತೆ ತೋರುತ್ತದೆ. ಈ ಕಾರ್ಯಸೂಚಿ ವಿಷಯಕ್ಕೆ ಸಂಬಂಧಿಸಿದ ಸಭೆಯ ಕಲಾಪಗಳನ್ನು ನಮೂದಿಸಿ.",
 
     // --- Feedback Card Tags ---
     tag_add_missing_details: "ಕಾಣೆಯಾದ ವಿವರಗಳನ್ನು ಸೇರಿಸಿ",

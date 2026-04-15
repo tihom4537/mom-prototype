@@ -92,6 +92,9 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
         _feedback_raw,
         failed,
         spans,
+        modes,
+        flag,
+        flag_message,
     ) = await run_feedback(
         body.agenda_subject,
         body.mom_discussion,
@@ -99,10 +102,11 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
     )
 
     logger.info(
-        "Agenda '%s' (%s) categorized as '%s'",
+        "Agenda '%s' (%s) categorized as '%s'%s",
         body.agenda_subject,
         body.agenda_id,
         category,
+        f" [flag={flag}]" if flag else "",
     )
 
     result = FeedbackResult(
@@ -110,6 +114,9 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
         category_reason=reason,
         feedback=feedback,
         spans=spans,
+        modes=modes,
+        flag=flag,
+        flag_message=flag_message,
     )
 
     # Only persist when LLM processing succeeded.
