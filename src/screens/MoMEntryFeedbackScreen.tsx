@@ -24,6 +24,7 @@ interface CardState {
   id: string;
   suggestion: string;
   type: 'fill-blanks' | 'rephrase';
+  mode: 'REPLACE' | 'APPEND' | 'REPHRASE';
   spanText: string | null;
   dismissed: boolean;
   accepted: boolean;
@@ -77,6 +78,66 @@ function assembleFromSegments(segments: Segment[]): string {
     .trim();
 }
 
+/**
+ * Finds the start and end indices of the sentence in `text` that contains `span`.
+ * Sentence boundaries: start/end of text, newline, period, Kannada danda (।).
+ * Returns null if the span is not found in the text.
+ */
+function findSentenceBounds(text: string, span: string): { start: number; end: number } | null {
+  const spanIdx = text.indexOf(span);
+  if (spanIdx === -1) return null;
+
+  const BOUNDARY = /[.\n।]/;
+
+  // Walk left from spanIdx to find sentence start
+  let start = spanIdx;
+  while (start > 0 && !BOUNDARY.test(text[start - 1])) {
+    start--;
+  }
+  // Skip leading whitespace
+  while (start < spanIdx && text[start] === ' ') start++;
+
+  // Walk right from end of span to find sentence end (include the boundary char)
+  let end = spanIdx + span.length;
+  while (end < text.length && !BOUNDARY.test(text[end])) {
+    end++;
+  }
+  // Include the boundary character (. or । or \n) if present
+  if (end < text.length && BOUNDARY.test(text[end])) {
+    end++;
+  }
+
+  return { start, end };
+}
+
+/**
+ * Replaces the sentence containing `span` in `text` with `replacement`.
+ * Falls back to appending if span not found.
+ */
+function replaceSentence(text: string, span: string | null, replacement: string): string {
+  if (!span) return text.trim() ? text + ' ' + replacement : replacement;
+  const bounds = findSentenceBounds(text, span);
+  if (!bounds) return text.trim() ? text + ' ' + replacement : replacement;
+  const before = text.slice(0, bounds.start).trimEnd();
+  const after  = text.slice(bounds.end).trimStart();
+  const parts  = [before, replacement, after].filter(Boolean);
+  return parts.join(' ');
+}
+
+/**
+ * Inserts `insertion` immediately after the sentence containing `span` in `text`.
+ * Falls back to appending if span not found.
+ */
+function insertAfterSentence(text: string, span: string | null, insertion: string): string {
+  if (!span) return text.trim() ? text + ' ' + insertion : insertion;
+  const bounds = findSentenceBounds(text, span);
+  if (!bounds) return text.trim() ? text + ' ' + insertion : insertion;
+  const before = text.slice(0, bounds.end).trimEnd();
+  const after  = text.slice(bounds.end).trimStart();
+  const parts  = [before, insertion, after].filter(Boolean);
+  return parts.join(' ');
+}
+
 // ── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MoMEntryFeedbackScreen() {
@@ -113,13 +174,13 @@ export default function MoMEntryFeedbackScreen() {
     const spans    = feedbackResult.spans ?? [];
     const modes    = feedbackResult.modes ?? [];
     return feedback.map((text, i) => {
-      const mode   = (modes[i] ?? 'REPLACE').toUpperCase();
-      // REPHRASE mode never has blanks; REPLACE and APPEND always do
+      const mode = ((modes[i] ?? 'REPLACE').toUpperCase()) as 'REPLACE' | 'APPEND' | 'REPHRASE';
       const isFill = mode !== 'REPHRASE' && hasBlanks(text);
       return {
         id:         `card-${i}`,
         suggestion: text,
         type:       isFill ? 'fill-blanks' : 'rephrase',
+        mode,
         spanText:   spans[i] ?? null,
         dismissed:  false,
         accepted:   false,
@@ -246,24 +307,28 @@ export default function MoMEntryFeedbackScreen() {
 
   // ── Card actions ──────────────────────────────────────────────────────────
 
-  /** fill-blanks: assemble filled sentence and append to discussion */
+  /** fill-blanks: assemble filled sentence, then REPLACE or APPEND based on mode */
   const handlePushText = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
-    const textToAdd = assembleFromSegments(card.segments);
-    if (textToAdd) {
-      const sep = discussionText.trim() ? ' ' : '';
-      setDiscussionText(prev => prev + sep + textToAdd);
+    const assembled = assembleFromSegments(card.segments);
+    if (assembled) {
+      if (card.mode === 'REPLACE') {
+        setDiscussionText(prev => replaceSentence(prev, card.spanText, assembled));
+      } else {
+        // APPEND — insert after the sentence containing the span
+        setDiscussionText(prev => insertAfterSentence(prev, card.spanText, assembled));
+      }
     }
     updateCard(cardId, { dismissed: true, accepted: true });
     if (activeCardId === cardId) setActiveCardId(null);
   };
 
-  /** rephrase: replace the span in discussion text with the improved sentence */
+  /** rephrase: replace the full sentence containing the span with the suggestion */
   const handleCardAccept = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
-    if (card?.type === 'rephrase' && card.spanText) {
-      setDiscussionText(prev => prev.replace(card.spanText!, card.suggestion));
+    if (card?.type === 'rephrase') {
+      setDiscussionText(prev => replaceSentence(prev, card.spanText, card.suggestion));
     }
     updateCard(cardId, { dismissed: true, accepted: true });
     if (activeCardId === cardId) setActiveCardId(null);
