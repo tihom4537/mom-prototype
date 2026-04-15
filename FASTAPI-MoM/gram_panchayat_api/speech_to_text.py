@@ -13,7 +13,7 @@ SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text"
 
 
 _LANGUAGE_CODE_MAP: Dict[str, str] = {
-    "en": "kn-IN",  # Force kn-IN regardless of UI toggle — auto-detect picks Hindi wrongly
+    "en": "en-IN",
     "kn": "kn-IN",
 }
 
