@@ -51,7 +51,7 @@ async def generate_text(
     *,
     model: Optional[str] = None,
     max_retries: int = 2,
-    timeout: float = 30.0,
+    timeout: float = 90.0,
     response_mime_type: Optional[str] = None,
     generation_config: Optional[Dict[str, Any]] = None,
 ) -> str:
