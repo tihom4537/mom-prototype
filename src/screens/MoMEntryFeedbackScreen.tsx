@@ -113,11 +113,32 @@ function findSentenceBounds(text: string, span: string): { start: number; end: n
 /**
  * Replaces the sentence containing `span` in `text` with `replacement`.
  * Falls back to appending if span not found.
+ *
+ * Special case: if the sentence is a comma-separated list (e.g. "Hearing petitions,
+ * applications for land, ration cards…") and the span only covers the first item,
+ * only the initial clause up to the span is replaced so the remaining list items
+ * are preserved on the next line instead of being lost.
  */
 function replaceSentence(text: string, span: string | null, replacement: string): string {
   if (!span) return text.trim() ? text + ' ' + replacement : replacement;
   const bounds = findSentenceBounds(text, span);
   if (!bounds) return text.trim() ? text + ' ' + replacement : replacement;
+
+  const spanEnd = text.indexOf(span) + span.length;
+  const afterSpan = text.slice(spanEnd, bounds.end);
+  const trimmedAfter = afterSpan.trim();
+
+  // If the sentence continues after the span as a list (starts with comma + substantial content),
+  // preserve those list items rather than erasing them.
+  if (trimmedAfter.startsWith(',') && trimmedAfter.replace(/,/g, '').trim().length > 20) {
+    let skipTo = spanEnd;
+    while (skipTo < bounds.end && (text[skipTo] === ',' || text[skipTo] === ' ')) skipTo++;
+    const before    = text.slice(0, bounds.start).trimEnd();
+    const remaining = text.slice(skipTo).trimStart();
+    const result    = [before, replacement].filter(Boolean).join(' ');
+    return remaining ? result + '\n' + remaining : result;
+  }
+
   const before = text.slice(0, bounds.start).trimEnd();
   const after  = text.slice(bounds.end).trimStart();
   const parts  = [before, replacement, after].filter(Boolean);
