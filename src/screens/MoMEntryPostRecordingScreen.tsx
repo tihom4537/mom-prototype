@@ -77,10 +77,18 @@ export default function MoMEntryPostRecordingScreen() {
     setFeedbackError(null);
 
     let stream: MediaStream;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
+      return;
+    }
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setSttError('Microphone access was denied. Please allow microphone access and try again.');
+    } catch (err) {
+      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
+      setSttError(isNotAllowed
+        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+        : 'Could not access the microphone. Please check your browser permissions and try again.'
+      );
       return;
     }
 
