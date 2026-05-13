@@ -523,6 +523,14 @@ export default function CreateMeetingAgendaScreen() {
 
                             {/* Fields */}
                             <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
+                              <InputField
+                                label={t('agenda_title_label')}
+                                placeholder={t('agenda_title_placeholder')}
+                                required
+                                value={agenda.title}
+                                onChange={val => updateAgenda(agenda.id, 'title', val)}
+                                disabled={agendaSaved}
+                              />
                               <div>
                                 <DescriptionField
                                   label={t('agenda_description_label')}
@@ -539,14 +547,6 @@ export default function CreateMeetingAgendaScreen() {
                                   <p className="text-xs text-[#b7131a] mt-1" style={{ fontFamily: 'Noto Sans' }}>{agendaSttError[agenda.id]}</p>
                                 )}
                               </div>
-                              <InputField
-                                label={t('agenda_title_label')}
-                                placeholder={t('agenda_title_placeholder')}
-                                required
-                                value={agenda.title}
-                                onChange={val => updateAgenda(agenda.id, 'title', val)}
-                                disabled={agendaSaved}
-                              />
                             </div>
 
                             {/* Remove button — visible for user-added agendas, invisible spacer for defaults */}
