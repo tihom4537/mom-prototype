@@ -151,12 +151,12 @@ export const translations = {
     btn_scan_photo: "Scan Photo",
     btn_upload_audio: "Upload Audio",
     discussion_field_placeholder: "Enter the proceedings",
-    btn_get_feedback: "Get Feedback",
+    btn_get_feedback: "Check my entry",
     btn_save: "Save",
 
     // --- Feedback Panel ---
     feedback_heading: "Feedback",
-    feedback_empty_state: "Click on \"Get Feedback\" to get suggestions",
+    feedback_empty_state: "Click on \"Check my entry\" to get suggestions",
     feedback_fetching: "Fetching feedback…",
     feedback_suggestions_label: "Suggestions",
     feedback_flag_good_to_go: "This entry is good to go. No changes or additions are needed.",
@@ -344,7 +344,7 @@ export const translations = {
     agenda_title_label: "Agenda Title",
     agenda_title_placeholder: "Enter the agenda title",
     btn_add_agenda: "Add Agenda",
-    btn_get_feedback: "Get feedback",
+    btn_get_feedback: "Check my entry",
     btn_save: "Save",
 
     // --- Upload Documents ---
@@ -848,12 +848,12 @@ export const translations = {
     btn_scan_photo: "ಫೋಟೋ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
     btn_upload_audio: "ಆಡಿಯೋ ಅಪ್ಲೋಡ್ ಮಾಡಿ",
     discussion_field_placeholder: "ಕಾರ್ಯವಿವರಗಳನ್ನು ನಮೂದಿಸಿ",
-    btn_get_feedback: "ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಿರಿ",
+    btn_get_feedback: "ನನ್ನ ಬರಹ ಪರಿಶೀಲಿಸಿ",
     btn_save: "ಉಳಿಸಿ",
 
     // --- Feedback Panel ---
     feedback_heading: "ಪ್ರತಿಕ್ರಿಯೆ",
-    feedback_empty_state: "ಸಲಹೆಗಳನ್ನು ಪಡೆಯಲು \"ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಿರಿ\" ಕ್ಲಿಕ್ ಮಾಡಿ",
+    feedback_empty_state: "ಸಲಹೆಗಳನ್ನು ಪಡೆಯಲು \"ನನ್ನ ಬರಹ ಪರಿಶೀಲಿಸಿ\" ಕ್ಲಿಕ್ ಮಾಡಿ",
     feedback_fetching: "ಪ್ರತಿಕ್ರಿಯೆ ತರಲಾಗುತ್ತಿದೆ…",
     feedback_suggestions_label: "ಸಲಹೆಗಳು",
     feedback_flag_good_to_go: "ಈ ನಮೂದು ಸರಿಯಾಗಿದೆ. ಯಾವುದೇ ಬದಲಾವಣೆಗಳು ಅಥವಾ ಸೇರ್ಪಡೆಗಳ ಅಗತ್ಯವಿಲ್ಲ.",
@@ -1041,7 +1041,7 @@ export const translations = {
     agenda_title_label: "ಕಾರ್ಯಸೂಚಿ ಶೀರ್ಷಿಕೆ",
     agenda_title_placeholder: "ಕಾರ್ಯಸೂಚಿ ಶೀರ್ಷಿಕೆ ನಮೂದಿಸಿ",
     btn_add_agenda: "ಕಾರ್ಯಸೂಚಿ ಸೇರಿಸಿ",
-    btn_get_feedback: "ಪ್ರತಿಕ್ರಿಯೆ ಪಡೆಯಿರಿ",
+    btn_get_feedback: "ನನ್ನ ಬರಹ ಪರಿಶೀಲಿಸಿ",
     btn_save: "ಉಳಿಸಿ",
 
     // --- Upload Documents ---
