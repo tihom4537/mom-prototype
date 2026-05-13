@@ -301,6 +301,7 @@ export default function MoMEntryPostRecordingScreen() {
                 <div className="relative z-20">
                   <Button
                     variant="outlined"
+                    size="small"
                     iconPlacement="right"
                     text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
                     onClick={() => setActionOpen(o => !o)}
@@ -325,7 +326,7 @@ export default function MoMEntryPostRecordingScreen() {
             </div>
 
             {/* Discussion field + floating mic */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
+            <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
                 type="mandatory"
                 questionText={t('discussion_field_label')}
@@ -357,7 +358,8 @@ export default function MoMEntryPostRecordingScreen() {
                 analyserNode={analyserRef.current ?? undefined}
                 isProcessing={isProcessing}
                 highlighted
-                className="shrink-0 w-full"
+                className="w-full"
+                style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
               />
 
               {/* Feedback error — below textarea */}
@@ -369,7 +371,7 @@ export default function MoMEntryPostRecordingScreen() {
             </div>
 
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
+            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
               {isFetchingFeedback && (
                 <span
                   className="text-sm text-[#727272] mr-2"
@@ -396,7 +398,7 @@ export default function MoMEntryPostRecordingScreen() {
           </div>
 
           {/* ── Right: feedback panel (empty state) ── */}
-          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch">
+          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch overflow-y-auto">
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
             <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
           </div>

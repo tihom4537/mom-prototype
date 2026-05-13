@@ -27,6 +27,8 @@ interface MeetingShellLayoutProps {
   backRoute?: string;
   /** Set false to hide the Previous step link (e.g. sub-pages within a step) */
   showBack?: boolean;
+  /** Fill viewport height — no scroll; children must manage their own overflow */
+  fillHeight?: boolean;
 }
 
 export default function MeetingShellLayout({
@@ -34,6 +36,7 @@ export default function MeetingShellLayout({
   stepperActiveState = 2,
   backRoute,
   showBack = true,
+  fillHeight = false,
 }: MeetingShellLayoutProps) {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -127,9 +130,9 @@ export default function MeetingShellLayout({
             />
           </div>
 
-          {/* Scrollable lower section */}
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
-            <div className="flex flex-col gap-5">
+          {/* Lower section */}
+          <div className={`flex-1 min-h-0 px-6 pt-4 pb-6 ${fillHeight ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
+            <div className={`flex flex-col gap-5 ${fillHeight ? 'flex-1 min-h-0' : ''}`}>
               <StepNavBar onBack={showBack && resolvedBackRoute ? () => navigate(resolvedBackRoute, { state: { meetingId } }) : undefined} backLabel={t('nav_previous_step')} />
               {children}
             </div>

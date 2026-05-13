@@ -10,6 +10,7 @@ import {
   Button,
   AttendancePill,
   Icon,
+  CloseButton,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
@@ -276,13 +277,11 @@ export default function ProceedingsReviewScreen() {
           <div className="w-[820px] max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex flex-col min-h-0">
             {/* Header */}
-            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('review_modal_title')}
               </span>
-              <button type="button" onClick={() => { setReviewModalId(null); setReviewPhase('entry'); }} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
-                <Icon name="close" size="small" color="#6a3e31" />
-              </button>
+              <CloseButton onClick={() => { setReviewModalId(null); setReviewPhase('entry'); }} />
             </div>
             {/* Body */}
             <div className="bg-white rounded-bl-[20px] rounded-br-[20px] flex flex-col gap-[20px] px-[30px] pt-[25px] pb-[30px] min-h-0">
@@ -303,7 +302,7 @@ export default function ProceedingsReviewScreen() {
                     </span>
                   </div>
                 </div>
-                <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[10px]">
+                <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[10px] ml-[47px]">
                   <p className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
                     {reviewModalItem.proceedingsText || t(`agenda_proceedings_${reviewModalItem.id}`)}
                   </p>

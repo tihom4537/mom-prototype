@@ -199,7 +199,7 @@ export default function SignNoticeScreen() {
           <div className="flex flex-col flex-1 min-h-0 min-w-0">
 
             {/* Breadcrumb + Stepper — fixed header */}
-            <div className="shrink-0 flex flex-col gap-[15px] px-6 pt-6 pb-[10px] bg-[#f1f2f2]">
+            <div className="shrink-0 flex flex-col gap-[15px] px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
               <Breadcrumb
                 level={3}
                 items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_create_meeting')]}
@@ -215,7 +215,7 @@ export default function SignNoticeScreen() {
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-5 pt-[21px] pb-[50px]">
+            <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[50px]">
               <div className="flex flex-col gap-[25px]">
 
                 {/* Notice preview card */}

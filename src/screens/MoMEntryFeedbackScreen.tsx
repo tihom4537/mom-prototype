@@ -532,6 +532,7 @@ export default function MoMEntryFeedbackScreen() {
                 <div className="relative z-20">
                   <Button
                     variant="outlined"
+                    size="small"
                     iconPlacement="right"
                     text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
                     onClick={() => setActionOpen(o => !o)}
@@ -556,7 +557,7 @@ export default function MoMEntryFeedbackScreen() {
             </div>
 
             {/* Discussion field + mic */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
+            <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
                 type="mandatory"
                 questionText={t('discussion_field_label')}
@@ -587,12 +588,13 @@ export default function MoMEntryFeedbackScreen() {
                 onSpanHoverLeave={handleSpanHoverLeave}
                 onSpanClick={handleSpanClick}
                 highlighted
-                className="shrink-0 w-full"
+                className="w-full"
+                style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
               />
             </div>
 
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
+            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
               {isFetchingFeedback && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   {t('feedback_fetching')}
@@ -616,8 +618,8 @@ export default function MoMEntryFeedbackScreen() {
           </div>
 
           {/* ── Right: feedback panel ── */}
-          <div className="w-[360px] shrink-0 self-stretch relative">
-            <div className="absolute inset-0 bg-[rgba(134,134,134,0.08)] flex flex-col pt-5 px-5 rounded-[15px] overflow-hidden">
+          <div className="w-[360px] shrink-0">
+            <div className="bg-[rgba(134,134,134,0.08)] flex flex-col pt-5 px-5 pb-[30px] rounded-[15px]">
 
               <div className="flex gap-4 items-center shrink-0 flex-wrap pb-5">
                 <SectionHeading text={t('feedback_heading')} className="shrink-0" />
@@ -644,7 +646,7 @@ export default function MoMEntryFeedbackScreen() {
               {visibleCards.length > 0 && (
                 <div
                   ref={feedbackListRef}
-                  className="flex flex-col gap-[15px] items-start w-full overflow-y-auto pb-[30px] flex-1 relative pr-3"
+                  className="flex flex-col gap-[15px] items-start w-full pb-[30px] pr-3"
                   style={{ scrollbarGutter: 'stable' }}
                 >
                   {visibleCards.map(card => (

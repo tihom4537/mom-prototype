@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Icon from './Icon';
 import Button from './Button';
+import CloseButton from './CloseButton';
 import NumberCircle from './NumberCircle';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -39,27 +40,21 @@ export default function ViewProceedingsModal({
       <div className="flex flex-col w-[600px] max-w-[90vw] max-h-[85vh] rounded-[20px] overflow-hidden shadow-2xl">
 
         {/* Header */}
-        <div className="bg-white flex items-center justify-between px-[25px] py-[20px] border-b border-[#e0e0e0] shrink-0">
+        <div className="bg-white flex items-center justify-between px-[25px] py-[15px] border-b border-[#e0e0e0] shrink-0">
           <p
             className="text-[20px] font-semibold text-[#6a3e31] leading-[24px]"
             style={NS}
           >
             {t('view_proceedings_title')}
           </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center justify-center size-[32px] rounded-full hover:bg-[rgba(106,62,49,0.08)] transition-colors"
-          >
-            <Icon name="close" size="small" color="#212121" />
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         {/* Body */}
         <div className="bg-white flex flex-col gap-[30px] items-start px-[30px] pt-[25px] pb-[35px] overflow-y-auto">
 
           {/* Agenda card — subpage style */}
-          <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] flex flex-col gap-[8px] items-end px-[15px] pt-[8px] pb-[15px] w-full">
+          <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] flex flex-col gap-[8px] px-[15px] pt-[8px] pb-[15px] w-full">
 
             {/* Agenda header row */}
             <div className="flex items-start pt-[3px] w-full">
@@ -84,8 +79,8 @@ export default function ViewProceedingsModal({
               </div>
             </div>
 
-            {/* Proceedings text box */}
-            <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] pt-[8px] pb-[10px] w-full">
+            {/* Proceedings text box — indented to align with heading text (32px circle + 15px gap) */}
+            <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] pt-[8px] pb-[10px] ml-[47px]">
               <p
                 className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap"
                 style={NS}

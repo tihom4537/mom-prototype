@@ -67,11 +67,11 @@ export default function AgendaCard({
       <div className={`flex items-start shrink-0 w-full ${isCompact ? 'pt-[3px]' : 'justify-between'}`}>
 
         {/* Left: circle + text */}
-        <div className={`flex gap-[15px] items-start ${isCompact ? 'shrink-0' : 'flex-1 min-w-0'}`}>
+        <div className="flex gap-[15px] items-start flex-1 min-w-0">
 
           <NumberCircle type={circleType} number={agendaNumber} />
 
-          <div className={`flex flex-col items-start ${isCompact ? 'justify-center shrink-0' : 'flex-1 min-w-0 justify-center gap-[5px] py-[3px]'}`}>
+          <div className={`flex flex-col items-start ${isCompact ? 'justify-center flex-1 min-w-0' : 'flex-1 min-w-0 justify-center gap-[5px] py-[3px]'}`}>
             <p
               className={`font-medium w-full ${isCompact ? 'text-[14px] leading-[24px]' : 'text-[16px] leading-[24px] tracking-[0.15px]'} ${headingColor}`}
               style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}

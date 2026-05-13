@@ -67,7 +67,10 @@ interface TextAreaContainerProps {
   onSpanClick?: (cardId: string) => void;
   /** Applies permanent coral border (for MoM Entry feedback screen) */
   highlighted?: boolean;
+  /** Removes max-height cap — textarea grows to fill parent flex container */
+  fillHeight?: boolean;
   className?: string;
+  style?: React.CSSProperties;
   // Legacy props — accepted but unused so existing call-sites don't break
   onStopRecording?: () => void;
   onAcceptRecording?: () => void;
@@ -91,12 +94,15 @@ export default function TextAreaContainer({
   onSpanHoverLeave,
   onSpanClick,
   highlighted = false,
+  fillHeight = false,
   className,
+  style,
   analyserNode,
   isProcessing = false,
 }: TextAreaContainerProps) {
   const isFilled    = state === 'filled';
   const isRecording = state === 'recording';
+  const hasExplicitHeight = !!(style?.height || style?.maxHeight);
 
   const useRichText = highlights !== undefined && highlights.length > 0;
 
@@ -107,12 +113,12 @@ export default function TextAreaContainer({
       : 'border border-[#727272] bg-[rgba(201,201,201,0.2)]';
 
   return (
-    <div className={`flex flex-col rounded-[8px] ${borderClass} ${className ?? 'w-full'}`}>
+    <div className={`flex flex-col rounded-[8px] ${borderClass} ${fillHeight ? 'flex-1 min-h-[100px]' : ''} ${className ?? 'w-full'}`} style={style}>
 
       {/* Text display area */}
-      <div className="flex items-start px-[8px] pt-[4px] pb-[8px] w-full">
+      <div className={`flex items-start px-[8px] pt-[4px] pb-[8px] w-full ${(fillHeight || hasExplicitHeight) ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
         {useRichText ? (
-          <div className="flex-1 relative min-h-[160px] max-h-[300px]">
+          <div className={`flex-1 relative ${(fillHeight || hasExplicitHeight) ? 'h-full min-h-0' : 'min-h-[160px] max-h-[300px]'}`}>
             {onChange && (
               <textarea
                 className="absolute inset-0 w-full h-full font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none text-transparent caret-[#212121] z-10"
@@ -160,8 +166,8 @@ export default function TextAreaContainer({
           </div>
         ) : onChange ? (
           <textarea
-            className="flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-y-auto min-h-[160px] max-h-[300px] text-[#212121] placeholder:text-[#727272]"
-            style={NS}
+            className={`flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-y-auto text-[#212121] placeholder:text-[#727272] ${(fillHeight || hasExplicitHeight) ? 'h-full min-h-0' : 'min-h-[160px]'}`}
+            style={{ ...NS, ...(style?.minHeight ? { minHeight: style.minHeight } : {}), ...(style?.maxHeight ? { maxHeight: style.maxHeight } : {}) }}
             placeholder={placeholder}
             value={value}
             onChange={e => onChange(e.target.value)}

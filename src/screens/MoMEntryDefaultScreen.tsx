@@ -253,7 +253,6 @@ export default function MoMEntryDefaultScreen() {
   return (
     <MeetingShellLayout stepperActiveState={2} showBack={false}>
 
-      {/* ── Header + body split (gap-[3px] between them) ── */}
       <div className="flex flex-col gap-[3px]">
 
         {/* Header bar */}
@@ -264,7 +263,6 @@ export default function MoMEntryDefaultScreen() {
           />
         </div>
 
-        {/* Body */}
         <div className="bg-white flex gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
 
           {/* ── Left column ── */}
@@ -295,6 +293,7 @@ export default function MoMEntryDefaultScreen() {
                 <div className="relative z-20">
                   <Button
                     variant="outlined"
+                    size="small"
                     iconPlacement="right"
                     text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
                     onClick={() => setActionOpen(o => !o)}
@@ -318,15 +317,14 @@ export default function MoMEntryDefaultScreen() {
               </div>
             </div>
 
-            {/* Discussion field + floating mic */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full relative pb-[33px]">
+            {/* Discussion field */}
+            <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
                 type="mandatory"
                 questionText={t('discussion_field_label')}
                 className="shrink-0"
               />
 
-              {/* Info box — always visible; STT error replaces it (mic issue) */}
               {sttError ? (
                 <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
                   We were unable to record your voice at the moment. Please try again in sometime.
@@ -351,10 +349,10 @@ export default function MoMEntryDefaultScreen() {
                 analyserNode={analyserRef.current ?? undefined}
                 isProcessing={isProcessing}
                 highlighted
-                className="shrink-0 w-full"
+                className="w-full"
+                style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
               />
 
-              {/* Feedback error — below textarea */}
               {feedbackError && (
                 <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
                   {feedbackError}
@@ -363,7 +361,7 @@ export default function MoMEntryDefaultScreen() {
             </div>
 
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
+            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
               {isFetchingFeedback && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   {t('feedback_fetching')}
@@ -387,7 +385,7 @@ export default function MoMEntryDefaultScreen() {
           </div>
 
           {/* ── Right: feedback card ── */}
-          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch">
+          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch overflow-y-auto">
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
             <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
           </div>

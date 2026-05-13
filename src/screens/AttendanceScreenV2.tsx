@@ -22,6 +22,7 @@ import {
   DropdownBoxOfIcon,
   InfoBox,
   StepNavBar,
+  CloseButton,
 } from '../components';
 import type { AttendanceStatus } from '../components';
 
@@ -142,15 +143,9 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
       <div className="flex flex-col w-[1000px] max-w-[92vw] max-h-[88vh] rounded-[20px] shadow-2xl bg-white overflow-hidden">
 
         {/* Header */}
-        <div className="bg-white flex items-center justify-between px-[25px] pt-[20px] pb-[14px] border-b border-[#e0e0e0] shrink-0 rounded-t-[20px]">
+        <div className="bg-white flex items-center justify-between px-[25px] py-[15px] border-b border-[#e0e0e0] shrink-0 rounded-t-[20px]">
           <p className="text-[20px] font-semibold text-[#6a3e31] leading-[24px]" style={NS}>{t('bio_modal_title')}</p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center justify-center size-[32px] rounded-full hover:bg-[rgba(106,62,49,0.08)] transition-colors"
-          >
-            <Icon name="close" size="small" color="#212121" />
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         {/* Body */}
