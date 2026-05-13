@@ -1,14 +1,18 @@
 import Icon from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type CompletionState = 'pending' | 'completed';
 
 interface CompletionTagProps {
   state?: CompletionState;
   className?: string;
+  label?: string;
 }
 
-export default function CompletionTag({ state = 'pending', className }: CompletionTagProps) {
+export default function CompletionTag({ state = 'pending', className, label }: CompletionTagProps) {
+  const { t } = useLanguage();
   const isCompleted = state === 'completed';
+  const displayLabel = label ?? (isCompleted ? t('tag_completed') : t('tag_pending'));
   return (
     <div
       className={`flex gap-2 items-center justify-center overflow-clip px-[10px] py-[5px] rounded-lg
@@ -28,7 +32,7 @@ export default function CompletionTag({ state = 'pending', className }: Completi
           ${isCompleted ? 'text-[#212121]' : 'text-[#b7131a]'}`}
         style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
       >
-        {isCompleted ? 'Completed' : 'Pending'}
+        {displayLabel}
       </span>
     </div>
   );

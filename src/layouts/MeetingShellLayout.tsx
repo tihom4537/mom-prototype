@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
   Navbar,
@@ -7,19 +8,38 @@ import {
   Stepper,
   DropdownBoxOfProfile,
   DropdownBoxOfIcon,
+  StepNavBar,
 } from '../components';
 import type { StepperActiveState } from '../components';
+
+const STEP_ROUTES: Record<number, string> = {
+  1: '/meetings/attendance',
+  2: '/agenda-list',
+  3: '/meetings/proceedings-review',
+  4: '/meetings/closure-attendance',
+  5: '/meetings/send-to-president',
+};
 
 interface MeetingShellLayoutProps {
   children: React.ReactNode;
   stepperActiveState?: StepperActiveState;
+  /** Override back route — defaults to one step back */
+  backRoute?: string;
+  /** Set false to hide the Previous step link (e.g. sub-pages within a step) */
+  showBack?: boolean;
 }
 
 export default function MeetingShellLayout({
   children,
   stepperActiveState = 2,
+  backRoute,
+  showBack = true,
 }: MeetingShellLayoutProps) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
+  const resolvedBackRoute = backRoute ?? STEP_ROUTES[stepperActiveState - 1];
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -28,7 +48,7 @@ export default function MeetingShellLayout({
     setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f6f7fb]">
+    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
 
       {/* ── Row 1: Navbar (fixed) ── */}
       <div className="shrink-0 relative z-40">
@@ -84,7 +104,7 @@ export default function MeetingShellLayout({
         <div className="flex flex-col flex-1 min-h-0 min-w-0">
 
           {/* Fixed upper section: breadcrumb + stepper */}
-          <div className="shrink-0 flex flex-col gap-2 px-6 pt-5 pb-3 shadow-[0_1px_4px_0_rgba(0,0,0,0.04)]">
+          <div className="shrink-0 flex flex-col gap-5 px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
             <Breadcrumb
               level={3}
               items={[
@@ -94,14 +114,23 @@ export default function MeetingShellLayout({
               ]}
             />
             <Stepper
+              variant="meeting-flow"
               activeState={stepperActiveState}
-              stepLabels={[t('step_1'), t('step_2'), t('step_3'), t('step_4')]}
+              stepLabels={[
+                t('meeting_flow_step_1'),
+                t('meeting_flow_step_2'),
+                t('meeting_flow_step_3'),
+                t('meeting_flow_step_4'),
+                t('meeting_flow_step_5'),
+              ]}
+              onStepClick={step => { if (STEP_ROUTES[step]) navigate(STEP_ROUTES[step], { state: { meetingId } }); }}
             />
           </div>
 
           {/* Scrollable lower section */}
           <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
             <div className="flex flex-col gap-5">
+              <StepNavBar onBack={showBack && resolvedBackRoute ? () => navigate(resolvedBackRoute, { state: { meetingId } }) : undefined} backLabel={t('nav_previous_step')} />
               {children}
             </div>
           </div>

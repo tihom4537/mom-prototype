@@ -296,6 +296,28 @@ Behaviour requirements:
 
 ---
 
+## Global Page Layout Rules
+
+### Background Color
+All screen root containers must use `bg-[#f1f2f2]`. Never use any other background color for the page-level wrapper (e.g. `#f6f7fb`, `#f5f5f5`, white, etc.).
+
+### Breadcrumb Bar
+The breadcrumb container bar must:
+- Have **no drop shadow** — never use `shadow-[0_4px_12px_0_rgba(0,0,0,0.06)]` or any shadow class on the breadcrumb wrapper
+- Use `bg-[#f1f2f2]` — blends into the page background, does not appear as an elevated bar
+- Never use `bg-white` on the breadcrumb wrapper
+
+Pattern:
+```tsx
+<div className="shrink-0 px-6 pt-6 pb-5 bg-[#f1f2f2]">
+  <Breadcrumb ... />
+</div>
+```
+
+Apply this to every screen that has a breadcrumb bar. This is a global rule — do not deviate on any new screen.
+
+---
+
 ## General Rules for Claude
 
 1. **Never write one-off styles.** Use only components from `/src/components`.

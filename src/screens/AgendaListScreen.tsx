@@ -1,24 +1,45 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda } from '../context/AgendaContext';
-import { AgendaCard, AgendaListCard, MeetingDetailsCard } from '../components';
+import { useMeetings } from '../context/MeetingsContext';
+import type { MeetingAgendaItem } from '../context/MeetingsContext';
+import { AgendaCard, AgendaListCard, MeetingDetailsCard, Button, ViewProceedingsModal } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 export default function AgendaListScreen() {
   const { t } = useLanguage();
   const { agendaItems } = useAgenda();
+  const { meetingAgendas } = useMeetings();
   const navigate = useNavigate();
+  const location = useLocation();
+  const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
+
+  // Use per-meeting agendas if this is a user-created meeting; fall back to demo AgendaContext
+  const userAgendas: MeetingAgendaItem[] | null = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;
+  const effectiveAgendaItems = userAgendas
+    ? userAgendas.map(a => ({ id: a.id, heading: a.title, description: a.description, completed: a.completed, proceedingsText: a.proceedingsText }))
+    : agendaItems;
 
   const [viewMode, setViewMode]       = useState<'list' | 'single'>('list');
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Modal state
+  const [modalAgendaId, setModalAgendaId] = useState<number | null>(null);
+  const modalItem = modalAgendaId !== null ? effectiveAgendaItems.find(a => a.id === modalAgendaId) : null;
+
+  const allCompleted = effectiveAgendaItems.every(a => a.completed);
 
   // Strip leading "+ " — the icon in Button already renders the "+"
   const btnText = (key: string) => t(key).replace(/^\+\s*/, '');
 
   const handleAddProceedings = (id: number) => {
-    const item = agendaItems.find(a => a.id === id)!;
-    navigate('/mom-entry', { state: { agenda: item } });
+    const item = effectiveAgendaItems.find(a => a.id === id)!;
+    navigate('/mom-entry', { state: { agenda: item, meetingId } });
+  };
+
+  const handleViewProceedings = (id: number) => {
+    setModalAgendaId(id);
   };
 
   const toggleView = () => {
@@ -26,27 +47,28 @@ export default function AgendaListScreen() {
   };
 
   const isFirst = currentIndex === 0;
-  const isLast  = currentIndex === agendaItems.length - 1;
+  const isLast  = currentIndex === effectiveAgendaItems.length - 1;
 
   return (
     <MeetingShellLayout stepperActiveState={2}>
       <MeetingDetailsCard
-        meetingTitle="2nd GP General Body Meeting 2026"
-        modeOfMeeting="IN PERSON"
+        variant="default-shortened"
+        meetingTitle={t('mock_meeting_title')}
+        modeOfMeeting={t('meeting_type_in_person')}
         date="19/03/2026"
         time="10:00 a.m"
-        venue="Venue: Kakanur GP Office (1501001003)"
-        participants="Participants: 14"
+        venue={`${t('meeting_venue_label')} Kakanur GP Office (1501001003)`}
+        participants={`14 ${t('meeting_participants_label')}`}
       />
       <AgendaListCard
         heading={t('agenda_list_heading')}
-        countLabel={`${agendaItems.length} ${t('agenda_count_label')}`}
+        countLabel={`${effectiveAgendaItems.length} ${t('agenda_count_label')}`}
         viewToggleLabel={viewMode === 'list' ? t('btn_single_view') : t('btn_list_view')}
         viewToggleIcon={viewMode === 'list' ? 'web_asset' : 'format_list_bulleted'}
         onViewToggle={toggleView}
       >
         {/* List view — all cards stacked */}
-        {viewMode === 'list' && agendaItems.map(item => (
+        {viewMode === 'list' && effectiveAgendaItems.map(item => (
           <AgendaCard
             key={item.id}
             stage={item.completed ? 'completed' : 'default'}
@@ -56,14 +78,16 @@ export default function AgendaListScreen() {
             addProceedingsText={btnText('btn_add_proceedings')}
             viewProceedingsText={btnText('btn_view_proceedings')}
             editProceedingsText={btnText('btn_edit_proceedings')}
+            completionTagLabel={item.completed ? btnText('tag_completed') : btnText('tag_pending')}
             onAddProceedings={() => handleAddProceedings(item.id)}
+            onViewProceedings={() => handleViewProceedings(item.id)}
             onEditProceedings={() => handleAddProceedings(item.id)}
           />
         ))}
 
         {/* Single view — one card at a time with Prev / Next */}
-        {viewMode === 'single' && agendaItems.length > 0 && (() => {
-          const item = agendaItems[currentIndex];
+        {viewMode === 'single' && effectiveAgendaItems.length > 0 && (() => {
+          const item = effectiveAgendaItems[currentIndex];
           return (
             <>
               <AgendaCard
@@ -74,7 +98,9 @@ export default function AgendaListScreen() {
                 addProceedingsText={btnText('btn_add_proceedings')}
                 viewProceedingsText={btnText('btn_view_proceedings')}
                 editProceedingsText={btnText('btn_edit_proceedings')}
+                completionTagLabel={item.completed ? btnText('tag_completed') : btnText('tag_pending')}
                 onAddProceedings={() => handleAddProceedings(item.id)}
+                onViewProceedings={() => handleViewProceedings(item.id)}
                 onEditProceedings={() => handleAddProceedings(item.id)}
               />
               <div className="flex items-center justify-end gap-2 shrink-0 w-full">
@@ -111,6 +137,40 @@ export default function AgendaListScreen() {
           );
         })()}
       </AgendaListCard>
+
+      {/* Proceed Next — disabled until all agenda items completed */}
+      <div className="flex items-center justify-center gap-[10px] pb-2 mt-[20px]">
+        <Button
+          variant="outlined"
+          iconPlacement="left"
+          iconName="arrow_back"
+          text={t('btn_previous')}
+          onClick={() => navigate('/meetings/attendance', { state: { meetingId } })}
+        />
+        <Button
+          variant="filled"
+          iconPlacement="right"
+          iconName="arrow_forward"
+          text={t('btn_proceed_next')}
+          state={allCompleted ? 'default' : 'disabled'}
+          onClick={allCompleted ? () => navigate('/meetings/proceedings-review', { state: { meetingId } }) : undefined}
+        />
+      </div>
+
+      {/* View Proceedings Modal */}
+      {modalItem && (
+        <ViewProceedingsModal
+          agendaNumber={modalItem.id}
+          agendaHeading={modalItem.heading}
+          agendaDescription={modalItem.description}
+          proceedingsText={modalItem.proceedingsText}
+          onClose={() => setModalAgendaId(null)}
+          onEdit={() => {
+            setModalAgendaId(null);
+            handleAddProceedings(modalItem.id);
+          }}
+        />
+      )}
     </MeetingShellLayout>
   );
 }

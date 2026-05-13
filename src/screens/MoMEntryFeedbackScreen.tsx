@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
+import { useMeetings } from '../context/MeetingsContext';
 import type { FeedbackResult } from './MoMEntryPostRecordingScreen';
 import {
   GoBackToPreviousPage,
@@ -11,7 +12,6 @@ import {
   Button,
   InfoBox,
   TextAreaContainer,
-  MicButton,
   FeedbackCard,
 } from '../components';
 import type { HighlightSpan, Segment } from '../components';
@@ -163,7 +163,8 @@ function insertAfterSentence(text: string, span: string | null, insertion: strin
 
 export default function MoMEntryFeedbackScreen() {
   const { lang, t } = useLanguage();
-  const { markCompleted } = useAgenda();
+  const { saveProceedings } = useAgenda();
+  const { saveMeetingProceedings } = useMeetings();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -171,22 +172,24 @@ export default function MoMEntryFeedbackScreen() {
     agenda?: AgendaItem;
     discussionText?: string;
     feedbackResult?: FeedbackResult;
+    meetingId?: number;
   } | null;
 
   const agenda = routeState?.agenda;
+  const meetingId = routeState?.meetingId;
 
   const [discussionText, setDiscussionText]         = useState(routeState?.discussionText ?? '');
   const [mainEntryState, setMainEntryState]         = useState<MainEntryState>('idle');
   const [mainSttError, setMainSttError]             = useState<string | null>(null);
   const [feedbackError, setFeedbackError]           = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
-  const [mainAnalyserNode, setMainAnalyserNode]     = useState<AnalyserNode | null>(null);
   const [actionOpen, setActionOpen]                 = useState(false);
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
   const mainMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mainAudioChunksRef   = useRef<Blob[]>([]);
   const mainAudioCtxRef      = useRef<AudioContext | null>(null);
+  const mainAnalyserRef      = useRef<AnalyserNode | null>(null);
 
   // ── Build initial cards from route state ─────────────────────────────────
 
@@ -210,8 +213,20 @@ export default function MoMEntryFeedbackScreen() {
     });
   };
 
+  const MOCK_FEEDBACK: FeedbackResult = {
+    feedback: [
+      'Specify the exact number of beneficiaries identified under PM Awas Yojana — provide [count] and [ward name].',
+      'Mention the name of the KUWSDB official contacted regarding water supply disruptions in [ward number].',
+      'The sentence about MGNREGS job cards is unclear — rephrase to clarify whether applications were approved or pending review.',
+      'Include the resolution number and date for the decision on caste and income certificate delays.',
+    ],
+    spans: [null, null, null, null],
+    modes: ['APPEND', 'APPEND', 'REPHRASE', 'APPEND'],
+    flag_message: null,
+  };
+
   const [cards, setCards] = useState<CardState[]>(() =>
-    routeState?.feedbackResult ? buildCards(routeState.feedbackResult) : []
+    buildCards(routeState?.feedbackResult ?? MOCK_FEEDBACK)
   );
 
   const [flagMessage, setFlagMessage]     = useState<string | null>(
@@ -245,7 +260,6 @@ export default function MoMEntryFeedbackScreen() {
   const teardownMainAudio = useCallback(() => {
     mainAudioCtxRef.current?.close();
     mainAudioCtxRef.current = null;
-    setMainAnalyserNode(null);
   }, []);
 
   // ── Main mic ──────────────────────────────────────────────────────────────
@@ -268,16 +282,19 @@ export default function MoMEntryFeedbackScreen() {
       );
       return;
     }
+    const audioCtx = new AudioContext();
+    mainAudioCtxRef.current = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    mainAnalyserRef.current = analyser;
+
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
     const mr = new MediaRecorder(stream, { mimeType });
     mainMediaRecorderRef.current = mr;
     mainAudioChunksRef.current = [];
     mr.ondataavailable = e => { if (e.data.size > 0) mainAudioChunksRef.current.push(e.data); };
-    const audioCtx = new AudioContext();
-    const analyser = audioCtx.createAnalyser();
-    audioCtx.createMediaStreamSource(stream).connect(analyser);
-    mainAudioCtxRef.current = audioCtx;
-    setMainAnalyserNode(analyser);
     mr.start();
     setMainEntryState('recording');
   };
@@ -290,6 +307,8 @@ export default function MoMEntryFeedbackScreen() {
     mr.stream.getTracks().forEach(t => t.stop());
     mainMediaRecorderRef.current = null;
     mainAudioChunksRef.current = [];
+    mainAudioCtxRef.current?.close(); mainAudioCtxRef.current = null;
+    mainAnalyserRef.current = null;
     teardownMainAudio();
     setMainEntryState('idle');
   };
@@ -449,8 +468,14 @@ export default function MoMEntryFeedbackScreen() {
   // ── Save ──────────────────────────────────────────────────────────────────
 
   const handleSave = () => {
-    if (agenda) markCompleted(agenda.id);
-    navigate('/agenda-list');
+    if (agenda) {
+      if (meetingId != null) {
+        saveMeetingProceedings(meetingId, agenda.id, discussionText);
+      } else {
+        saveProceedings(agenda.id, discussionText);
+      }
+    }
+    navigate('/agenda-list', { state: { meetingId } });
   };
 
   // ── Highlights for TextAreaContainer ─────────────────────────────────────
@@ -465,7 +490,7 @@ export default function MoMEntryFeedbackScreen() {
     }));
 
   return (
-    <MeetingShellLayout stepperActiveState={2}>
+    <MeetingShellLayout stepperActiveState={2} showBack={false}>
 
       <div className="flex flex-col gap-[3px]">
 
@@ -473,7 +498,7 @@ export default function MoMEntryFeedbackScreen() {
         <div className="bg-white pl-[20px] pr-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 w-full">
           <GoBackToPreviousPage
             label={t('go_back')}
-            onClick={() => navigate('/agenda-list')}
+            onClick={() => navigate('/agenda-list', { state: { meetingId } })}
           />
         </div>
 
@@ -539,19 +564,24 @@ export default function MoMEntryFeedbackScreen() {
               />
 
               {(mainSttError ?? feedbackError) ? (
-                <InfoBox type="default" text={(mainSttError ?? feedbackError)!} className="shrink-0 w-full" />
+                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
+                  {mainSttError ? 'We were unable to record your voice at the moment. Please try again in sometime.' : (feedbackError ?? '')}
+                </p>
               ) : (
-                <InfoBox type="outlined" text={t('discussion_field_info')} className="shrink-0 w-full" />
+                <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
               )}
 
               <TextAreaContainer
-                state={isMainRecording || isMainProcessing ? 'recording' : hasText ? 'filled' : 'default'}
+                state={isMainRecording ? 'recording' : hasText ? 'filled' : 'default'}
                 placeholder={t('discussion_field_placeholder')}
                 value={discussionText}
                 onChange={setDiscussionText}
-                onStopRecording={handleMainCancelRecording}
-                onAcceptRecording={handleMainConfirmRecording}
-                analyserNode={mainAnalyserNode ?? undefined}
+                onMicClick={handleMainMicClick}
+                onStopClick={handleMainCancelRecording}
+                scanPhotoLabel={t('btn_scan_photo')}
+                uploadAudioLabel={t('btn_upload_audio')}
+                analyserNode={mainAnalyserRef.current ?? undefined}
+                isProcessing={isMainProcessing}
                 highlights={highlights}
                 onSpanHoverEnter={handleSpanHoverEnter}
                 onSpanHoverLeave={handleSpanHoverLeave}
@@ -559,38 +589,24 @@ export default function MoMEntryFeedbackScreen() {
                 highlighted
                 className="shrink-0 w-full"
               />
-
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                <MicButton
-                  pulse
-                  isRecording={isMainRecording}
-                  disabled={isMainProcessing}
-                  onClick={handleMainMicClick}
-                />
-              </div>
             </div>
 
             {/* Footer buttons */}
             <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
-              {isMainProcessing && (
-                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
-                  Transcribing…
-                </span>
-              )}
               {isFetchingFeedback && (
                 <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
                   {t('feedback_fetching')}
                 </span>
               )}
               <Button
-                variant="filled"
+                variant="outlined"
                 state={isFeedbackEnabled ? 'default' : 'disabled'}
                 iconPlacement="none"
                 text={t('btn_get_feedback')}
                 onClick={isFeedbackEnabled ? handleGetFeedback : undefined}
               />
               <Button
-                variant="save"
+                variant="filled"
                 state="default"
                 iconPlacement="none"
                 text={t('btn_save')}

@@ -7,6 +7,7 @@ interface LanguageContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (key: string) => string;
+  tDesignation: (designation: string) => string;
 }
 
 export const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -19,8 +20,21 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return dict[lang]?.[key] ?? dict['en']?.[key] ?? key;
   }
 
+  const DESIGNATION_MAP: Record<string, string> = {
+    'PDO':            'designation_pdo',
+    'Secretary':      'designation_secretary',
+    'Ward Member':    'designation_ward_member',
+    'President':      'designation_president',
+    'Vice President': 'designation_vice_president',
+  };
+
+  function tDesignation(designation: string): string {
+    const key = DESIGNATION_MAP[designation];
+    return key ? t(key) : designation;
+  }
+
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={{ lang, setLang, t, tDesignation }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
+import { useMeetings } from '../context/MeetingsContext';
 import {
   GoBackToPreviousPage,
   SectionHeading,
@@ -10,7 +11,6 @@ import {
   Button,
   InfoBox,
   TextAreaContainer,
-  MicButton,
   SmallDetailsText,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
@@ -34,13 +34,15 @@ export interface FeedbackResult {
 
 export default function MoMEntryPostRecordingScreen() {
   const { lang, t } = useLanguage();
-  const { markCompleted } = useAgenda();
+  const { markCompleted, saveProceedings } = useAgenda();
+  const { saveMeetingProceedings } = useMeetings();
   const navigate = useNavigate();
   const location = useLocation();
 
-  type RouteState = { agenda?: AgendaItem; discussionText?: string; feedbackCompleted?: boolean } | null;
+  type RouteState = { agenda?: AgendaItem; discussionText?: string; feedbackCompleted?: boolean; meetingId?: number } | null;
   const routeState = location.state as RouteState;
   const agenda = routeState?.agenda;
+  const meetingId = routeState?.meetingId;
 
   const [discussionText, setDiscussionText]         = useState(routeState?.discussionText ?? '');
   const [entryState, setEntryState]                 = useState<EntryState>('idle');
@@ -54,12 +56,12 @@ export default function MoMEntryPostRecordingScreen() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef   = useRef<Blob[]>([]);
   const audioCtxRef      = useRef<AudioContext | null>(null);
-  const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
+  const analyserRef      = useRef<AnalyserNode | null>(null);
 
   const teardownAudio = useCallback(() => {
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
-    setAnalyserNode(null);
+    analyserRef.current = null;
   }, []);
 
   const isRecording  = entryState === 'recording';
@@ -68,7 +70,7 @@ export default function MoMEntryPostRecordingScreen() {
   const hasText      = discussionText.trim().length > 0;
 
   const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback;
-  const isSaveEnabled     = hasText && isIdle && feedbackCompleted && !isFetchingFeedback;
+  const isSaveEnabled     = hasText && feedbackCompleted;
 
   // ── Start recording ──────────────────────────────────────────────────────
   const handleMicClick = async () => {
@@ -92,6 +94,14 @@ export default function MoMEntryPostRecordingScreen() {
       return;
     }
 
+    const audioCtx = new AudioContext();
+    audioCtxRef.current = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    analyserRef.current = analyser;
+
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
     const mediaRecorder = new MediaRecorder(stream, { mimeType });
     mediaRecorderRef.current = mediaRecorder;
@@ -100,12 +110,6 @@ export default function MoMEntryPostRecordingScreen() {
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) audioChunksRef.current.push(e.data);
     };
-
-    const audioCtx = new AudioContext();
-    const analyser = audioCtx.createAnalyser();
-    audioCtx.createMediaStreamSource(stream).connect(analyser);
-    audioCtxRef.current = audioCtx;
-    setAnalyserNode(analyser);
 
     mediaRecorder.start();
     setEntryState('recording');
@@ -177,6 +181,7 @@ export default function MoMEntryPostRecordingScreen() {
   const handleGetFeedback = async () => {
     if (!isFeedbackEnabled) return;
     setFeedbackError(null);
+    setFeedbackCompleted(true);
     setIsFetchingFeedback(true);
 
     // MOCK INTERCEPT — remove this block when API is live
@@ -203,7 +208,7 @@ export default function MoMEntryPostRecordingScreen() {
         ],
       };
       setIsFetchingFeedback(false);
-      navigate('/mom-entry/feedback', { state: { agenda, discussionText, feedbackResult } });
+      navigate('/mom-entry/feedback', { state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId } });
       return;
     }
     // END MOCK INTERCEPT
@@ -227,7 +232,7 @@ export default function MoMEntryPostRecordingScreen() {
 
       const feedbackResult: FeedbackResult = await res.json();
       navigate('/mom-entry/feedback', {
-        state: { agenda, discussionText, feedbackResult },
+        state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -239,15 +244,21 @@ export default function MoMEntryPostRecordingScreen() {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
-    if (agenda) markCompleted(agenda.id);
-    navigate('/agenda-list');
+    if (agenda) {
+      if (meetingId != null) {
+        saveMeetingProceedings(meetingId, agenda.id, discussionText);
+      } else {
+        saveProceedings(agenda.id, discussionText);
+      }
+    }
+    navigate('/agenda-list', { state: { meetingId } });
   };
 
   // Determine the active error message to show (STT takes priority)
   const activeError = sttError ?? feedbackError;
 
   return (
-    <MeetingShellLayout stepperActiveState={2}>
+    <MeetingShellLayout stepperActiveState={2} showBack={false}>
 
       <div className="flex flex-col gap-[3px]">
 
@@ -255,7 +266,7 @@ export default function MoMEntryPostRecordingScreen() {
         <div className="bg-white pl-[20px] pr-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 w-full">
           <GoBackToPreviousPage
             label={t('go_back')}
-            onClick={() => navigate('/agenda-list')}
+            onClick={() => navigate('/agenda-list', { state: { meetingId } })}
           />
         </div>
 
@@ -321,54 +332,44 @@ export default function MoMEntryPostRecordingScreen() {
                 className="shrink-0"
               />
 
-              {/* Info / error box */}
-              {activeError ? (
-                <InfoBox
-                  type="default"
-                  text={activeError}
-                  className="shrink-0 w-full"
-                />
+              {/* Info box — always visible; STT error replaces it (mic issue) */}
+              {sttError ? (
+                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
+                  We were unable to record your voice at the moment. Please try again in sometime.
+                </p>
               ) : (
                 <InfoBox
-                  type="outlined"
+                  type="plain"
                   text={t('discussion_field_info')}
                   className="shrink-0 w-full"
                 />
               )}
 
               <TextAreaContainer
-                state={isRecording || isProcessing ? 'recording' : hasText ? 'filled' : 'default'}
+                state={isRecording ? 'recording' : hasText ? 'filled' : 'default'}
                 placeholder={t('discussion_field_placeholder')}
                 value={discussionText}
                 onChange={setDiscussionText}
-                onStopRecording={handleCancelRecording}
-                onAcceptRecording={handleConfirmRecording}
-                analyserNode={analyserNode ?? undefined}
+                onMicClick={handleMicClick}
+                onStopClick={handleCancelRecording}
+                scanPhotoLabel={t('btn_scan_photo')}
+                uploadAudioLabel={t('btn_upload_audio')}
+                analyserNode={analyserRef.current ?? undefined}
+                isProcessing={isProcessing}
                 highlighted
                 className="shrink-0 w-full"
               />
 
-              {/* Mic button — floats centred below textarea */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                <MicButton
-                  pulse
-                  isRecording={isRecording}
-                  disabled={isProcessing || isFetchingFeedback}
-                  onClick={handleMicClick}
-                />
-              </div>
+              {/* Feedback error — below textarea */}
+              {feedbackError && (
+                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
+                  {feedbackError}
+                </p>
+              )}
             </div>
 
             {/* Footer buttons */}
             <div className="flex gap-[15px] items-start justify-end shrink-0 w-full">
-              {isProcessing && (
-                <span
-                  className="text-sm text-[#727272] mr-2"
-                  style={{ fontFamily: 'Noto Sans' }}
-                >
-                  Transcribing…
-                </span>
-              )}
               {isFetchingFeedback && (
                 <span
                   className="text-sm text-[#727272] mr-2"
@@ -378,14 +379,14 @@ export default function MoMEntryPostRecordingScreen() {
                 </span>
               )}
               <Button
-                variant="filled"
+                variant="outlined"
                 state={isFeedbackEnabled ? 'default' : 'disabled'}
                 iconPlacement="none"
                 text={t('btn_get_feedback')}
                 onClick={isFeedbackEnabled ? handleGetFeedback : undefined}
               />
               <Button
-                variant="save"
+                variant="filled"
                 state={isSaveEnabled ? 'default' : 'disabled'}
                 iconPlacement="none"
                 text={t('btn_save')}

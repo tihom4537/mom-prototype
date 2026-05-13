@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  /* ── Base color tokens ── */
   --primary-50: #f7f0ee;
   --primary-100: #efe0dc;
   --primary-200: #dfc2b9;
@@ -11,10 +12,55 @@
   --secondary-300: #ff7266;
   --secondary-source: #ff7468;
   --secondary-600: #cc1000;
+  /* ── Danger (red) ── */
+  --danger-50:  #FFEEEA;
+  --danger-100: #FFCDC0;
+  --danger-200: #FFAC9A;
+  --danger-300: #FF8B78;
+  --danger-400: #FF6C5A;
+  --danger-500: #EC5042;
+  --danger-600: #D4362E;
+  --danger-700: #972120;
+  --danger-800: #961416;
+  --danger-900: #741818;
+  /* ── Success (green) ── */
+  --success-50:  #EDF7E6;
+  --success-100: #E3F2D9;
+  --success-200: #C6E5B5;
+  --success-300: #98CF80;
+  --success-400: #698349;
+  --success-500: #309314;
+  --success-600: #187400;
+  --success-700: #005A00;
+  --success-800: #024500;
+  --success-900: #044400;
+  /* ── Warning (amber) ── */
+  --warning-50:  #FEF1E7;
+  --warning-100: #F9D7B9;
+  --warning-200: #F0BD8F;
+  --warning-300: #E2A468;
+  --warning-400: #D08D47;
+  --warning-500: #BB7728;
+  --warning-600: #A46212;
+  --warning-700: #985000;
+  --warning-800: #713F00;
+  --warning-900: #573000;
+  /* ── Neutral (grey) ── */
+  --neutral-50:  #F3F3F3;
+  --neutral-300: #B0B0B0;
+  --neutral-400: #989898;
+  --neutral-500: #868686;
+  --neutral-700: #5E5E5E;
+  --neutral-800: #484848;
+  --neutral-900: #393939;
   --success-source: #3c9718;
   --neutral-source: #212121;
+  --neutral-100: #f3f3f3;
+  --neutral-200: #c6c6c6;
   --neutral-400: #c6c6c6;
+  --neutral-500: #868686;
   --neutral-600: #727272;
+  --neutral-800: #4b4b4b;
   --text-dark: #212121;
   --text-light: #ffffff;
   --text-hint: #727272;
@@ -23,6 +69,86 @@
   --stroke-300: #b0b0b0;
   --font-family-headings: 'Noto Sans', sans-serif;
   --font-family-body: 'Noto Sans', sans-serif;
+
+  /* ── Figma slash-notation aliases (used in generated Figma code) ── */
+  --primary\/50: #f7f0ee;
+  --primary\/100: #efe0dc;
+  --primary\/200: #dfc2b9;
+  --primary\/source: #6a3e31;
+  --primary-transparent\/40\%: rgba(106, 62, 49, 0.4);
+  --secondary-transparent\/16\%: rgba(255, 116, 104, 0.16);
+  --neutral\/0---white: #ffffff;
+  --neutral\/100: #dddddd;
+  --neutral\/200: #c6c6c6;
+  --neutral\/400: #c6c6c6;
+  --neutral\/500: #868686;
+  --neutral\/600: #727272;
+  --neutral\/700: #5e5e5e;
+  --neutral\/800: #4b4b4b;
+  --neutral\/source: #212121;
+  --black\/100\%: #000000;
+  --text\/dark: #212121;
+  --text\/light: #ffffff;
+  --text\/hint: #727272;
+  --stroke\/100: #dddddd;
+  --stroke\/200: #c6c6c6;
+  --stroke\/300: #b0b0b0;
+
+  /* ── Font families (Figma slash-notation) ── */
+  --font-family\/headings: 'Noto Sans', sans-serif;
+  --font-family\/label-\&-body: 'Noto Sans', sans-serif;
+
+  /* ── Font size scale ── */
+  --font-size\/0: 11px;
+  --font-size\/1: 12px;
+  --font-size\/2: 14px;
+  --font-size\/3: 16px;
+  --font-size\/4: 20px;
+  --font-size\/5: 22px;
+  --font-size\/6: 24px;
+  --font-size\/7: 28px;
+  --font-size\/8: 32px;
+  --font-size\/9: 40px;
+  --font-size\/10: 48px;
+  --font-size\/11: 56px;
+  --font-size\/12: 64px;
+  --font-size\/13: 72px;
+  --font-size\/14: 80px;
+
+  /* ── Line height scale ── */
+  --line-heights\/0: 100px;
+  --line-heights\/2: 80px;
+  --line-heights\/3: 72px;
+  --line-heights\/4: 56px;
+  --line-heights\/5: 48px;
+  --line-heights\/6: 40px;
+  --line-heights\/7: 32px;
+  --line-heights\/8: 28px;
+  --line-heights\/9: 24px;
+  --line-heights\/10: 20px;
+  --line-heights\/11: 16px;
+
+  /* ── Letter spacing scale ── */
+  --letter-spacing: 0px;
+  --letter-spacing\/1: 0.15px;
+  --letter-spacing\/2: 0.1px;
+  --letter-spacing\/3: 0.5px;
+  --letter-spacing\/4: 0.25px;
+  --letter-spacing\/5: 0.4px;
+
+  /* ── Spacing tokens ── */
+  --12: 12px;
+  --16: 16px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+
+  /* ── Border radius tokens ── */
+  --radius-none: 0px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
 }
 
 * {

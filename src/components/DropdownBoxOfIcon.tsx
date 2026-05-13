@@ -43,7 +43,7 @@ export default function DropdownBoxOfIcon({
             className="bg-white flex items-center justify-between px-6 py-[11px] rounded-tl-lg rounded-tr-lg w-full"
             onClick={toggle}
           >
-            <span className="font-normal text-sm text-[#999] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
+            <span className="font-normal text-sm text-[#727272] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
               {menuLabel}
             </span>
             <svg width="14" height="8" viewBox="0 0 14 8" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleY(-1)' }}>

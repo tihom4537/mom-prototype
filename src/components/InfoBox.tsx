@@ -1,6 +1,6 @@
 import Icon from './Icon';
 
-export type InfoBoxType = 'default' | 'outlined';
+export type InfoBoxType = 'default' | 'outlined' | 'plain';
 
 interface InfoBoxProps {
   type?: InfoBoxType;
@@ -14,6 +14,22 @@ export default function InfoBox({
   className,
 }: InfoBoxProps) {
   const isOutlined = type === 'outlined';
+  const isPlain    = type === 'plain';
+
+  if (isPlain) {
+    return (
+      <div className={`flex gap-[8px] items-center ${className ?? 'w-full'}`}>
+        <Icon name="info" size="small" color="#727272" />
+        <p
+          className="flex-1 font-medium text-[12px] text-[#727272] leading-5 tracking-[0.1px] min-w-px"
+          style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+        >
+          {text}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex gap-1 items-center rounded-[10px]
@@ -21,9 +37,7 @@ export default function InfoBox({
         ${className ?? 'w-full'}`}
     >
       <div className="flex flex-1 gap-[10px] items-center justify-center min-h-px min-w-px px-[10px] py-[5px]">
-        {/* Info icon */}
         <Icon name="info" size="small" color="#6a3e31" />
-        {/* Text */}
         <p
           className="flex-1 font-medium text-xs text-[#212121] leading-5 tracking-[0.1px] min-h-px min-w-px"
           style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}

@@ -20,14 +20,12 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
   const location  = useLocation();
   const { t }     = useLanguage();
 
-  // Determine which parent group the current route belongs to
-  const fullPath = location.pathname + location.search;
-
   const getInitialOpenItem = (): NavId | null => {
+    // Overview is the module home — no nav item selected
+    if (['/meetings/overview', '/meetings', '/'].includes(location.pathname)) return null;
     if (location.pathname.startsWith('/meetings')) return 'meetings';
-    // Agenda / MoM screens are part of the start-meeting flow — keep meetings open
     if (['/agenda-list', '/mom-entry', '/mom-entry/post-recording', '/mom-entry/feedback'].includes(location.pathname)) return 'meetings';
-    return 'meetings';
+    return null;
   };
 
   const [openItem, setOpenItem]       = useState<NavId | null>(getInitialOpenItem);
@@ -43,27 +41,29 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
     id: NavId;
     label: string;
     icon: string;
+    onParentClick?: () => void;
     subItems: Array<{ label: string; onClick: () => void; isActive: boolean }>;
   }> = [
     {
       id: 'meetings',
       label: t('nav_meetings'),
       icon: 'people_alt',
+      onParentClick: () => navigate('/meetings/overview'),
       subItems: [
         {
           label: t('nav_create_meeting'),
-          onClick: showToast,
-          isActive: false,
+          onClick: () => navigate('/meetings/create'),
+          isActive: location.pathname === '/meetings/create',
         },
         {
           label: t('nav_meeting_list'),
           onClick: () => navigate('/meetings/list'),
-          isActive: fullPath === '/meetings/list',
+          isActive: location.pathname === '/meetings/list',
         },
         {
-          label: t('nav_start_meeting'),
-          onClick: () => navigate('/meetings/list?mode=start'),
-          isActive: fullPath === '/meetings/list?mode=start',
+          label: t('nav_add_participants'),
+          onClick: () => navigate('/meetings/participants'),
+          isActive: location.pathname === '/meetings/participants',
         },
       ],
     },
@@ -89,21 +89,13 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
   const activeNavId = NAV_ITEMS.find(nav => nav.subItems.some(s => s.isActive))?.id ?? null;
 
   const handleNavClick = (id: NavId) => {
-    const item = NAV_ITEMS.find(n => n.id === id)!;
-    if (item.subItems.length === 0) {
-      // Leaf item — toggle active, no sub-expansion
-      setOpenItem(prev => (prev === id ? null : id));
-      return;
-    }
-    if (activeNavId === id) {
-      // Active parent — stays open, but we allow toggling other groups
-      return;
-    }
+    const item = NAV_ITEMS.find(n => n.id === id);
+    item?.onParentClick?.();
     setOpenItem(prev => (prev === id ? null : id));
   };
 
-  // A nav group is open if the user opened it OR if it's the active parent
-  const isEffectivelyOpen = (id: NavId) => openItem === id || activeNavId === id;
+  // A nav group is open if the user explicitly opened it
+  const isEffectivelyOpen = (id: NavId) => openItem === id;
 
   return (
     <div
@@ -151,10 +143,10 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
                     onClick={() => handleNavClick(item.id)}
                     title={item.label}
                     className={`flex items-center justify-center px-3 py-[9px] rounded-2xl shrink-0 border-none cursor-pointer transition-colors
-                      ${isActive ? 'bg-[#ff7266]' : 'bg-transparent hover:bg-[#f7f0ee]'}`}
+                      ${isActive ? 'bg-[#efe0dc]' : 'bg-transparent hover:bg-[#efe0dc]'}`}
                   >
                     <div className="flex h-[35px] items-center shrink-0">
-                      <Icon name={item.icon} size="medium" color={isActive ? 'white' : '#6a3e31'} />
+                      <Icon name={item.icon} size="medium" color="#6a3e31" />
                     </div>
                   </button>
                 </div>

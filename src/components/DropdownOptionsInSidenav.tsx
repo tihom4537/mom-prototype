@@ -15,14 +15,14 @@ export default function DropdownOptionsInSidenav({
 }: DropdownOptionsInSidenavProps) {
   const barColor =
     state === 'selected'
-      ? 'bg-[#6a3e31]'
+      ? 'bg-[rgba(106,62,49,0.4)]'
       : state === 'hover'
       ? 'bg-[rgba(106,62,49,0.32)]'
       : 'bg-[#d9d9d9]';
 
   const contentBg =
     state === 'selected'
-      ? 'bg-[#efe0dc]'
+      ? 'bg-[#f3f3f3]'
       : state === 'hover'
       ? 'bg-[#f7f0ee]'
       : '';

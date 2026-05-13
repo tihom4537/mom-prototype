@@ -1,28 +1,42 @@
 import Icon from './Icon';
 
-export type StepperActiveState = 2 | 3;
+export type StepperActiveState = 1 | 2 | 3 | 4 | 5;
+export type StepperVariant = 'mom-flow' | 'meeting-flow';
 
 interface Step {
   label: string;
   status: 'completed' | 'active' | 'pending';
-  number?: number;
+  number: number;
 }
 
 interface StepperProps {
   activeState?: StepperActiveState;
   stepLabels?: string[];
+  variant?: StepperVariant;
   className?: string;
+  /** Called with 1-based step number when a completed step circle is clicked */
+  onStepClick?: (step: number) => void;
 }
 
-const STEPS = [
+const MOM_STEPS = [
   'Meeting Attendence',
   'Meeting Proceedings Entry',
   'Proceedings review',
   'Send Proceeding for President Approval',
 ];
 
-export default function Stepper({ activeState = 2, stepLabels, className }: StepperProps) {
-  const labels = stepLabels ?? STEPS;
+const MEETING_STEPS = [
+  'Starting\nAttendance',
+  'Meeting\nProceedings Entry',
+  'Proceedings\nReview',
+  'Closure\nAttendance',
+  'Send for\nPresident Approval',
+];
+
+export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-flow', className, onStepClick }: StepperProps) {
+  const defaultLabels = variant === 'meeting-flow' ? MEETING_STEPS : MOM_STEPS;
+  const labels = stepLabels ?? defaultLabels;
+
   const steps: Step[] = labels.map((label, i) => {
     const stepNumber = i + 1;
     if (stepNumber < activeState) return { label, status: 'completed', number: stepNumber };
@@ -31,55 +45,62 @@ export default function Stepper({ activeState = 2, stepLabels, className }: Step
   });
 
   return (
-    <div className={`bg-white flex flex-col items-start px-[10px] py-[5px] rounded-[15px] ${className ?? 'w-full'}`}>
-      <div className="flex gap-1 items-center justify-center w-full">
-        {steps.map((step, i) => (
-          <div key={i} className="flex gap-0.5 items-center shrink-0">
-            {/* Step */}
-            <div className="flex gap-2 items-center p-1 shrink-0">
-              {/* Circle */}
-              <div className="flex items-center p-0 shrink-0">
-                {step.status === 'completed' ? (
-                  <div className="bg-[#3c9718] flex flex-col items-center justify-center px-1 py-[6px] rounded-full shrink-0 size-8">
-                    <Icon name="check" size="small" color="white" />
-                  </div>
-                ) : step.status === 'active' ? (
-                  <div className="border-2 border-[#3c9718] relative rounded-full shrink-0 size-8 flex items-center justify-center">
-                    <span
-                      className="font-medium text-sm text-[#212121] text-center leading-5 tracking-[0.1px]"
-                      style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                    >
-                      {step.number}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="bg-white border border-[#b0b0b0] flex flex-col items-center justify-center px-1 py-[6px] rounded-full shrink-0 w-8">
-                    <span
-                      className="font-medium text-sm text-[#727272] text-center leading-5 tracking-[0.1px] w-full"
-                      style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                    >
-                      {step.number}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {/* Label */}
-              <span
-                className="font-medium text-xs text-[#212121] leading-4 tracking-[0.5px] whitespace-nowrap"
-                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-              >
-                {step.label}
-              </span>
-            </div>
-            {/* Divider (not after last) */}
-            {i < steps.length - 1 && (
+    <div className={`bg-white flex items-center px-[10px] py-[5px] rounded-[15px] ${className ?? 'w-full'}`}>
+      {steps.map((step, i) => (
+        <>
+          {/* Step pill — centred */}
+          <div key={`step-${i}`} className="flex items-center justify-center gap-2 p-1 shrink-0">
+            {/* Circle */}
+            {step.status === 'completed' ? (
               <div
-                className={`h-px shrink-0 w-16 ${step.status === 'completed' ? 'bg-[#3c9718]' : 'bg-[#c6c6c6]'}`}
-              />
+                className={`bg-[#3c9718] flex items-center justify-center rounded-full shrink-0 size-8 ${onStepClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                onClick={() => onStepClick?.(step.number)}
+                title={onStepClick ? `Go to step ${step.number}` : undefined}
+              >
+                <Icon name="check" size="small" color="white" />
+              </div>
+            ) : step.status === 'active' ? (
+              <div className="border-2 border-[#3c9718] rounded-full shrink-0 size-8 flex items-center justify-center">
+                <span
+                  className="font-medium text-sm text-[#212121] text-center leading-5 tracking-[0.1px]"
+                  style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                >
+                  {step.number}
+                </span>
+              </div>
+            ) : (
+              <div className="bg-white border border-[#b0b0b0] flex items-center justify-center rounded-full shrink-0 size-8">
+                <span
+                  className="font-medium text-sm text-[#727272] text-center leading-5 tracking-[0.1px]"
+                  style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                >
+                  {step.number}
+                </span>
+              </div>
             )}
+            {/* Label */}
+            <div className="flex flex-col">
+              {step.label.split('\n').map((line, li) => (
+                <span
+                  key={li}
+                  className="font-medium text-[12px] text-[#212121] leading-4 tracking-[0.5px] whitespace-nowrap"
+                  style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                >
+                  {line}
+                </span>
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+
+          {/* Connector between steps */}
+          {i < steps.length - 1 && (
+            <div
+              key={`conn-${i}`}
+              className={`h-px flex-1 min-w-[8px] ${step.status === 'completed' ? 'bg-[#3c9718]' : 'bg-[#c6c6c6]'}`}
+            />
+          )}
+        </>
+      ))}
     </div>
   );
 }

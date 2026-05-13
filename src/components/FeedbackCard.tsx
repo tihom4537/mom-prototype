@@ -1,5 +1,6 @@
 import FeedbackCardTags, { FeedbackTagType } from './FeedbackCardTags';
-import Icon from './Icon';
+import Button from './Button';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type FeedbackCardType = 'fill-blanks' | 'rephrase';
 
@@ -14,14 +15,11 @@ const typeToTagType: Record<FeedbackCardType, FeedbackTagType> = {
 
 export interface FeedbackCardProps {
   type?: FeedbackCardType;
-  /** fill-blanks: parsed sentence segments with blanks */
   segments?: Segment[];
   onSegmentChange?: (index: number, value: string) => void;
-  /** rephrase: the complete improved sentence */
   originalText?: string;
   onAccept?: () => void;
   onReject?: () => void;
-  /** fill-blanks: assemble filled sentence and push to discussion */
   onPushText?: () => void;
   isActive?: boolean;
   onHoverEnter?: () => void;
@@ -44,6 +42,7 @@ export default function FeedbackCard({
   onClick,
   className,
 }: FeedbackCardProps) {
+  const { t } = useLanguage();
   const isFillBlanks = type === 'fill-blanks';
 
   const activeStyle = isActive
@@ -65,38 +64,14 @@ export default function FeedbackCard({
     >
       {/* ── Header ── */}
       <div className="bg-white flex items-center pb-[10px] pt-3 px-4 rounded-tl-lg rounded-tr-lg shrink-0 w-full">
-        <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
-          <FeedbackCardTags type={typeToTagType[type]} />
-          <div className="flex gap-[9px] items-center shrink-0">
-            {/* Accept / Push (✓) */}
-            <button
-              onClick={e => {
-                e.stopPropagation();
-                isFillBlanks ? onPushText?.() : onAccept?.();
-              }}
-              className="border border-[#ddd] flex items-center justify-center rounded-lg shrink-0 size-6 cursor-pointer bg-white hover:bg-[#f5f5f5] transition-colors"
-              title={isFillBlanks ? 'Add to Discussion' : 'Accept'}
-            >
-              <Icon name="check" size="small" color="#3c9718" />
-            </button>
-            {/* Reject (✕) */}
-            <button
-              onClick={e => { e.stopPropagation(); onReject?.(); }}
-              className="border border-[#ddd] flex items-center justify-center rounded-lg shrink-0 size-6 cursor-pointer bg-white hover:bg-[#f5f5f5] transition-colors"
-              title="Dismiss"
-            >
-              <Icon name="close" size="small" color="#b7131a" />
-            </button>
-          </div>
-        </div>
+        <FeedbackCardTags type={typeToTagType[type]} />
       </div>
 
       {/* ── Body ── */}
       <div
-        className="bg-white flex flex-col pt-1 px-4 pb-4 shrink-0 w-full"
+        className="bg-white flex flex-col pt-1 px-4 pb-4 shrink-0 w-full gap-3"
         onClick={isActive ? e => e.stopPropagation() : undefined}
       >
-
         {/* Fill-blanks: inline sentence with editable blanks */}
         {isFillBlanks && (
           <p
@@ -107,12 +82,11 @@ export default function FeedbackCard({
               if (seg.kind === 'text') {
                 return <span key={i}>{seg.content}</span>;
               }
-              // Blank — inactive: static underlined hint; active: editable input
               if (!isActive) {
                 return (
                   <span
                     key={i}
-                    className="border-b border-[#bbb] text-[#aaa] text-xs italic"
+                    className="border-b border-[#bbb] text-[#727272] text-xs italic"
                     style={{ minWidth: '3em', display: 'inline-block', paddingBottom: '1px' }}
                   >
                     {seg.hint}
@@ -152,6 +126,25 @@ export default function FeedbackCard({
           </div>
         )}
 
+        {/* ── Footer buttons ── */}
+        <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+          <Button
+            variant="outlined"
+            size="small"
+            iconPlacement="none"
+            text={t('btn_reject')}
+            onClick={() => onReject?.()}
+          />
+          <button
+            type="button"
+            onClick={() => (isFillBlanks ? onPushText?.() : onAccept?.())}
+            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[16px] py-[8px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('btn_accept')}
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   );

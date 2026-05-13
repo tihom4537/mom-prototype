@@ -1,57 +1,68 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useMemo } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { DEMO_MODE, DEMO_PROCEEDINGS } from '../config/demo';
 
 export interface AgendaItem {
   id: number;
   heading: string;
   description: string;
   completed: boolean;
+  proceedingsText: string;
 }
 
-const INITIAL_AGENDA_ITEMS: AgendaItem[] = [
-  {
-    id: 1,
-    heading: 'Reading and reporting on the proceedings of the previous meeting',
-    description: 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.',
-    completed: false,
-  },
-  {
-    id: 2,
-    heading: 'Reading and explaining circulars issued by the government',
-    description: 'All circulars issued by the state and district government offices are to be read out and explained to the members.',
-    completed: true,
-  },
-  {
-    id: 3,
-    heading: 'About approval of deposit expenditure',
-    description: 'The deposit expenditure statements are to be presented and approved by the General Body members.',
-    completed: false,
-  },
-  {
-    id: 4,
-    heading: 'Regarding applications received from the public',
-    description: 'Applications received from citizens regarding public works and services are to be reviewed and decisions taken.',
-    completed: false,
-  },
+interface AgendaItemKey {
+  id: number;
+  headingKey: string;
+  descriptionKey: string;
+  completed: boolean;
+  proceedingsText: string;
+}
+
+const INITIAL_AGENDA_KEYS: AgendaItemKey[] = [
+  { id: 1, headingKey: 'agenda_heading_1', descriptionKey: 'agenda_desc_1', completed: DEMO_MODE, proceedingsText: DEMO_MODE ? DEMO_PROCEEDINGS[1] : '' },
+  { id: 2, headingKey: 'agenda_heading_2', descriptionKey: 'agenda_desc_2', completed: DEMO_MODE, proceedingsText: DEMO_MODE ? DEMO_PROCEEDINGS[2] : '' },
+  { id: 3, headingKey: 'agenda_heading_3', descriptionKey: 'agenda_desc_3', completed: DEMO_MODE, proceedingsText: DEMO_MODE ? DEMO_PROCEEDINGS[3] : '' },
+  { id: 4, headingKey: 'agenda_heading_4', descriptionKey: 'agenda_desc_4', completed: DEMO_MODE, proceedingsText: DEMO_MODE ? DEMO_PROCEEDINGS[4] : '' },
 ];
 
 interface AgendaContextValue {
   agendaItems: AgendaItem[];
   markCompleted: (id: number) => void;
+  saveProceedings: (id: number, text: string) => void;
 }
 
 const AgendaContext = createContext<AgendaContextValue | null>(null);
 
 export function AgendaProvider({ children }: { children: React.ReactNode }) {
-  const [agendaItems, setAgendaItems] = useState<AgendaItem[]>(INITIAL_AGENDA_ITEMS);
+  const { t } = useLanguage();
+  const [keys, setKeys] = useState<AgendaItemKey[]>(INITIAL_AGENDA_KEYS);
 
   const markCompleted = (id: number) => {
-    setAgendaItems(items =>
+    setKeys(items =>
       items.map(item => (item.id === id ? { ...item, completed: true } : item))
     );
   };
 
+  const saveProceedings = (id: number, text: string) => {
+    setKeys(items =>
+      items.map(item => (item.id === id ? { ...item, proceedingsText: text, completed: true } : item))
+    );
+  };
+
+  const agendaItems: AgendaItem[] = useMemo(
+    () => keys.map(k => ({
+      id: k.id,
+      heading: t(k.headingKey),
+      description: t(k.descriptionKey),
+      completed: k.completed,
+      proceedingsText: k.proceedingsText,
+    })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [keys, t]
+  );
+
   return (
-    <AgendaContext.Provider value={{ agendaItems, markCompleted }}>
+    <AgendaContext.Provider value={{ agendaItems, markCompleted, saveProceedings }}>
       {children}
     </AgendaContext.Provider>
   );

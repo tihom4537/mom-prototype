@@ -6,7 +6,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 // Karnataka government logo — saved locally in /public to avoid broken remote URLs
 const imgLogo = "/karnataka-emblem.png";
 
-export type NavbarVersion = 'default-with-welcome' | 'no-welcome';
+export type NavbarVersion = 'default-with-welcome' | 'no-welcome' | 'home-page-nav' | 'version4';
 
 interface NavbarProps {
   version?: NavbarVersion;
@@ -23,6 +23,52 @@ const LANG_OPTIONS: Array<{ code: 'en' | 'kn'; label: string; short: string }> =
   { code: 'kn', label: 'ಕನ್ನಡ',    short: 'ಕನ್ನಡ' },
 ];
 
+function LangDropdown({
+  lang,
+  setLang,
+  langOpen,
+  setLangOpen,
+  currentOption,
+}: {
+  lang: 'en' | 'kn';
+  setLang: (code: 'en' | 'kn') => void;
+  langOpen: boolean;
+  setLangOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  currentOption: { code: 'en' | 'kn'; label: string; short: string };
+}) {
+  return (
+    <div className="relative shrink-0">
+      {langOpen && <div className="fixed inset-0 z-10" onClick={() => setLangOpen(false)} />}
+      <button
+        onClick={() => setLangOpen(o => !o)}
+        className="relative z-20 flex items-center gap-[2px] border border-[#6a3e31] rounded-lg px-3 py-[6px] bg-transparent cursor-pointer hover:bg-[#f7f0ee] transition-colors"
+        aria-label="Select language"
+      >
+        <span className="font-medium text-sm text-[#6a3e31] leading-5 whitespace-nowrap" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+          {currentOption.short}
+        </span>
+        <Icon name="arrow_drop_down" size="small" color="#6a3e31" />
+      </button>
+      {langOpen && (
+        <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden z-20 min-w-[140px]">
+          {LANG_OPTIONS.map(({ code, label }) => (
+            <button
+              key={code}
+              onClick={() => { setLang(code); setLangOpen(false); }}
+              className="flex items-center justify-between w-full px-4 py-[10px] bg-white hover:bg-[#f7f0ee] transition-colors border-none cursor-pointer"
+            >
+              <span className={`text-sm text-[#212121] leading-5 ${lang === code ? 'font-semibold' : 'font-normal'}`} style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+                {label}
+              </span>
+              {lang === code && <Icon name="check" size="small" color="#6a3e31" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar({
   version = 'default-with-welcome',
   userName = 'MANOJ MANDYA MANDYA',
@@ -37,6 +83,83 @@ export default function Navbar({
   const [langOpen, setLangOpen] = useState(false);
 
   const currentOption = LANG_OPTIONS.find(o => o.code === lang)!;
+
+  // home-page-nav: compact, no profile pill — just logo + lang + settings + home
+  if (version === 'home-page-nav') {
+    return (
+      <div
+        className={`bg-white border border-[rgba(204,204,204,0.15)] flex items-center justify-between px-[26px] w-full py-[10px] ${className ?? ''}`}
+      >
+        {/* Left: Logo + Org name */}
+        <div className="flex gap-[15px] items-center shrink-0">
+          <div className="relative h-[57px] w-[66px] shrink-0">
+            <img alt="Karnataka Logo" className="absolute inset-0 max-w-none object-contain size-full" src={imgLogo} />
+          </div>
+          <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
+            <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              Rural Development and Panchayati Raj Department
+            </p>
+            <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              Government of Karnataka
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Lang + Settings + Home only */}
+        <div className="flex gap-[26px] items-center justify-end shrink-0">
+          <LangDropdown lang={lang} setLang={setLang} langOpen={langOpen} setLangOpen={setLangOpen} currentOption={currentOption} />
+          <button onClick={onSettingsClick} className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0" aria-label="Settings">
+            <Icon name="settings" size="medium" color="#6a3e31" />
+          </button>
+          <button onClick={() => navigate('/')} className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0" aria-label="Home">
+            <Icon name="home" size="medium" color="#6a3e31" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // version4: compact with profile avatar only (no full pill), 82px height
+  if (version === 'version4') {
+    return (
+      <div
+        className={`bg-white border border-[rgba(204,204,204,0.15)] flex items-center justify-between px-[26px] w-full py-[11px] ${className ?? ''}`}
+      >
+        {/* Left: Logo + Org name */}
+        <div className="flex gap-[15px] items-center shrink-0">
+          <div className="relative h-[57px] w-[66px] shrink-0">
+            <img alt="Karnataka Logo" className="absolute inset-0 max-w-none object-contain size-full" src={imgLogo} />
+          </div>
+          <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
+            <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              Rural Development and Panchayati Raj Department
+            </p>
+            <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              Government of Karnataka
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Avatar icon + Lang + Settings + Home */}
+        <div className="flex gap-[26px] items-center justify-end shrink-0">
+          <button
+            onClick={onProfileClick}
+            className="flex items-center justify-center size-[38px] rounded-full bg-[#f7f0ee] cursor-pointer border-none"
+            aria-label="Profile"
+          >
+            <Icon name="account_circle" size="large" color="#6a3e31" />
+          </button>
+          <LangDropdown lang={lang} setLang={setLang} langOpen={langOpen} setLangOpen={setLangOpen} currentOption={currentOption} />
+          <button onClick={onSettingsClick} className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0" aria-label="Settings">
+            <Icon name="settings" size="medium" color="#6a3e31" />
+          </button>
+          <button onClick={() => navigate('/')} className="flex items-center justify-center shrink-0 cursor-pointer bg-transparent border-none p-0" aria-label="Home">
+            <Icon name="home" size="medium" color="#6a3e31" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -106,50 +229,7 @@ export default function Navbar({
         </div>
 
         {/* Language dropdown */}
-        <div className="relative shrink-0">
-          {/* Outside-click overlay */}
-          {langOpen && (
-            <div className="fixed inset-0 z-10" onClick={() => setLangOpen(false)} />
-          )}
-
-          {/* Trigger button — shows current lang short name */}
-          <button
-            onClick={() => setLangOpen(o => !o)}
-            className="relative z-20 flex items-center gap-[2px] border border-[#6a3e31] rounded-lg px-3 py-[6px] bg-transparent cursor-pointer hover:bg-[#f7f0ee] transition-colors"
-            aria-label="Select language"
-          >
-            <span
-              className="font-medium text-sm text-[#6a3e31] leading-5 whitespace-nowrap"
-              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-            >
-              {currentOption.short}
-            </span>
-            <Icon name="arrow_drop_down" size="small" color="#6a3e31" />
-          </button>
-
-          {/* Dropdown panel */}
-          {langOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden z-20 min-w-[140px]">
-              {LANG_OPTIONS.map(({ code, label }) => (
-                <button
-                  key={code}
-                  onClick={() => { setLang(code); setLangOpen(false); }}
-                  className="flex items-center justify-between w-full px-4 py-[10px] bg-white hover:bg-[#f7f0ee] transition-colors border-none cursor-pointer"
-                >
-                  <span
-                    className={`text-sm text-[#212121] leading-5 ${lang === code ? 'font-semibold' : 'font-normal'}`}
-                    style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                  >
-                    {label}
-                  </span>
-                  {lang === code && (
-                    <Icon name="check" size="small" color="#6a3e31" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <LangDropdown lang={lang} setLang={setLang} langOpen={langOpen} setLangOpen={setLangOpen} currentOption={currentOption} />
 
         {/* Settings icon */}
         <button

@@ -1,6 +1,5 @@
-import { useRef, useEffect } from 'react';
-
 import Icon from './Icon';
+import MicButton from './MicButton';
 
 export type TextAreaState = 'default' | 'filled' | 'recording';
 
@@ -33,7 +32,7 @@ function buildSegments(value: string, highlights: HighlightSpan[]): Segment[] {
   const segments: Segment[] = [];
   let pos = 0;
   for (const range of ranges) {
-    if (range.start < pos) continue; // overlapping, skip
+    if (range.start < pos) continue;
     if (range.start > pos) {
       segments.push({ text: value.slice(pos, range.start) });
     }
@@ -46,22 +45,34 @@ function buildSegments(value: string, highlights: HighlightSpan[]): Segment[] {
   return segments;
 }
 
+const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
+
 interface TextAreaContainerProps {
   state?: TextAreaState;
   placeholder?: string;
   value?: string;
   onChange?: (value: string) => void;
-  onStopRecording?: () => void;
-  onAcceptRecording?: () => void;
-  analyserNode?: AnalyserNode;
-  /** When provided, renders a rich-text view with highlighted spans instead of a plain textarea */
+  /** Called when mic button clicked (start recording) */
+  onMicClick?: () => void;
+  /** Called when stop button clicked (stop recording) */
+  onStopClick?: () => void;
+  onScanPhoto?: () => void;
+  onUploadAudio?: () => void;
+  scanPhotoLabel?: string;
+  uploadAudioLabel?: string;
+  /** When provided, renders rich-text view with highlighted spans */
   highlights?: HighlightSpan[];
   onSpanHoverEnter?: (cardId: string) => void;
   onSpanHoverLeave?: (cardId: string) => void;
   onSpanClick?: (cardId: string) => void;
-  /** Applies permanent coral border + subtle tint (for MoM Entry screens) */
+  /** Applies permanent coral border (for MoM Entry feedback screen) */
   highlighted?: boolean;
   className?: string;
+  // Legacy props — accepted but unused so existing call-sites don't break
+  onStopRecording?: () => void;
+  onAcceptRecording?: () => void;
+  analyserNode?: AnalyserNode;
+  isProcessing?: boolean;
 }
 
 export default function TextAreaContainer({
@@ -69,96 +80,50 @@ export default function TextAreaContainer({
   placeholder = 'Type agenda discussion here, or click the mic button to dictate the agenda discussion.....',
   value,
   onChange,
-  onStopRecording,
-  onAcceptRecording,
-  analyserNode,
+  onMicClick,
+  onStopClick,
+  onScanPhoto,
+  onUploadAudio,
+  scanPhotoLabel = 'Scan Photo',
+  uploadAudioLabel = 'Upload Audio',
   highlights,
   onSpanHoverEnter,
   onSpanHoverLeave,
   onSpanClick,
   highlighted = false,
   className,
+  analyserNode,
+  isProcessing = false,
 }: TextAreaContainerProps) {
-  const isFilled = state === 'filled';
+  const isFilled    = state === 'filled';
   const isRecording = state === 'recording';
-  const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!analyserNode || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d')!;
-    let animId: number;
-
-    analyserNode.fftSize = 256;
-    const bufferLength = analyserNode.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    canvas.width = canvas.offsetWidth || 240;
-    canvas.height = canvas.offsetHeight || 45;
-    const W = canvas.width;
-    const H = canvas.height;
-
-    const barW = 3;
-    const barCount = Math.floor(W / 6);
-    const gap = barCount > 1 ? (W - barCount * barW) / (barCount - 1) : 0;
-    const step = Math.max(1, Math.floor(bufferLength / barCount));
-
-    const draw = () => {
-      animId = requestAnimationFrame(draw);
-      analyserNode.getByteFrequencyData(dataArray);
-
-      ctx.clearRect(0, 0, W, H);
-      for (let i = 0; i < barCount; i++) {
-        const idx = Math.min(i * step, bufferLength - 1);
-        const val = dataArray[idx] / 255;
-        const barH = Math.max(2, val * H * 0.85);
-        const x = Math.round(i * (barW + gap));
-        const y = (H - barH) / 2;
-        ctx.fillStyle = val > 0.45 ? '#ff7468' : '#ff9a6c';
-        ctx.globalAlpha = 0.55 + val * 0.45;
-        ctx.fillRect(x, y, barW, barH);
-      }
-      ctx.globalAlpha = 1;
-    };
-
-    draw();
-    return () => cancelAnimationFrame(animId);
-  }, [analyserNode]);
 
   const useRichText = highlights !== undefined && highlights.length > 0;
 
+  const borderClass = isRecording
+    ? 'border border-[#ff7266] bg-[rgba(201,201,201,0.1)]'
+    : (highlighted || !isFilled)
+      ? 'border border-[#c6c6c6] bg-[rgba(201,201,201,0.1)]'
+      : 'border border-[#727272] bg-[rgba(201,201,201,0.2)]';
+
   return (
-    <div
-      className={`flex flex-col items-center pl-[4px] pr-[10px] pt-[4px] rounded-[8px]
-        ${isRecording
-          ? 'border border-[#ff7266] bg-[rgba(201,201,201,0.1)]'
-          : (highlighted || !isFilled)
-            ? 'border border-[#c6c6c6] bg-[rgba(201,201,201,0.1)]'
-            : 'border border-[#727272] bg-[rgba(201,201,201,0.2)]'}
-        ${isRecording ? 'gap-[49px] pb-[10px]' : 'justify-center pb-[30px]'}
-        ${className ?? 'w-full'}`}
-    >
+    <div className={`flex flex-col rounded-[8px] ${borderClass} ${className ?? 'w-full'}`}>
+
       {/* Text display area */}
-      <div className="flex items-start px-[8px] py-[4px] shrink-0 w-full">
+      <div className="flex items-start px-[8px] pt-[4px] pb-[8px] w-full">
         {useRichText ? (
-          /* Rich-text view: highlighted spans overlay — editable textarea sits beneath */
           <div className="flex-1 relative min-h-[160px] max-h-[300px]">
-            {/* Editable textarea (transparent text, always editable) */}
             {onChange && (
               <textarea
-                ref={textareaRef}
                 className="absolute inset-0 w-full h-full font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none text-transparent caret-[#212121] z-10"
-                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+                style={NS}
                 value={value}
                 onChange={e => onChange(e.target.value)}
               />
             )}
-            {/* Visual highlight layer */}
             <div
               className="w-full h-full font-normal text-sm leading-[20px] tracking-[0.25px] text-[#212121] whitespace-pre-wrap break-words overflow-y-auto pointer-events-none"
-              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+              style={NS}
             >
               {value
                 ? buildSegments(value, highlights ?? []).map((seg, i) =>
@@ -195,9 +160,8 @@ export default function TextAreaContainer({
           </div>
         ) : onChange ? (
           <textarea
-            ref={textareaRef}
             className="flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-y-auto min-h-[160px] max-h-[300px] text-[#212121] placeholder:text-[#727272]"
-            style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            style={NS}
             placeholder={placeholder}
             value={value}
             onChange={e => onChange(e.target.value)}
@@ -206,40 +170,65 @@ export default function TextAreaContainer({
           <p
             className={`flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] min-h-px min-w-px
               ${isFilled ? 'text-[#212121]' : 'text-[#727272] overflow-hidden text-ellipsis whitespace-nowrap'}`}
-            style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            style={NS}
           >
             {value ?? placeholder}
           </p>
         )}
       </div>
 
-      {/* Recording waveform + controls */}
-      {isRecording && (
-        <div className="bg-[#f3f3f3] flex items-center px-[15px] py-2 rounded-[15px] shrink-0 w-full">
-          <div className="flex flex-1 items-center justify-between min-h-px min-w-px">
-            <canvas
-              ref={canvasRef}
-              className="h-[45px] flex-1 min-w-0"
-            />
-            <div className="flex gap-3 items-center shrink-0">
-              {/* Cancel */}
-              <button
-                onClick={onStopRecording}
-                className="bg-[#b7131a] flex gap-2 items-center justify-center overflow-clip p-2 rounded-lg size-[33px] cursor-pointer border-none"
-              >
-                <Icon name="close" size="small" color="white" />
-              </button>
-              {/* Accept */}
-              <button
-                onClick={onAcceptRecording}
-                className="bg-[#3c9718] flex gap-2 items-center justify-center overflow-clip p-2 rounded-lg size-[33px] cursor-pointer border-none"
-              >
-                <Icon name="check" size="small" color="white" />
-              </button>
-            </div>
-          </div>
+      {/* Bottom action row */}
+      <div className="flex items-center justify-between px-[10px] pb-[10px]">
+        {/* Left: Scan Photo + Upload Audio */}
+        <div className="flex items-center gap-[8px]">
+          <button
+            type="button"
+            onClick={onScanPhoto}
+            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <Icon name="photo_camera" size="small" color="#6a3e31" />
+            <span
+              className="text-[#6a3e31] text-[12px] font-medium leading-5"
+              style={NS}
+            >
+              {scanPhotoLabel}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onUploadAudio}
+            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            <Icon name="upload_file" size="small" color="#6a3e31" />
+            <span
+              className="text-[#6a3e31] text-[12px] font-medium leading-5"
+              style={NS}
+            >
+              {uploadAudioLabel}
+            </span>
+          </button>
         </div>
-      )}
+
+        {/* Right: mic / stop / processing */}
+        {isProcessing ? (
+          <div className="flex items-center gap-[6px] shrink-0">
+            <svg className="animate-spin shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
+              <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <span className="text-[12px] text-[#6a3e31] font-medium whitespace-nowrap" style={NS}>
+              Transcribing…
+            </span>
+          </div>
+        ) : (
+          <MicButton
+            isRecording={isRecording}
+            onClick={isRecording ? onStopClick : onMicClick}
+            analyserNode={analyserNode}
+          />
+        )}
+      </div>
     </div>
   );
 }

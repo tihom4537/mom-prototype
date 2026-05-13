@@ -36,7 +36,8 @@ export default function AgendaListCard({
           </div>
           {/* Right: view toggle button */}
           <Button
-            variant="filled"
+            variant="outlined"
+            size="small"
             iconPlacement="left"
             iconName={viewToggleIcon}
             text={viewToggleLabel}
