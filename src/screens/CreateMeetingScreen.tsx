@@ -90,6 +90,26 @@ export default function CreateMeetingScreen() {
   const [profileOpen,  setProfileOpen]  = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // ── Section 1: Meeting details ──
+  const [meetingType,  setMeetingType]  = useState('');
+  const [date,         setDate]         = useState('');
+  const [time,         setTime]         = useState('');
+  const [mode,         setMode]         = useState('');
+  const [meetingLink,  setMeetingLink]  = useState('');
+  const [venue,        setVenue]        = useState('');
+  const [chairperson,  setChairperson]  = useState('');
+  const [title,        setTitle]        = useState('');
+  const [description,  setDescription]  = useState('');
+
+  // ── Description mic recording ──
+  const [descRecording,   setDescRecording]   = useState(false);
+  const [descSttError,    setDescSttError]    = useState('');
+  const descRecorderRef = useRef<PcmAudioRecorder | null>(null);
+  const descAudioCtxRef = useRef<AudioContext | null>(null);
+  const descAnalyserRef = useRef<AnalyserNode | null>(null);
+  const descWsClientRef = useRef<WebSocketSTTClient | null>(null);
+  const descUpdatedTextRef = useRef<string>(description);
+
   // Keep ref in sync with state so we can access updated value during async operations
   useEffect(() => {
     descUpdatedTextRef.current = description;
@@ -110,26 +130,6 @@ export default function CreateMeetingScreen() {
       }
     };
   }, []);
-
-  // ── Section 1: Meeting details ──
-  const [meetingType,  setMeetingType]  = useState('');
-  const [date,         setDate]         = useState('');
-  const [time,         setTime]         = useState('');
-  const [mode,         setMode]         = useState('');
-  const [meetingLink,  setMeetingLink]  = useState('');
-  const [venue,        setVenue]        = useState('');
-  const [chairperson,  setChairperson]  = useState('');
-  const [title,        setTitle]        = useState('');
-  const [description,  setDescription]  = useState('');
-
-  // ── Description mic recording ──
-  const [descRecording,   setDescRecording]   = useState(false);
-  const [descSttError,    setDescSttError]    = useState('');
-  const descRecorderRef = useRef<PcmAudioRecorder | null>(null);
-  const descAudioCtxRef = useRef<AudioContext | null>(null);
-  const descAnalyserRef = useRef<AnalyserNode | null>(null);
-  const descWsClientRef = useRef<WebSocketSTTClient | null>(null);
-  const descUpdatedTextRef = useRef<string>(description);
 
   async function handleDescMicClick() {
     if (descRecording) {
@@ -382,7 +382,7 @@ export default function CreateMeetingScreen() {
   // ── Submit (navigate to Stage 2) ──
   function handleProceed() {
     if (!canProceed) return;
-    if (descRecording) descMediaRef.current?.stop();
+    if (descRecording) descRecorderRef.current?.stop();
     navigate('/meetings/create/agenda', {
       state: {
         meetingType, date, time, mode, meetingLink, venue, chairperson, title, description,
