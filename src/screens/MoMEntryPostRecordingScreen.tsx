@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -15,6 +15,8 @@ import {
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { STT_API, FEEDBACK_API } from '../config/api';
+import { WebSocketSTTClient } from '../utils/websocketSttClient';
+import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
@@ -53,15 +55,37 @@ export default function MoMEntryPostRecordingScreen() {
   const [actionOpen, setActionOpen]                 = useState(false);
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef   = useRef<Blob[]>([]);
+  const pcmRecorderRef   = useRef<PcmAudioRecorder | null>(null);
   const audioCtxRef      = useRef<AudioContext | null>(null);
   const analyserRef      = useRef<AnalyserNode | null>(null);
+  const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
+  const updatedTextRef   = useRef<string>(discussionText);
 
   const teardownAudio = useCallback(() => {
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     analyserRef.current = null;
+  }, []);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    updatedTextRef.current = discussionText;
+  }, [discussionText]);
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      const wsClient = wsClientRef.current;
+      if (wsClient) {
+        wsClient.close().catch(err => console.error('[PostRecording] Cleanup error:', err));
+        wsClientRef.current = null;
+      }
+      const recorder = pcmRecorderRef.current;
+      if (recorder) {
+        recorder.stop();
+        pcmRecorderRef.current = null;
+      }
+    };
   }, []);
 
   const isRecording  = entryState === 'recording';
@@ -76,7 +100,6 @@ export default function MoMEntryPostRecordingScreen() {
   const handleMicClick = async () => {
     if (entryState !== 'idle') return;
     setSttError(null);
-    setFeedbackError(null);
 
     let stream: MediaStream;
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -94,87 +117,141 @@ export default function MoMEntryPostRecordingScreen() {
       return;
     }
 
-    const audioCtx = new AudioContext();
-    audioCtxRef.current = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    analyserRef.current = analyser;
+    const pcmRecorder = new PcmAudioRecorder();
+    pcmRecorderRef.current = pcmRecorder;
 
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const mediaRecorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorder.start();
-    setEntryState('recording');
+    try {
+      await pcmRecorder.start();
+      setEntryState('recording');
+      console.log('[PostRecording] PCM recording started');
+    } catch (err) {
+      console.error('[PostRecording] PCM recorder failed:', err);
+      setSttError('Failed to initialize audio recorder. Please check microphone access.');
+      pcmRecorderRef.current = null;
+    }
   };
 
   // ── Cancel recording ─────────────────────────────────────────────────────
-  const handleCancelRecording = () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
-    mr.onstop = null;
-    mr.stop();
-    mr.stream.getTracks().forEach(t => t.stop());
-    mediaRecorderRef.current = null;
-    audioChunksRef.current = [];
+  const handleCancelRecording = async () => {
+    const recorder = pcmRecorderRef.current;
+    if (!recorder) return;
+
+    recorder.stop();
+    pcmRecorderRef.current = null;
     teardownAudio();
+
+    const wsClient = wsClientRef.current;
+    if (wsClient) {
+      try {
+        await wsClient.close();
+      } catch (err) {
+        console.error('[PostRecording] Error closing WebSocket:', err);
+      }
+      wsClientRef.current = null;
+    }
+
     setEntryState('idle');
+    setSttError(null);
   };
 
-  // ── Confirm recording — calls STT API ────────────────────────────────────
-  const handleConfirmRecording = () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
+  // ── Confirm recording — calls WebSocket STT ──────────────────────────────
+  const handleConfirmRecording = async () => {
+    const recorder = pcmRecorderRef.current;
+    if (!recorder) {
+      console.error('[PostRecording] No recorder found!');
+      return;
+    }
 
     setEntryState('processing');
-    const textAtConfirm = discussionText;
+    setSttError(null);
 
-    mr.onstop = async () => {
-      mr.stream.getTracks().forEach(t => t.stop());
-      mediaRecorderRef.current = null;
+    let wsClient: WebSocketSTTClient | null = null;
+
+    try {
+      const audioData = recorder.stop();
+      pcmRecorderRef.current = null;
       teardownAudio();
+      console.log('[PostRecording] Recording stopped. Audio data:', audioData.length, 'bytes');
 
-      const mimeType = audioChunksRef.current[0]?.type ?? 'audio/webm';
-      const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      audioChunksRef.current = [];
+      if (audioData.length === 0) {
+        throw new Error('No audio data captured');
+      }
 
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const audioDataUri = reader.result as string;
-        try {
-          const res = await fetch(STT_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioDataUri, locale: lang }),
-          });
+      wsClient = new WebSocketSTTClient(lang);
+      wsClientRef.current = wsClient;
 
-          if (!res.ok) {
-            const detail = await res.text().catch(() => '');
-            throw new Error(`STT API returned ${res.status}${detail ? `: ${detail}` : ''}`);
-          }
+      await wsClient.connect();
+      console.log('[PostRecording] WebSocket connected');
 
-          const data: { transcription: string } = await res.json();
-          const separator = textAtConfirm.trim() ? ' ' : '';
-          setDiscussionText(textAtConfirm + separator + data.transcription);
-          setEntryState('idle');
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-          setEntryState('idle');
+      let transcriptReceived = false;
+      let transcriptPromiseResolve: (() => void) | null = null;
+      const transcriptPromise = new Promise<void>(resolve => {
+        transcriptPromiseResolve = resolve;
+      });
+
+      wsClient.on('transcript', (text: string) => {
+        console.log('[PostRecording] Transcript received:', text);
+        transcriptReceived = true;
+        if (text.trim()) {
+          const newText = updatedTextRef.current + (updatedTextRef.current.trim() ? ' ' : '') + text;
+          updatedTextRef.current = newText;
+          setDiscussionText(newText);
         }
-      };
+        if (transcriptPromiseResolve) {
+          transcriptPromiseResolve();
+          transcriptPromiseResolve = null;
+        }
+      });
 
-      reader.readAsDataURL(blob);
-    };
+      wsClient.on('error', (msg: string) => {
+        console.error('[PostRecording] WebSocket error:', msg);
+        setSttError(`Speech recognition error: ${msg}`);
+      });
 
-    mr.stop();
+      console.log('[PostRecording] Sending audio...');
+      await wsClient.send(audioData);
+      console.log('[PostRecording] Audio sent. Sending end signal...');
+
+      await wsClient.end();
+
+      const transcriptTimeout = new Promise<void>((_, reject) =>
+        setTimeout(() => {
+          console.error('[PostRecording] Transcript timeout');
+          reject(new Error('Transcript response timeout'));
+        }, 60000)
+      );
+
+      try {
+        await Promise.race([transcriptPromise, transcriptTimeout]);
+        console.log('[PostRecording] Transcript received successfully');
+      } catch (timeoutErr) {
+        console.error('[PostRecording] Promise race failed:', timeoutErr);
+        if (!transcriptReceived) {
+          console.warn('[PostRecording] Warning: Transcript event never fired');
+        }
+        throw timeoutErr;
+      }
+
+      if (wsClient) {
+        await wsClient.close();
+        console.log('[PostRecording] WebSocket closed');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[PostRecording] Error:', msg);
+      setSttError(`Speech recognition failed — ${msg}`);
+
+      if (wsClient) {
+        try {
+          await wsClient.close();
+        } catch (closeErr) {
+          console.error('[PostRecording] Error closing WebSocket:', closeErr);
+        }
+      }
+    }
+
+    wsClientRef.current = null;
+    setEntryState('idle');
   };
 
   // ── Get Feedback ─────────────────────────────────────────────────────────
