@@ -73,7 +73,11 @@ export default function MoMEntryDefaultScreen() {
 
   // ── Start recording ────────────────────────────────────────────────────────
   const handleMicClick = async () => {
-    if (entryState !== 'idle') return;
+    console.log('[MoM] handleMicClick called, entryState:', entryState);
+    if (entryState !== 'idle') {
+      console.log('[MoM] Ignoring click - not idle');
+      return;
+    }
     setSttError(null);
 
     let stream: MediaStream;
@@ -109,6 +113,7 @@ export default function MoMEntryDefaultScreen() {
 
   // ── Cancel recording ───────────────────────────────────────────────────────
   const handleCancelRecording = async () => {
+    console.log('[MoM] handleCancelRecording called');
     const recorder = pcmRecorderRef.current;
     if (!recorder) return;
 
@@ -131,10 +136,22 @@ export default function MoMEntryDefaultScreen() {
     setSttError(null);
   };
 
+  // ── On stop button click — immediately process the recording ────────────────
+  const handleStopRecording = async () => {
+    console.log('[MoM] Stop button clicked - transitioning to confirm recording');
+    // When user clicks stop, immediately trigger the confirmation flow
+    // This processes the recorded audio and sends it to the server
+    await handleConfirmRecording();
+  };
+
   // ── Confirm recording — stream audio via WebSocket ──────────────────────────
   const handleConfirmRecording = async () => {
+    console.log('[MoM] handleConfirmRecording called');
     const recorder = pcmRecorderRef.current;
-    if (!recorder) return;
+    if (!recorder) {
+      console.error('[MoM] No recorder found!');
+      return;
+    }
 
     setEntryState('processing');
     setSttError(null);
@@ -418,12 +435,12 @@ export default function MoMEntryDefaultScreen() {
               )}
 
               <TextAreaContainer
-                state={isRecording ? 'recording' : 'default'}
+                state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
                 placeholder={t('discussion_field_placeholder')}
                 value={discussionText}
                 onChange={setDiscussionText}
                 onMicClick={handleMicClick}
-                onStopClick={handleCancelRecording}
+                onStopClick={handleStopRecording}
                 scanPhotoLabel={t('btn_scan_photo')}
                 uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={analyserRef.current ?? undefined}
