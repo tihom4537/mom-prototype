@@ -37,6 +37,8 @@ export default function MoMEntryDefaultScreen() {
   const [entryState, setEntryState]                 = useState<EntryState>('idle');
   const [sttError, setSttError]                     = useState<string | null>(null);
   const [feedbackError, setFeedbackError]           = useState<string | null>(null);
+  const [ocrLoading, setOcrLoading]                 = useState(false);
+  const [ocrError, setOcrError]                     = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
   const [actionOpen, setActionOpen]                 = useState(false);
@@ -47,6 +49,7 @@ export default function MoMEntryDefaultScreen() {
   const analyserRef      = useRef<AnalyserNode | null>(null);
   const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
   const updatedTextRef   = useRef<string>(discussionText);
+  const fileInputRef     = useRef<HTMLInputElement | null>(null);
 
   const teardownAudio = useCallback(() => {
     audioCtxRef.current?.close();
@@ -350,6 +353,97 @@ export default function MoMEntryDefaultScreen() {
     }
   };
 
+  // ── OCR: Scan Photo ───────────────────────────────────────────────────────
+  const handleScanPhotoClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setOcrError(null);
+    setOcrLoading(true);
+
+    try {
+      // Validate file type
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        setOcrError('Please select a JPG or PNG image.');
+        setOcrLoading(false);
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setOcrError('Image is too large. Maximum size is 5MB.');
+        setOcrLoading(false);
+        return;
+      }
+
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const base64String = (e.target?.result as string).split(',')[1];
+
+          console.log('[MoM] Sending image to OCR endpoint...');
+          const response = await fetch('/ocr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image: base64String,
+              format: file.type,
+            }),
+          });
+
+          if (!response.ok) {
+            const error = await response.text().catch(() => '');
+            throw new Error(`OCR API returned ${response.status}${error ? `: ${error}` : ''}`);
+          }
+
+          const result = await response.json();
+
+          if (result.error) {
+            setOcrError(result.error);
+            setOcrLoading(false);
+            return;
+          }
+
+          if (result.extracted_text.trim()) {
+            const newText = discussionText + (discussionText.trim() ? ' ' : '') + result.extracted_text;
+            setDiscussionText(newText);
+            updatedTextRef.current = newText;
+            console.log('[MoM] OCR text added:', result.extracted_text);
+          } else {
+            setOcrError('No text found in the image. Please try a clearer image.');
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          console.error('[MoM] OCR error:', msg);
+          setOcrError(`Failed to extract text — ${msg}`);
+        } finally {
+          setOcrLoading(false);
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
+        }
+      };
+
+      reader.onerror = () => {
+        setOcrError('Failed to read the image file.');
+        setOcrLoading(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setOcrError(`Failed to process image — ${msg}`);
+      setOcrLoading(false);
+    }
+  };
+
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     if (agenda) {
@@ -456,10 +550,11 @@ export default function MoMEntryDefaultScreen() {
                 onChange={setDiscussionText}
                 onMicClick={handleMicClick}
                 onStopClick={handleStopRecording}
+                onScanPhoto={handleScanPhotoClick}
                 scanPhotoLabel={t('btn_scan_photo')}
                 uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={analyserRef.current ?? undefined}
-                isProcessing={isProcessing}
+                isProcessing={isProcessing || ocrLoading}
                 highlighted
                 className="w-full"
                 style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
@@ -504,6 +599,15 @@ export default function MoMEntryDefaultScreen() {
 
         </div>
       </div>
+
+      {/* Hidden file input for OCR */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        onChange={handlePhotoSelected}
+        style={{ display: 'none' }}
+      />
 
     </MeetingShellLayout>
   );
