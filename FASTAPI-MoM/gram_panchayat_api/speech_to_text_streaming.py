@@ -139,22 +139,39 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
             receive_task = asyncio.create_task(_receive_from_client())
             sarvam_task = asyncio.create_task(_receive_from_sarvam())
 
+            # Wait for client receive to finish (on "end" signal), then give Sarvam time to process
             done, pending = await asyncio.wait(
                 {receive_task, sarvam_task},
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
-            for task in pending:
-                task.cancel()
+            # If receive_task finished first (expected), wait a bit for Sarvam to send final messages
+            if receive_task in done:
+                logger.info("Client finished sending; waiting for Sarvam to complete...")
                 try:
-                    await task
+                    # Give Sarvam up to 10 seconds to send final responses
+                    await asyncio.wait_for(sarvam_task, timeout=10.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Sarvam task timed out; cancelling it")
+                    sarvam_task.cancel()
+                    try:
+                        await sarvam_task
+                    except (asyncio.CancelledError, Exception):
+                        pass
+            else:
+                # Sarvam finished first, cancel the receive task
+                receive_task.cancel()
+                try:
+                    await receive_task
                 except (asyncio.CancelledError, Exception):
                     pass
 
-            for task in done:
-                exc = task.exception()
-                if exc and not isinstance(exc, asyncio.CancelledError):
-                    raise exc
+            # Check for exceptions in completed tasks
+            for task in [receive_task, sarvam_task]:
+                if task.done():
+                    exc = task.exception()
+                    if exc and not isinstance(exc, asyncio.CancelledError):
+                        raise exc
 
     except WebSocketDisconnect:
         logger.info("Streaming STT session ended by client disconnect.")
