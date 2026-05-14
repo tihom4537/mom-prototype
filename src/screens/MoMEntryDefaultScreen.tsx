@@ -46,12 +46,18 @@ export default function MoMEntryDefaultScreen() {
   const audioCtxRef      = useRef<AudioContext | null>(null);
   const analyserRef      = useRef<AnalyserNode | null>(null);
   const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
+  const updatedTextRef   = useRef<string>(discussionText);
 
   const teardownAudio = useCallback(() => {
     audioCtxRef.current?.close();
     audioCtxRef.current = null;
     analyserRef.current = null;
   }, []);
+
+  // Keep ref in sync with state so we can access updated value during async operations
+  useEffect(() => {
+    updatedTextRef.current = discussionText;
+  }, [discussionText]);
 
   const isRecording      = entryState === 'recording';
   const isProcessing     = entryState === 'processing';
@@ -188,10 +194,10 @@ export default function MoMEntryDefaultScreen() {
         console.log('[MoM] Transcript event fired with text:', text);
         transcriptReceived = true;
         if (text.trim()) {
-          setDiscussionText(prev => {
-            const separator = prev.trim() ? ' ' : '';
-            return prev + separator + text;
-          });
+          const newText = updatedTextRef.current + (updatedTextRef.current.trim() ? ' ' : '') + text;
+          updatedTextRef.current = newText;
+          setDiscussionText(newText);
+          console.log('[MoM] Discussion text updated to:', newText);
         }
         // Resolve promise immediately
         if (transcriptPromiseResolve) {
@@ -272,9 +278,9 @@ export default function MoMEntryDefaultScreen() {
 
     wsClientRef.current = null;
 
-    // Navigate to post-recording screen (only if successful)
+    // Navigate to post-recording screen with the updated text (from ref to ensure it includes transcript)
     navigate('/mom-entry/post-recording', {
-      state: { agenda, discussionText, meetingId },
+      state: { agenda, discussionText: updatedTextRef.current, meetingId },
     });
   };
 
