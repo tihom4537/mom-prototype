@@ -14,7 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import close_db_pool, init_db_pool, insert_ai_feedback
@@ -28,6 +28,7 @@ from .models import (
     TranslateResponse,
 )
 from .speech_to_text import transcribe_audio_data_uri
+from .speech_to_text_streaming import handle_streaming_stt
 from .translate import translate_text
 
 
@@ -161,6 +162,27 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
     """
     translation = await translate_text(body.text, body.from_locale, body.to_locale)
     return TranslateResponse(translation=translation)
+
+
+@app.websocket("/ws/speech-to-text")
+async def websocket_speech_to_text(websocket: WebSocket, locale: str = "kn") -> None:
+    """
+    Real-time streaming Speech-to-Text via Sarvam AI.
+
+    Query params:
+      locale: "en" | "kn" | "hi"  (default: "kn")
+
+    Client → Server:
+      binary frames : raw audio bytes (WAV chunks, 16 kHz, 16-bit PCM recommended)
+      JSON text     : {"type": "end"} to signal no more audio
+
+    Server → Client:
+      {"type": "transcript", "text": "..."}
+      {"type": "speech_start"}
+      {"type": "speech_end"}
+      {"type": "error", "message": "..."}
+    """
+    await handle_streaming_stt(websocket, locale)
 
 
 # If you want to run with: `python -m gram_panchayat_api.main`
