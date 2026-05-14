@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -16,9 +16,11 @@ import {
 } from '../components';
 import type { HighlightSpan, Segment } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API } from '../config/api';
+import { FEEDBACK_API } from '../config/api';
+import { WebSocketSTTClient } from '../utils/websocketSttClient';
 
 type MainEntryState = 'idle' | 'recording' | 'processing';
+type CardRecordingState = 'idle' | 'recording' | 'processing';
 
 interface CardState {
   id: string;
@@ -29,11 +31,14 @@ interface CardState {
   dismissed: boolean;
   accepted: boolean;
   segments: Segment[];
+  inputText?: string;
+  recordingState?: CardRecordingState;
+  micError?: string | null;
 }
 
 /** Detect language from text — checks for Kannada Unicode block (U+0C80–U+0CFF) */
 function detectLang(text: string): 'en' | 'kn' {
-  return /[\u0C80-\u0CFF]/.test(text) ? 'kn' : 'en';
+  return /[ಀ-೿]/.test(text) ? 'kn' : 'en';
 }
 
 // ── Segment parsing helpers ──────────────────────────────────────────────────
@@ -114,10 +119,7 @@ function findSentenceBounds(text: string, span: string): { start: number; end: n
  * Replaces the sentence containing `span` in `text` with `replacement`.
  * Falls back to appending if span not found.
  *
- * Special case: if the sentence is a comma-separated list (e.g. "Hearing petitions,
- * applications for land, ration cards…") and the span only covers the first item,
- * only the initial clause up to the span is replaced so the remaining list items
- * are preserved on the next line instead of being lost.
+ * Special case: if the sentence is a comma-separated list, preserve list items.
  */
 function replaceSentence(text: string, span: string | null, replacement: string): string {
   if (!span) return text.trim() ? text + ' ' + replacement : replacement;
@@ -128,8 +130,6 @@ function replaceSentence(text: string, span: string | null, replacement: string)
   const afterSpan = text.slice(spanEnd, bounds.end);
   const trimmedAfter = afterSpan.trim();
 
-  // If the sentence continues after the span as a list (starts with comma + substantial content),
-  // preserve those list items rather than erasing them.
   if (trimmedAfter.startsWith(',') && trimmedAfter.replace(/,/g, '').trim().length > 20) {
     let skipTo = spanEnd;
     while (skipTo < bounds.end && (text[skipTo] === ',' || text[skipTo] === ' ')) skipTo++;
@@ -187,9 +187,15 @@ export default function MoMEntryFeedbackScreen() {
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
   const mainMediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mainAudioChunksRef   = useRef<Blob[]>([]);
   const mainAudioCtxRef      = useRef<AudioContext | null>(null);
   const mainAnalyserRef      = useRef<AnalyserNode | null>(null);
+  const mainWsClientRef      = useRef<WebSocketSTTClient | null>(null);
+
+  // Per-card recording state (one WebSocket + MediaRecorder per card)
+  const cardWsClientsRef     = useRef<Map<string, WebSocketSTTClient>>(new Map());
+  const cardMediaRecordersRef = useRef<Map<string, MediaRecorder>>(new Map());
+  const cardAudioCtxRef      = useRef<Map<string, AudioContext>>(new Map());
+  const cardAnalysersRef     = useRef<Map<string, AnalyserNode>>(new Map());
 
   // ── Build initial cards from route state ─────────────────────────────────
 
@@ -201,14 +207,17 @@ export default function MoMEntryFeedbackScreen() {
       const mode = ((modes[i] ?? 'REPLACE').toUpperCase()) as 'REPLACE' | 'APPEND' | 'REPHRASE';
       const isFill = mode !== 'REPHRASE' && hasBlanks(text);
       return {
-        id:         `card-${i}`,
-        suggestion: text,
-        type:       isFill ? 'fill-blanks' : 'rephrase',
+        id:              `card-${i}`,
+        suggestion:      text,
+        type:            isFill ? 'fill-blanks' : 'rephrase',
         mode,
-        spanText:   spans[i] ?? null,
-        dismissed:  false,
-        accepted:   false,
-        segments:   isFill ? parseSegments(text) : [],
+        spanText:        spans[i] ?? null,
+        dismissed:       false,
+        accepted:        false,
+        segments:        isFill ? parseSegments(text) : [],
+        inputText:       '',
+        recordingState:  'idle',
+        micError:        null,
       };
     });
   };
@@ -244,6 +253,21 @@ export default function MoMEntryFeedbackScreen() {
   const isMainProcessing = mainEntryState === 'processing';
   const hasText         = discussionText.trim().length > 0;
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cardWsClientsRef.current.forEach(wsClient => {
+        wsClient.close().catch(() => {});
+      });
+      cardWsClientsRef.current.clear();
+
+      cardAudioCtxRef.current.forEach(ctx => ctx.close());
+      cardAudioCtxRef.current.clear();
+
+      mainWsClientRef.current?.close().catch(() => {});
+    };
+  }, []);
+
   // ── Card helpers ──────────────────────────────────────────────────────────
 
   const updateCard = useCallback((id: string, updates: Partial<CardState>) => {
@@ -263,6 +287,7 @@ export default function MoMEntryFeedbackScreen() {
   const teardownMainAudio = useCallback(() => {
     mainAudioCtxRef.current?.close();
     mainAudioCtxRef.current = null;
+    mainAnalyserRef.current = null;
   }, []);
 
   // ── Main mic ──────────────────────────────────────────────────────────────
@@ -280,8 +305,8 @@ export default function MoMEntryFeedbackScreen() {
     } catch (err) {
       const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
       setMainSttError(isNotAllowed
-        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
-        : 'Could not access the microphone. Please check your browser permissions and try again.'
+        ? 'Microphone access was denied. Please allow microphone access and try again.'
+        : 'Could not access the microphone. Please check your browser permissions.'
       );
       return;
     }
@@ -296,86 +321,268 @@ export default function MoMEntryFeedbackScreen() {
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
     const mr = new MediaRecorder(stream, { mimeType });
     mainMediaRecorderRef.current = mr;
-    mainAudioChunksRef.current = [];
-    mr.ondataavailable = e => { if (e.data.size > 0) mainAudioChunksRef.current.push(e.data); };
-    mr.start();
+
+    mr.ondataavailable = () => {};
+    mr.start(100);
     setMainEntryState('recording');
   };
 
-  const handleMainCancelRecording = () => {
+  const handleMainCancelRecording = async () => {
     const mr = mainMediaRecorderRef.current;
     if (!mr) return;
     mr.onstop = null;
     mr.stop();
     mr.stream.getTracks().forEach(t => t.stop());
     mainMediaRecorderRef.current = null;
-    mainAudioChunksRef.current = [];
-    mainAudioCtxRef.current?.close(); mainAudioCtxRef.current = null;
-    mainAnalyserRef.current = null;
     teardownMainAudio();
+
+    const wsClient = mainWsClientRef.current;
+    if (wsClient) {
+      try {
+        await wsClient.close();
+      } catch (err) {
+        console.error('[Feedback] Error closing main WS:', err);
+      }
+      mainWsClientRef.current = null;
+    }
+
     setMainEntryState('idle');
+    setMainSttError(null);
   };
 
-  const handleMainConfirmRecording = () => {
+  const handleMainConfirmRecording = async () => {
     const mr = mainMediaRecorderRef.current;
     if (!mr) return;
+
     setMainEntryState('processing');
-    const textAtConfirm = discussionText;
-    mr.onstop = async () => {
-      mr.stream.getTracks().forEach(t => t.stop());
-      mainMediaRecorderRef.current = null;
-      teardownMainAudio();
-      const mimeType = mainAudioChunksRef.current[0]?.type ?? 'audio/webm';
-      const blob = new Blob(mainAudioChunksRef.current, { type: mimeType });
-      mainAudioChunksRef.current = [];
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const audioDataUri = reader.result as string;
-        try {
-          const res = await fetch(STT_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioDataUri, locale: lang }),
+    setMainSttError(null);
+
+    try {
+      const wsClient = new WebSocketSTTClient(lang);
+      mainWsClientRef.current = wsClient;
+
+      await wsClient.connect();
+      console.log('[Feedback] Main WebSocket connected');
+
+      wsClient.on('transcript', (text: string) => {
+        if (text.trim()) {
+          setDiscussionText(prev => {
+            const separator = prev.trim() ? ' ' : '';
+            return prev + separator + text;
           });
-          if (!res.ok) {
-            const detail = await res.text().catch(() => '');
-            throw new Error(`STT API returned ${res.status}${detail ? `: ${detail}` : ''}`);
+        }
+      });
+
+      wsClient.on('error', (msg: string) => {
+        console.error('[Feedback] Main WS error:', msg);
+        setMainSttError(`Speech recognition error: ${msg}`);
+      });
+
+      mr.ondataavailable = async (e) => {
+        if (e.data.size > 0 && wsClient.connected()) {
+          try {
+            await wsClient.send(e.data);
+          } catch (err) {
+            console.error('[Feedback] Failed to send main chunk:', err);
+            setMainSttError('Failed to send audio.');
           }
-          const data: { transcription: string } = await res.json();
-          const sep = textAtConfirm.trim() ? ' ' : '';
-          setDiscussionText(textAtConfirm + sep + data.transcription);
-          setMainEntryState('idle');
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          setMainSttError(`Speech recognition failed — ${msg}. Please try again.`);
-          setMainEntryState('idle');
         }
       };
-      reader.readAsDataURL(blob);
-    };
+
+      mr.onstop = async () => {
+        mr.stream.getTracks().forEach(t => t.stop());
+        mainMediaRecorderRef.current = null;
+        teardownMainAudio();
+
+        try {
+          if (wsClient.connected()) {
+            await wsClient.end();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await wsClient.close();
+          }
+        } catch (err) {
+          console.error('[Feedback] Error closing main WS:', err);
+        }
+
+        mainWsClientRef.current = null;
+        setMainEntryState('idle');
+      };
+
+      mr.stop();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[Feedback] Main recording setup error:', msg);
+      setMainSttError(`Speech recognition setup failed — ${msg}`);
+      setMainEntryState('idle');
+      mainWsClientRef.current = null;
+
+      const mr = mainMediaRecorderRef.current;
+      if (mr && mr.state !== 'inactive') {
+        mr.onstop = null;
+        mr.stop();
+        mr.stream.getTracks().forEach(t => t.stop());
+        mainMediaRecorderRef.current = null;
+        teardownMainAudio();
+      }
+    }
+  };
+
+  // ── Card recording handlers ───────────────────────────────────────────────
+
+  const handleCardMicClick = async (cardId: string) => {
+    const card = cards.find(c => c.id === cardId);
+    if (!card || card.type !== 'fill-blanks' || card.recordingState !== 'idle') return;
+
+    updateCard(cardId, { micError: null, recordingState: 'recording' });
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioCtx = new AudioContext();
+      cardAudioCtxRef.current.set(cardId, audioCtx);
+
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 64;
+      source.connect(analyser);
+      cardAnalysersRef.current.set(cardId, analyser);
+
+      const wsClient = new WebSocketSTTClient(lang);
+      cardWsClientsRef.current.set(cardId, wsClient);
+
+      await wsClient.connect();
+      console.log(`[Feedback] Card WS connected: ${cardId}`);
+
+      wsClient.on('transcript', (text: string) => {
+        if (text.trim()) {
+          updateCard(cardId, {
+            inputText: (prev = '') => prev + (prev?.trim() ? ' ' : '') + text,
+          } as any);
+        }
+      });
+
+      wsClient.on('error', (msg: string) => {
+        updateCard(cardId, { micError: msg });
+      });
+
+      const mr = new MediaRecorder(stream);
+      cardMediaRecordersRef.current.set(cardId, mr);
+
+      mr.ondataavailable = async (e) => {
+        if (e.data.size > 0 && wsClient.connected()) {
+          try {
+            await wsClient.send(e.data);
+          } catch (err) {
+            updateCard(cardId, { micError: 'Failed to send audio' });
+          }
+        }
+      };
+
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        cardMediaRecordersRef.current.delete(cardId);
+
+        const ctx = cardAudioCtxRef.current.get(cardId);
+        if (ctx) {
+          ctx.close();
+          cardAudioCtxRef.current.delete(cardId);
+        }
+        cardAnalysersRef.current.delete(cardId);
+
+        try {
+          if (wsClient.connected()) {
+            await wsClient.end();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await wsClient.close();
+          }
+        } catch (err) {
+          console.error(`[Feedback] Error closing card WS ${cardId}:`, err);
+        }
+
+        cardWsClientsRef.current.delete(cardId);
+        updateCard(cardId, { recordingState: 'idle' });
+      };
+
+      mr.start(100);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      updateCard(cardId, {
+        recordingState: 'idle',
+        micError: msg === 'NotAllowedError' ? 'Mic access denied' : 'Failed to record'
+      });
+
+      const wsClient = cardWsClientsRef.current.get(cardId);
+      if (wsClient) {
+        wsClient.close().catch(() => {});
+        cardWsClientsRef.current.delete(cardId);
+      }
+    }
+  };
+
+  const handleCardCancelRecording = async (cardId: string) => {
+    const mr = cardMediaRecordersRef.current.get(cardId);
+    if (!mr) return;
+
+    mr.onstop = null;
     mr.stop();
+    mr.stream.getTracks().forEach(t => t.stop());
+    cardMediaRecordersRef.current.delete(cardId);
+
+    const ctx = cardAudioCtxRef.current.get(cardId);
+    if (ctx) {
+      ctx.close();
+      cardAudioCtxRef.current.delete(cardId);
+    }
+    cardAnalysersRef.current.delete(cardId);
+
+    const wsClient = cardWsClientsRef.current.get(cardId);
+    if (wsClient) {
+      try {
+        await wsClient.close();
+      } catch (err) {
+        console.error(`[Feedback] Error closing card WS ${cardId}:`, err);
+      }
+      cardWsClientsRef.current.delete(cardId);
+    }
+
+    updateCard(cardId, { recordingState: 'idle', micError: null });
+  };
+
+  const handleCardConfirmRecording = (cardId: string) => {
+    const mr = cardMediaRecordersRef.current.get(cardId);
+    if (!mr) return;
+
+    updateCard(cardId, { recordingState: 'processing' });
+    mr.stop();
+  };
+
+  const handleCardInputChange = (cardId: string, text: string) => {
+    updateCard(cardId, { inputText: text });
   };
 
   // ── Card actions ──────────────────────────────────────────────────────────
 
-  /** fill-blanks: assemble filled sentence, then REPLACE or APPEND based on mode */
   const handlePushText = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
-    const assembled = assembleFromSegments(card.segments);
-    if (assembled) {
+
+    let textToPush: string;
+    if (card.type === 'fill-blanks') {
+      textToPush = card.inputText?.trim() || assembleFromSegments(card.segments);
+    } else {
+      textToPush = card.suggestion;
+    }
+
+    if (textToPush) {
       if (card.mode === 'REPLACE') {
-        setDiscussionText(prev => replaceSentence(prev, card.spanText, assembled));
+        setDiscussionText(prev => replaceSentence(prev, card.spanText, textToPush));
       } else {
-        // APPEND — insert after the sentence containing the span
-        setDiscussionText(prev => insertAfterSentence(prev, card.spanText, assembled));
+        setDiscussionText(prev => insertAfterSentence(prev, card.spanText, textToPush));
       }
     }
     updateCard(cardId, { dismissed: true, accepted: true });
     if (activeCardId === cardId) setActiveCardId(null);
   };
 
-  /** rephrase: replace the full sentence containing the span with the suggestion */
   const handleCardAccept = (cardId: string) => {
     const card = cards.find(c => c.id === cardId);
     if (card?.type === 'rephrase') {
@@ -417,7 +624,6 @@ export default function MoMEntryFeedbackScreen() {
     setFlagMessage(null);
     setIsFetchingFeedback(true);
 
-    // MOCK INTERCEPT — remove when API is live
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
@@ -442,7 +648,6 @@ export default function MoMEntryFeedbackScreen() {
       setIsFetchingFeedback(false);
       return;
     }
-    // END MOCK INTERCEPT
 
     try {
       const res = await fetch(FEEDBACK_API, {
@@ -457,7 +662,7 @@ export default function MoMEntryFeedbackScreen() {
       });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
-        throw new Error(`Feedback API returned ${res.status}${detail ? `: ${detail}` : ''}`);
+        throw new Error(`API returned ${res.status}${detail ? `: ${detail}` : ''}`);
       }
       const feedbackResult: FeedbackResult = await res.json();
       setFlagMessage(feedbackResult.flag_message ?? null);
@@ -500,15 +705,14 @@ export default function MoMEntryFeedbackScreen() {
 
       <div className="flex flex-col gap-[3px]">
 
-        {/* Header bar */}
+        {/* ── Header bar ── */}
         <div className="bg-white pl-[20px] pr-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 w-full">
           <GoBackToPreviousPage
             label={t('go_back')}
-            onClick={() => navigate('/agenda-list', { state: { meetingId } })}
+            onClick={() => navigate('/mom-entry/post-recording', { state: { agenda, discussionText, meetingId } })}
           />
         </div>
 
-        {/* Body */}
         <div className="bg-white flex gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
 
           {/* ── Left column ── */}
@@ -516,6 +720,7 @@ export default function MoMEntryFeedbackScreen() {
 
             <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
+            {/* Agenda card */}
             <AgendaCard
               stage="subpage"
               agendaNumber={agenda ? String(agenda.id) : '1'}
@@ -562,7 +767,7 @@ export default function MoMEntryFeedbackScreen() {
               </div>
             </div>
 
-            {/* Discussion field + mic */}
+            {/* Discussion field */}
             <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
                 type="mandatory"
@@ -570,21 +775,25 @@ export default function MoMEntryFeedbackScreen() {
                 className="shrink-0"
               />
 
-              {(mainSttError ?? feedbackError) ? (
+              {mainSttError ? (
                 <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
-                  {mainSttError ? 'We were unable to record your voice at the moment. Please try again in sometime.' : (feedbackError ?? '')}
+                  {mainSttError}
                 </p>
               ) : (
-                <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
+                <InfoBox
+                  type="plain"
+                  text={t('discussion_field_info')}
+                  className="shrink-0 w-full"
+                />
               )}
 
               <TextAreaContainer
-                state={isMainRecording ? 'recording' : hasText ? 'filled' : 'default'}
+                state={isMainRecording ? 'recording' : 'filled'}
                 placeholder={t('discussion_field_placeholder')}
                 value={discussionText}
                 onChange={setDiscussionText}
                 onMicClick={handleMainMicClick}
-                onStopClick={handleMainCancelRecording}
+                onStopClick={handleMainConfirmRecording}
                 scanPhotoLabel={t('btn_scan_photo')}
                 uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={mainAnalyserRef.current ?? undefined}
@@ -598,6 +807,15 @@ export default function MoMEntryFeedbackScreen() {
                 style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
               />
             </div>
+
+            {/* Flag message */}
+            {flagMessage && (
+              <InfoBox
+                type="default"
+                text={flagMessage}
+                className="shrink-0 w-full"
+              />
+            )}
 
             {/* Footer buttons */}
             <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
@@ -623,67 +841,57 @@ export default function MoMEntryFeedbackScreen() {
             </div>
           </div>
 
-          {/* ── Right: feedback panel ── */}
-          <div className="w-[360px] shrink-0">
-            <div className="bg-[rgba(134,134,134,0.08)] flex flex-col pt-5 px-5 pb-[30px] rounded-[15px]">
+          {/* ── Right: feedback cards ── */}
+          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch overflow-y-auto">
+            <SectionHeading text={t('feedback_heading')} className="shrink-0" />
 
-              <div className="flex gap-4 items-center shrink-0 flex-wrap pb-5">
-                <SectionHeading text={t('feedback_heading')} className="shrink-0" />
-                {visibleCards.length > 0 && (
-                  <div className="bg-[#ff7468] flex items-center justify-center px-2 rounded-[5px] shrink-0">
-                    <span
-                      className="font-medium text-sm leading-6 text-white whitespace-nowrap"
-                      style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                    >
-                      {visibleCards.length} {t('feedback_suggestions_label')}
-                    </span>
-                  </div>
-                )}
-                {visibleCards.length === 0 && (
-                  <p
-                    className="font-normal text-xs leading-[18px] text-[#3b3b3b] shrink-0 w-full"
-                    style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            {visibleCards.length > 0 && (
+              <div
+                ref={feedbackListRef}
+                className="flex flex-col gap-[15px] items-start w-full pb-[30px] pr-3"
+                style={{ scrollbarGutter: 'stable' }}
+              >
+                {visibleCards.map(card => (
+                  <div
+                    key={card.id}
+                    ref={el => {
+                      if (el) cardRefsMap.current.set(card.id, el);
+                      else cardRefsMap.current.delete(card.id);
+                    }}
+                    className="w-full shrink-0"
                   >
-                    {flagMessage ?? t('feedback_empty_state')}
-                  </p>
-                )}
+                    <FeedbackCard
+                      type={card.type}
+                      segments={card.segments}
+                      onSegmentChange={(i, v) => updateSegment(card.id, i, v)}
+                      originalText={card.suggestion}
+                      isActive={activeCardId === card.id}
+                      onHoverEnter={() => setActiveCardId(card.id)}
+                      onHoverLeave={() => setActiveCardId(prev => prev === card.id ? null : prev)}
+                      onClick={() => handleCardClick(card.id)}
+                      onAccept={() => handleCardAccept(card.id)}
+                      onReject={() => handleCardReject(card.id)}
+                      onPushText={card.type === 'fill-blanks' ? () => handlePushText(card.id) : undefined}
+                      inputText={card.inputText ?? ''}
+                      onInputChange={(text) => handleCardInputChange(card.id, text)}
+                      recordingState={card.recordingState ?? 'idle'}
+                      onMicClick={() => handleCardMicClick(card.id)}
+                      onCancelRecording={() => handleCardCancelRecording(card.id)}
+                      onConfirmRecording={() => handleCardConfirmRecording(card.id)}
+                      micAnalyserNode={cardAnalysersRef.current.get(card.id) ?? undefined}
+                      micError={card.micError ?? null}
+                      className="w-full"
+                    />
+                  </div>
+                ))}
               </div>
+            )}
 
-              {visibleCards.length > 0 && (
-                <div
-                  ref={feedbackListRef}
-                  className="flex flex-col gap-[15px] items-start w-full pb-[30px] pr-3"
-                  style={{ scrollbarGutter: 'stable' }}
-                >
-                  {visibleCards.map(card => (
-                    <div
-                      key={card.id}
-                      ref={el => {
-                        if (el) cardRefsMap.current.set(card.id, el);
-                        else cardRefsMap.current.delete(card.id);
-                      }}
-                      className="w-full shrink-0"
-                    >
-                      <FeedbackCard
-                        type={card.type}
-                        segments={card.segments}
-                        onSegmentChange={(i, v) => updateSegment(card.id, i, v)}
-                        originalText={card.suggestion}
-                        isActive={activeCardId === card.id}
-                        onHoverEnter={() => setActiveCardId(card.id)}
-                        onHoverLeave={() => setActiveCardId(prev => prev === card.id ? null : prev)}
-                        onClick={() => handleCardClick(card.id)}
-                        onAccept={() => handleCardAccept(card.id)}
-                        onReject={() => handleCardReject(card.id)}
-                        onPushText={card.type === 'fill-blanks' ? () => handlePushText(card.id) : undefined}
-                        className="w-full"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-
-            </div>
+            {visibleCards.length === 0 && (
+              <p className="text-sm text-[#727272]" style={{ fontFamily: 'Noto Sans' }}>
+                {t('feedback_empty_state')}
+              </p>
+            )}
           </div>
 
         </div>
