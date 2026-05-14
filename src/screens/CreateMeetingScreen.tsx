@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
+import { WebSocketSTTClient } from '../utils/websocketSttClient';
 import {
   Navbar,
   Sidebar,
@@ -88,6 +89,17 @@ export default function CreateMeetingScreen() {
   const [profileOpen,  setProfileOpen]  = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      const wsClient = descWsClientRef.current;
+      if (wsClient) {
+        wsClient.close().catch(err => console.error('[CreateMeeting] Cleanup error:', err));
+        descWsClientRef.current = null;
+      }
+    };
+  }, []);
+
   // ── Section 1: Meeting details ──
   const [meetingType,  setMeetingType]  = useState('');
   const [date,         setDate]         = useState('');
@@ -103,15 +115,40 @@ export default function CreateMeetingScreen() {
   const [descRecording,   setDescRecording]   = useState(false);
   const [descSttError,    setDescSttError]    = useState('');
   const descMediaRef    = useRef<MediaRecorder | null>(null);
-  const descChunksRef   = useRef<Blob[]>([]);
   const descAudioCtxRef = useRef<AudioContext | null>(null);
   const descAnalyserRef = useRef<AnalyserNode | null>(null);
+  const descWsClientRef = useRef<WebSocketSTTClient | null>(null);
 
   async function handleDescMicClick() {
     if (descRecording) {
-      descMediaRef.current?.stop();
+      // Stop recording and finalize
+      const mr = descMediaRef.current;
+      if (mr) {
+        mr.onstop = async () => {
+          mr.stream.getTracks().forEach(t => t.stop());
+          descAudioCtxRef.current?.close();
+          descAudioCtxRef.current = null;
+          descAnalyserRef.current = null;
+          setDescRecording(false);
+
+          try {
+            const wsClient = descWsClientRef.current;
+            if (wsClient && wsClient.connected()) {
+              await wsClient.end();
+              await new Promise(resolve => setTimeout(resolve, 500));
+              await wsClient.close();
+            }
+          } catch (err) {
+            console.error('[CreateMeeting] Error closing WebSocket:', err);
+          }
+          descWsClientRef.current = null;
+        };
+        mr.stop();
+      }
       return;
     }
+
+    // Start recording
     setDescSttError('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -122,38 +159,54 @@ export default function CreateMeetingScreen() {
       analyser.fftSize = 64;
       source.connect(analyser);
       descAnalyserRef.current = analyser;
+
+      // Create and connect WebSocket
+      const wsClient = new WebSocketSTTClient('en');
+      descWsClientRef.current = wsClient;
+
+      await wsClient.connect();
+      console.log('[CreateMeeting] WebSocket connected for description');
+
+      // Setup event handlers
+      wsClient.on('transcript', (text: string) => {
+        if (text.trim()) {
+          setDescription(prev => prev ? prev + ' ' + text : text);
+        }
+      });
+
+      wsClient.on('error', (msg: string) => {
+        console.error('[CreateMeeting] WebSocket error:', msg);
+        setDescSttError(`Speech recognition error: ${msg}`);
+      });
+
+      // Setup MediaRecorder for streaming
       const mr = new MediaRecorder(stream);
-      descChunksRef.current = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) descChunksRef.current.push(e.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        descAudioCtxRef.current?.close(); descAudioCtxRef.current = null;
-        descAnalyserRef.current = null;
-        setDescRecording(false);
-        const blob = new Blob(descChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const res = await fetch('http://localhost:8000/speech-to-text', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ audioDataUri: reader.result, locale: 'en' }),
-            });
-            const data = await res.json();
-            if (data.transcription) {
-              setDescription(prev => prev ? prev + ' ' + data.transcription : data.transcription);
-            }
-          } catch {
-            setDescSttError('Speech-to-text failed. Please try again.');
-          }
-        };
-        reader.readAsDataURL(blob);
-      };
-      mr.start();
       descMediaRef.current = mr;
+
+      mr.ondataavailable = async (e) => {
+        if (e.data.size > 0 && wsClient.connected()) {
+          try {
+            await wsClient.send(e.data);
+          } catch (err) {
+            console.error('[CreateMeeting] Failed to send audio chunk:', err);
+            setDescSttError('Failed to send audio to server.');
+          }
+        }
+      };
+
+      mr.start(100); // 100ms timeslice for real-time streaming
       setDescRecording(true);
-    } catch {
-      setDescSttError('Microphone access denied.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[CreateMeeting] Error:', msg);
+      setDescSttError(msg === 'NotAllowedError' ? 'Microphone access denied.' : 'Failed to start recording.');
+
+      // Close WebSocket if it was created
+      const wsClient = descWsClientRef.current;
+      if (wsClient) {
+        wsClient.close().catch(() => {});
+        descWsClientRef.current = null;
+      }
     }
   }
 

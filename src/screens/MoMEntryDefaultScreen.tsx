@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -15,7 +15,8 @@ import {
   SmallDetailsText,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API } from '../config/api';
+import { FEEDBACK_API } from '../config/api';
+import { WebSocketSTTClient } from '../utils/websocketSttClient';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
@@ -41,9 +42,9 @@ export default function MoMEntryDefaultScreen() {
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef   = useRef<Blob[]>([]);
   const audioCtxRef      = useRef<AudioContext | null>(null);
   const analyserRef      = useRef<AnalyserNode | null>(null);
+  const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
 
   const teardownAudio = useCallback(() => {
     audioCtxRef.current?.close();
@@ -57,6 +58,17 @@ export default function MoMEntryDefaultScreen() {
   const hasText          = discussionText.trim().length > 0;
   const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback;
   const isSaveEnabled     = hasText && feedbackCompleted;
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      const wsClient = wsClientRef.current;
+      if (wsClient) {
+        wsClient.close().catch(err => console.error('[MoM] Cleanup error:', err));
+        wsClientRef.current = null;
+      }
+    };
+  }, []);
 
   // ── Start recording ────────────────────────────────────────────────────────
   const handleMicClick = async () => {
@@ -90,86 +102,143 @@ export default function MoMEntryDefaultScreen() {
     const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
     const mediaRecorder = new MediaRecorder(stream, { mimeType });
     mediaRecorderRef.current = mediaRecorder;
-    audioChunksRef.current = [];
 
+    // For real-time streaming, we'll handle chunks in handleConfirmRecording after WS connects
     mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      // Chunks will be streamed to WS when they arrive; see handleConfirmRecording
     };
 
-    mediaRecorder.start();
+    // Start with 100ms timeslice for frequent chunks (low-latency streaming)
+    mediaRecorder.start(100);
     setEntryState('recording');
   };
 
   // ── Cancel recording ───────────────────────────────────────────────────────
-  const handleCancelRecording = () => {
+  const handleCancelRecording = async () => {
     const mr = mediaRecorderRef.current;
     if (!mr) return;
-    // Discard audio: clear onstop before stopping
+
+    // Clear onstop handler to prevent navigation
     mr.onstop = null;
     mr.stop();
     mr.stream.getTracks().forEach(t => t.stop());
     mediaRecorderRef.current = null;
-    audioChunksRef.current = [];
     teardownAudio();
+
+    // Close WebSocket if it's open
+    const wsClient = wsClientRef.current;
+    if (wsClient) {
+      try {
+        await wsClient.close();
+      } catch (err) {
+        console.error('[MoM] Error closing WebSocket:', err);
+      }
+      wsClientRef.current = null;
+    }
+
     setEntryState('idle');
+    setSttError(null);
   };
 
-  // ── Confirm recording — calls STT API ──────────────────────────────────────
-  const handleConfirmRecording = () => {
+  // ── Confirm recording — stream audio via WebSocket ──────────────────────────
+  const handleConfirmRecording = async () => {
     const mr = mediaRecorderRef.current;
     if (!mr) return;
 
     setEntryState('processing');
+    setSttError(null);
 
-    const textAtConfirm = discussionText; // capture before async
+    try {
+      // Create and connect WebSocket client
+      const wsClient = new WebSocketSTTClient(lang);
+      wsClientRef.current = wsClient;
 
-    mr.onstop = async () => {
-      mr.stream.getTracks().forEach(t => t.stop());
-      mediaRecorderRef.current = null;
-      teardownAudio();
+      await wsClient.connect();
+      console.log('[MoM] WebSocket connected, starting to stream audio');
 
-      const mimeType = audioChunksRef.current[0]?.type ?? 'audio/webm';
-      const blob = new Blob(audioChunksRef.current, { type: mimeType });
-      audioChunksRef.current = [];
-
-      // Encode audio as base64 data URI
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const audioDataUri = reader.result as string;
-        try {
-          const res = await fetch(STT_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              audioDataUri,
-              locale: lang, // 'en' | 'kn'
-            }),
+      // Setup handlers for transcript events
+      let hasReceivedTranscript = false;
+      wsClient.on('transcript', (text: string) => {
+        if (text.trim()) {
+          hasReceivedTranscript = true;
+          setDiscussionText(prev => {
+            const separator = prev.trim() ? ' ' : '';
+            return prev + separator + text;
           });
+        }
+      });
 
-          if (!res.ok) {
-            const detail = await res.text().catch(() => '');
-            throw new Error(`STT API returned ${res.status}${detail ? `: ${detail}` : ''}`);
+      wsClient.on('speech_start', () => {
+        console.log('[MoM] Speech detected by server');
+      });
+
+      wsClient.on('speech_end', () => {
+        console.log('[MoM] Speech ended on server');
+      });
+
+      wsClient.on('error', (msg: string) => {
+        console.error('[MoM] WebSocket error:', msg);
+        setSttError(`Speech recognition error: ${msg}`);
+      });
+
+      // Setup recorder to stream chunks to WebSocket as they arrive
+      mr.ondataavailable = async (e) => {
+        if (e.data.size > 0 && wsClient.connected()) {
+          try {
+            await wsClient.send(e.data);
+          } catch (err) {
+            console.error('[MoM] Failed to send audio chunk:', err);
+            setSttError('Failed to send audio to server. Please check your connection.');
           }
-
-          const data: { transcription: string } = await res.json();
-          const separator = textAtConfirm.trim() ? ' ' : '';
-          const newText = textAtConfirm + separator + data.transcription;
-
-          // Navigate to Post Recording screen, passing combined text forward
-          navigate('/mom-entry/post-recording', {
-            state: { agenda, discussionText: newText, meetingId },
-          });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-          setEntryState('idle');
         }
       };
 
-      reader.readAsDataURL(blob);
-    };
+      // Setup stop handler to finalize and close connection
+      mr.onstop = async () => {
+        mr.stream.getTracks().forEach(t => t.stop());
+        mediaRecorderRef.current = null;
+        teardownAudio();
 
-    mr.stop();
+        try {
+          // Signal end of audio stream
+          if (wsClient.connected()) {
+            await wsClient.end();
+            console.log('[MoM] Sent end signal, waiting for connection to close');
+            // Give server a moment to process and close
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await wsClient.close();
+          }
+        } catch (err) {
+          console.error('[MoM] Error closing WebSocket:', err);
+        }
+
+        wsClientRef.current = null;
+
+        // Navigate to post-recording screen with accumulated text
+        navigate('/mom-entry/post-recording', {
+          state: { agenda, discussionText, meetingId },
+        });
+      };
+
+      // Start streaming with frequent chunks for low latency
+      mr.stop();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[MoM] WebSocket setup error:', msg);
+      setSttError(`Speech recognition setup failed — ${msg}. Please try again or type your notes.`);
+      setEntryState('idle');
+      wsClientRef.current = null;
+
+      // Stop the recorder if it's still going
+      const mr = mediaRecorderRef.current;
+      if (mr && mr.state !== 'inactive') {
+        mr.onstop = null; // Clear the stop handler to avoid navigation
+        mr.stop();
+        mr.stream.getTracks().forEach(t => t.stop());
+        mediaRecorderRef.current = null;
+        teardownAudio();
+      }
+    }
   };
 
   // ── Get Feedback ──────────────────────────────────────────────────────────
