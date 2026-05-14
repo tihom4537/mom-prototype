@@ -6,7 +6,7 @@
 export class PcmAudioRecorder {
   private audioContext: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
-  private source: MediaAudioTrackAudioSourceNode | null = null;
+  private source: MediaStreamAudioSourceNode | null = null;
   private processor: ScriptProcessorNode | null = null;
   private isRecording = false;
   private audioChunks: Int16Array[] = [];
@@ -156,6 +156,6 @@ export class PcmAudioRecorder {
     view.setUint32(36, 0x61746164, true); // "data"
     view.setUint32(40, audioLength, true); // subchunk2 size
 
-    return new Blob([wavHeader, pcmData], { type: 'audio/wav' });
+    return new Blob([new Uint8Array(wavHeader), pcmData], { type: 'audio/wav' });
   }
 }

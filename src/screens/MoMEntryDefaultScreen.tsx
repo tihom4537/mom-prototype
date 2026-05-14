@@ -212,11 +212,9 @@ export default function MoMEntryDefaultScreen() {
 
       // Stop the recorder if it's still going
       const mr = mediaRecorderRef.current;
-      if (mr && mr.state !== 'inactive') {
-        mr.onstop = null; // Clear the stop handler to avoid navigation
-        mr.stop();
-        mr.stream.getTracks().forEach(t => t.stop());
-        mediaRecorderRef.current = null;
+      if (recorder) {
+        recorder.stop();
+        pcmRecorderRef.current = null;
         teardownAudio();
       }
     }
