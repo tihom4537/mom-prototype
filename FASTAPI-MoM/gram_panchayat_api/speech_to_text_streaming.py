@@ -82,9 +82,13 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
                     try:
                         # Convert audio bytes to data URI format for REST API
                         audio_b64 = base64.b64encode(bytes(audio_chunks)).decode('utf-8')
-                        audio_data_uri = f"data:audio/webm;base64,{audio_b64}"
+                        # Detect format from magic bytes or default to WAV
+                        audio_format = "audio/wav"
+                        if bytes(audio_chunks).startswith(b'ID3') or bytes(audio_chunks).startswith(b'\xff\xfb'):
+                            audio_format = "audio/mpeg"
+                        audio_data_uri = f"data:{audio_format};base64,{audio_b64}"
 
-                        logger.info("Calling REST API for transcription...")
+                        logger.info(f"Calling REST API for transcription... Format: {audio_format}, Size: {len(audio_chunks)} bytes")
                         transcript = await transcribe_audio_data_uri(audio_data_uri, locale)
 
                         logger.info(f"Sending transcript to client: {transcript}")

@@ -171,6 +171,10 @@ export default function MoMEntryDefaultScreen() {
       pcmRecorderRef.current = null;
       teardownAudio();
       console.log('[MoM] Recording stopped. Audio data:', audioData.length, 'bytes');
+      console.log('[MoM] Audio type:', audioData.constructor.name);
+      if (audioData.length === 0) {
+        throw new Error('No audio data captured');
+      }
 
       // Setup promise for waiting on transcript (MUST be created BEFORE sending)
       let transcriptReceived = false;
@@ -202,9 +206,14 @@ export default function MoMEntryDefaultScreen() {
       });
 
       // Send audio in chunks if large, or all at once if small
-      console.log('[MoM] Sending audio data...');
-      await wsClient.send(audioData);
-      console.log('[MoM] Audio sent. Sending end signal...');
+      console.log('[MoM] Sending audio data...', 'size:', audioData.length, 'type:', audioData.constructor.name);
+      try {
+        await wsClient.send(audioData);
+        console.log('[MoM] Audio sent successfully. Sending end signal...');
+      } catch (sendErr) {
+        console.error('[MoM] Failed to send audio:', sendErr);
+        throw sendErr;
+      }
 
       // Signal end of stream
       await wsClient.end();

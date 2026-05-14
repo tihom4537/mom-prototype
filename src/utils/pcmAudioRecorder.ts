@@ -62,7 +62,7 @@ export class PcmAudioRecorder {
   }
 
   /**
-   * Stop recording and get all audio data
+   * Stop recording and get all audio data as WAV file
    */
   stop(): Uint8Array {
     if (!this.isRecording) {
@@ -96,8 +96,56 @@ export class PcmAudioRecorder {
       offset += chunk.length;
     }
 
-    console.log('[PCM Recorder] Stopped recording. Total:', totalLength, 'samples');
-    return this.uint8FromInt16(result);
+    const pcmData = this.uint8FromInt16(result);
+    console.log('[PCM Recorder] Stopped recording. Total:', totalLength, 'samples, PCM size:', pcmData.length, 'bytes');
+
+    // Wrap PCM data in WAV header for Sarvam compatibility
+    const wavData = this.createWavFromPcm(pcmData, 16000, 1, 16);
+    console.log('[PCM Recorder] Created WAV file:', wavData.length, 'bytes');
+    return wavData;
+  }
+
+  /**
+   * Create WAV file from raw PCM data
+   */
+  private createWavFromPcm(pcmData: Uint8Array, sampleRate: number, numChannels: number, bitsPerSample: number): Uint8Array {
+    const bytesPerSample = bitsPerSample / 8;
+    const dataLength = pcmData.length;
+    const fileLength = 36 + dataLength;
+
+    const wav = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(wav);
+
+    // RIFF header
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, fileLength, true);
+    writeString(8, 'WAVE');
+
+    // fmt sub-chunk
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true); // sub-chunk size
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // byte rate
+    view.setUint16(32, numChannels * bytesPerSample, true); // block align
+    view.setUint16(34, bitsPerSample, true);
+
+    // data sub-chunk
+    writeString(36, 'data');
+    view.setUint32(40, dataLength, true);
+
+    // Copy PCM data
+    const uint8View = new Uint8Array(wav);
+    uint8View.set(pcmData, 44);
+
+    return uint8View;
   }
 
   /**
