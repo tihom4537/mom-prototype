@@ -62,3 +62,29 @@ class TranslateRequest(BaseModel):
 
 class TranslateResponse(BaseModel):
     translation: str
+
+
+class OCRRequest(BaseModel):
+    image: str  # base64-encoded image bytes
+    format: str  # "image/jpeg" or "image/png"
+
+    @field_validator("image")
+    @classmethod
+    def image_must_not_be_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("image must not be empty")
+        return value
+
+    @field_validator("format")
+    @classmethod
+    def format_must_be_valid(cls, value: str) -> str:
+        if value not in ["image/jpeg", "image/png"]:
+            raise ValueError("format must be 'image/jpeg' or 'image/png'")
+        return value
+
+
+class OCRResponse(BaseModel):
+    extracted_text: str
+    detected_language: Literal["en", "kn"]
+    confidence: float
+    error: Optional[str] = None

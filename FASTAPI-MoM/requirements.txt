@@ -5,4 +5,7 @@ python-dotenv
 pydantic>=2,<3
 asyncpg
 sarvamai
+google-cloud-vision
+google-auth-httplib2
+google-auth-oauthlib
 

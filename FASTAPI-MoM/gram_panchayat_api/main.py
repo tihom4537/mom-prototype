@@ -22,11 +22,14 @@ from .feedback import get_feedback as run_feedback
 from .models import (
     FeedbackRequest,
     FeedbackResult,
+    OCRRequest,
+    OCRResponse,
     SpeechToTextRequest,
     SpeechToTextResponse,
     TranslateRequest,
     TranslateResponse,
 )
+from .ocr import process_image_ocr
 from .speech_to_text import transcribe_audio_data_uri
 from .speech_to_text_streaming import handle_streaming_stt
 from .translate import translate_text
@@ -162,6 +165,18 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
     """
     translation = await translate_text(body.text, body.from_locale, body.to_locale)
     return TranslateResponse(translation=translation)
+
+
+@app.post("/ocr", response_model=OCRResponse)
+async def ocr(body: OCRRequest) -> OCRResponse:
+    """
+    Extract text from an image using Google Cloud Vision API.
+
+    Supports JPG and PNG images up to 5MB.
+    Automatically detects if text is English or Kannada.
+    """
+    result = await process_image_ocr(body.image, body.format)
+    return OCRResponse(**result)
 
 
 @app.websocket("/ws/speech-to-text")
