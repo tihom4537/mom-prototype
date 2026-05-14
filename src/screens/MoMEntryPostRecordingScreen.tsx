@@ -431,12 +431,12 @@ export default function MoMEntryPostRecordingScreen() {
               )}
 
               <TextAreaContainer
-                state={isRecording ? 'recording' : hasText ? 'filled' : 'default'}
+                state={isRecording ? 'recording' : (isProcessing ? 'recording' : hasText ? 'filled' : 'default')}
                 placeholder={t('discussion_field_placeholder')}
                 value={discussionText}
                 onChange={setDiscussionText}
                 onMicClick={handleMicClick}
-                onStopClick={handleCancelRecording}
+                onStopClick={handleMicClick}
                 scanPhotoLabel={t('btn_scan_photo')}
                 uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={analyserRef.current ?? undefined}
