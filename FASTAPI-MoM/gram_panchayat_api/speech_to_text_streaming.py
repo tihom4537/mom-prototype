@@ -108,24 +108,33 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
 
             async def _receive_from_sarvam() -> None:
                 """Forward Sarvam transcript events to the browser."""
-                async for message in sarvam_ws:
-                    msg_type = message.get("type")
+                try:
+                    logger.info("Starting to receive messages from Sarvam...")
+                    async for message in sarvam_ws:
+                        logger.info(f"Received from Sarvam: {message}")
+                        msg_type = message.get("type")
 
-                    if msg_type == "transcript":
-                        text = message.get("text", "")
-                        if text:
-                            await websocket.send_text(
-                                json.dumps({"type": "transcript", "text": text})
-                            )
+                        if msg_type == "transcript":
+                            text = message.get("text", "")
+                            if text:
+                                logger.info(f"Sending transcript to client: {text}")
+                                await websocket.send_text(
+                                    json.dumps({"type": "transcript", "text": text})
+                                )
 
-                    elif msg_type == "speech_start":
-                        await websocket.send_text(json.dumps({"type": "speech_start"}))
+                        elif msg_type == "speech_start":
+                            logger.info("Sending speech_start to client")
+                            await websocket.send_text(json.dumps({"type": "speech_start"}))
 
-                    elif msg_type == "speech_end":
-                        await websocket.send_text(json.dumps({"type": "speech_end"}))
+                        elif msg_type == "speech_end":
+                            logger.info("Sending speech_end to client")
+                            await websocket.send_text(json.dumps({"type": "speech_end"}))
 
-                    else:
-                        logger.debug("Unhandled Sarvam message type: %s", msg_type)
+                        else:
+                            logger.info(f"Unhandled Sarvam message type: {msg_type}, full message: {message}")
+                    logger.info("Sarvam async iterator exhausted (connection closed)")
+                except Exception as e:
+                    logger.exception(f"Error in _receive_from_sarvam: {e}")
 
             receive_task = asyncio.create_task(_receive_from_client())
             sarvam_task = asyncio.create_task(_receive_from_sarvam())
