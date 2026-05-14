@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
 import { useMeetings } from '../context/MeetingsContext';
+import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
+import { WebSocketSTTClient } from '../utils/websocketSttClient';
 import type { FeedbackResult } from './MoMEntryPostRecordingScreen';
 import {
   GoBackToPreviousPage,
@@ -186,7 +188,7 @@ export default function MoMEntryFeedbackScreen() {
   const [actionOpen, setActionOpen]                 = useState(false);
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
-  const mainMediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mainPcmRecorderRef   = useRef<PcmAudioRecorder | null>(null);
   const mainAudioCtxRef      = useRef<AudioContext | null>(null);
   const mainAnalyserRef      = useRef<AnalyserNode | null>(null);
   const mainWsClientRef      = useRef<WebSocketSTTClient | null>(null);
@@ -295,45 +297,38 @@ export default function MoMEntryFeedbackScreen() {
   const handleMainMicClick = async () => {
     if (mainEntryState !== 'idle') return;
     setMainSttError(null);
-    let stream: MediaStream;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setMainSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
-      return;
-    }
+
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const pcmRecorder = new PcmAudioRecorder();
+      mainPcmRecorderRef.current = pcmRecorder;
+
+      await pcmRecorder.start();
+      console.log('[Feedback] Main PCM recording started');
+
+      const audioCtx = (pcmRecorder as any).audioContext;
+      if (audioCtx) {
+        mainAudioCtxRef.current = audioCtx;
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+        mainAnalyserRef.current = analyser;
+      }
+
+      setMainEntryState('recording');
     } catch (err) {
       const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
       setMainSttError(isNotAllowed
         ? 'Microphone access was denied. Please allow microphone access and try again.'
         : 'Could not access the microphone. Please check your browser permissions.'
       );
-      return;
     }
-    const audioCtx = new AudioContext();
-    mainAudioCtxRef.current = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    mainAnalyserRef.current = analyser;
-
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const mr = new MediaRecorder(stream, { mimeType });
-    mainMediaRecorderRef.current = mr;
-
-    mr.ondataavailable = () => {};
-    mr.start(100);
-    setMainEntryState('recording');
   };
 
   const handleMainCancelRecording = async () => {
-    const mr = mainMediaRecorderRef.current;
-    if (!mr) return;
-    mr.onstop = null;
-    mr.stop();
-    mr.stream.getTracks().forEach(t => t.stop());
-    mainMediaRecorderRef.current = null;
+    const pcmRecorder = mainPcmRecorderRef.current;
+    if (pcmRecorder) {
+      pcmRecorder.stop();
+      mainPcmRecorderRef.current = null;
+    }
     teardownMainAudio();
 
     const wsClient = mainWsClientRef.current;
@@ -351,22 +346,34 @@ export default function MoMEntryFeedbackScreen() {
   };
 
   const handleMainConfirmRecording = async () => {
-    const mr = mainMediaRecorderRef.current;
-    if (!mr) return;
+    const pcmRecorder = mainPcmRecorderRef.current;
+    if (!pcmRecorder) return;
 
     setMainEntryState('processing');
     setMainSttError(null);
 
     try {
+      const wavData = pcmRecorder.stop();
+      mainPcmRecorderRef.current = null;
+      teardownMainAudio();
+
+      if (wavData.length === 0) {
+        setMainSttError('No audio captured. Please try again.');
+        setMainEntryState('idle');
+        return;
+      }
+
+      console.log('[Feedback] Main recording stopped, wav size:', wavData.length);
+
       const wsClient = new WebSocketSTTClient(lang);
       mainWsClientRef.current = wsClient;
 
-      await wsClient.connect();
-      console.log('[Feedback] Main WebSocket connected');
+      const updatedTextRef = useRef(discussionText);
 
       wsClient.on('transcript', (text: string) => {
         if (text.trim()) {
           setDiscussionText(prev => {
+            updatedTextRef.current = prev;
             const separator = prev.trim() ? ' ' : '';
             return prev + separator + text;
           });
@@ -378,37 +385,37 @@ export default function MoMEntryFeedbackScreen() {
         setMainSttError(`Speech recognition error: ${msg}`);
       });
 
-      mr.ondataavailable = async (e) => {
-        if (e.data.size > 0 && wsClient.connected()) {
-          try {
-            await wsClient.send(e.data);
-          } catch (err) {
-            console.error('[Feedback] Failed to send main chunk:', err);
-            setMainSttError('Failed to send audio.');
-          }
-        }
-      };
+      await wsClient.connect();
+      console.log('[Feedback] Main WebSocket connected');
 
-      mr.onstop = async () => {
-        mr.stream.getTracks().forEach(t => t.stop());
-        mainMediaRecorderRef.current = null;
-        teardownMainAudio();
+      await wsClient.send(wavData);
+      console.log('[Feedback] Main audio sent');
 
-        try {
-          if (wsClient.connected()) {
-            await wsClient.end();
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await wsClient.close();
-          }
-        } catch (err) {
-          console.error('[Feedback] Error closing main WS:', err);
-        }
+      await wsClient.end();
+      console.log('[Feedback] Main end signal sent');
 
-        mainWsClientRef.current = null;
-        setMainEntryState('idle');
-      };
+      const transcriptPromise = new Promise<void>(resolve => {
+        const originalResolve = wsClient.on('close', () => resolve());
+      });
 
-      mr.stop();
+      const transcriptTimeout = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Transcript timeout')), 60000)
+      );
+
+      try {
+        await Promise.race([transcriptPromise, transcriptTimeout]);
+      } catch (err) {
+        console.error('[Feedback] Transcript wait error:', err);
+      }
+
+      try {
+        await wsClient.close();
+      } catch (err) {
+        console.error('[Feedback] Error closing main WS:', err);
+      }
+
+      mainWsClientRef.current = null;
+      setMainEntryState('idle');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('[Feedback] Main recording setup error:', msg);
@@ -416,12 +423,10 @@ export default function MoMEntryFeedbackScreen() {
       setMainEntryState('idle');
       mainWsClientRef.current = null;
 
-      const mr = mainMediaRecorderRef.current;
-      if (mr && mr.state !== 'inactive') {
-        mr.onstop = null;
-        mr.stop();
-        mr.stream.getTracks().forEach(t => t.stop());
-        mainMediaRecorderRef.current = null;
+      const pcmRecorder = mainPcmRecorderRef.current;
+      if (pcmRecorder) {
+        pcmRecorder.stop();
+        mainPcmRecorderRef.current = null;
         teardownMainAudio();
       }
     }
