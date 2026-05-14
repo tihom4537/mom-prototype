@@ -430,6 +430,9 @@ export default function MoMEntryFeedbackScreen() {
           'Onagalu Day observance',
           'COVID-19 JN.1 precautionary measures',
         ],
+        modes: ['APPEND', 'APPEND', 'APPEND'],
+        flag: null,
+        flag_message: null,
       };
       setCards(buildCards(feedbackResult));
       setActiveCardId(null);
