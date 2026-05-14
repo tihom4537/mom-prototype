@@ -16,6 +16,7 @@ Server → Client messages:
 """
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -76,8 +77,10 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
 
                         if "bytes" in message and message["bytes"] is not None:
                             audio_chunk: bytes = message["bytes"]
+                            # Convert binary audio to base64 string for Sarvam API
+                            audio_base64 = base64.b64encode(audio_chunk).decode('utf-8')
                             await sarvam_ws.transcribe(
-                                audio=audio_chunk,
+                                audio=audio_base64,
                                 encoding="audio/wav",
                                 sample_rate=16000,
                             )
