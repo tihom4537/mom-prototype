@@ -139,86 +139,99 @@ export default function MoMEntryDefaultScreen() {
     setEntryState('processing');
     setSttError(null);
 
+    let wsClient: WebSocketSTTClient | null = null;
+
     try {
       // Create and connect WebSocket client
-      const wsClient = new WebSocketSTTClient(lang);
+      wsClient = new WebSocketSTTClient(lang);
       wsClientRef.current = wsClient;
 
       await wsClient.connect();
-      console.log('[MoM] WebSocket connected, starting to stream audio');
+      console.log('[MoM] WebSocket connected');
 
-      // Setup handlers for transcript events
+      // Stop recording and get final audio FIRST (before setting up listeners)
+      const audioData = recorder.stop();
+      pcmRecorderRef.current = null;
+      teardownAudio();
+      console.log('[MoM] Recording stopped. Audio data:', audioData.length, 'bytes');
+
+      // Setup promise for waiting on transcript (MUST be created BEFORE sending)
+      let transcriptReceived = false;
       let transcriptPromiseResolve: (() => void) | null = null;
       const transcriptPromise = new Promise<void>(resolve => {
         transcriptPromiseResolve = resolve;
       });
 
+      // Register event listeners BEFORE sending audio
       wsClient.on('transcript', (text: string) => {
+        console.log('[MoM] Transcript event fired with text:', text);
+        transcriptReceived = true;
         if (text.trim()) {
           setDiscussionText(prev => {
             const separator = prev.trim() ? ' ' : '';
             return prev + separator + text;
           });
         }
-        // Signal that transcript was received (even if empty)
-        transcriptPromiseResolve?.();
-      });
-
-      wsClient.on('speech_start', () => {
-        console.log('[MoM] Speech detected by server');
-      });
-
-      wsClient.on('speech_end', () => {
-        console.log('[MoM] Speech ended on server');
+        // Resolve promise immediately
+        if (transcriptPromiseResolve) {
+          transcriptPromiseResolve();
+          transcriptPromiseResolve = null;
+        }
       });
 
       wsClient.on('error', (msg: string) => {
-        console.error('[MoM] WebSocket error:', msg);
+        console.error('[MoM] WebSocket error event:', msg);
         setSttError(`Speech recognition error: ${msg}`);
       });
 
-      // Stop recording and get final audio (raw PCM, 16-bit at 16kHz - perfect for Sarvam)
-      const audioData = recorder.stop();
-      pcmRecorderRef.current = null;
-      teardownAudio();
+      // Send audio in chunks if large, or all at once if small
+      console.log('[MoM] Sending audio data...');
+      await wsClient.send(audioData);
+      console.log('[MoM] Audio sent. Sending end signal...');
 
-      console.log('[MoM] Sent', audioData.length, 'bytes of audio to server');
+      // Signal end of stream
+      await wsClient.end();
+      console.log('[MoM] End signal sent. Waiting for transcript...');
 
-      // Send audio to server
+      // Wait for transcript response from server (with longer timeout for REST API processing)
+      const transcriptTimeout = new Promise<void>((_, reject) =>
+        setTimeout(() => {
+          console.error('[MoM] Transcript timeout - no response after 60 seconds');
+          reject(new Error('Transcript response timeout'));
+        }, 60000)
+      );
+
       try {
-        if (wsClient.connected()) {
-          await wsClient.send(audioData);
-
-          // Signal end of stream
-          await wsClient.end();
-          console.log('[MoM] Sent end signal');
-
-          // Wait for transcript response from server (with timeout)
-          const transcriptTimeout = new Promise<void>((_, reject) =>
-            setTimeout(() => reject(new Error('Transcript response timeout')), 30000)
-          );
-          await Promise.race([transcriptPromise, transcriptTimeout]);
-          console.log('[MoM] Received transcript from server');
-
-          await wsClient.close();
+        await Promise.race([transcriptPromise, transcriptTimeout]);
+        console.log('[MoM] Transcript received successfully');
+      } catch (timeoutErr) {
+        console.error('[MoM] Promise race failed:', timeoutErr);
+        if (!transcriptReceived) {
+          console.warn('[MoM] Warning: Transcript event never fired');
         }
-      } catch (err) {
-        console.error('[MoM] Error sending audio:', err);
-        setSttError('Failed to send audio. Check your connection and try again.');
+        throw timeoutErr;
       }
 
-      wsClientRef.current = null;
-
-      // Navigate to post-recording screen
-      navigate('/mom-entry/post-recording', {
-        state: { agenda, discussionText, meetingId },
-      });
+      // Now safe to close the connection
+      console.log('[MoM] Closing WebSocket...');
+      if (wsClient) {
+        await wsClient.close();
+        console.log('[MoM] WebSocket closed');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[MoM] WebSocket setup error:', msg);
-      setSttError(`Speech recognition setup failed — ${msg}. Please try again or type your notes.`);
+      console.error('[MoM] Error in handleConfirmRecording:', msg);
+      setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
       setEntryState('idle');
-      wsClientRef.current = null;
+
+      // Attempt to close the connection if still open
+      if (wsClient) {
+        try {
+          await wsClient.close();
+        } catch (closeErr) {
+          console.error('[MoM] Error closing WebSocket:', closeErr);
+        }
+      }
 
       // Stop the recorder if it's still going
       const recorder = pcmRecorderRef.current;
@@ -227,7 +240,16 @@ export default function MoMEntryDefaultScreen() {
         pcmRecorderRef.current = null;
         teardownAudio();
       }
+
+      return;
     }
+
+    wsClientRef.current = null;
+
+    // Navigate to post-recording screen (only if successful)
+    navigate('/mom-entry/post-recording', {
+      state: { agenda, discussionText, meetingId },
+    });
   };
 
   // ── Get Feedback ──────────────────────────────────────────────────────────

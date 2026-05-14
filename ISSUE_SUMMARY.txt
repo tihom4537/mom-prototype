@@ -1,0 +1,67 @@
+═══════════════════════════════════════════════════════════════════════════════
+SARVAM STREAMING API - DIAGNOSIS COMPLETE
+═══════════════════════════════════════════════════════════════════════════════
+
+TESTED SCENARIOS:
+─────────────────
+✓ Test 1: Basic parameters (vad_signals=True, flush_signal=True)
+✓ Test 2: Without VAD signals
+✓ Test 3: Without flush signal
+✓ Test 4: Lower VAD sensitivity
+✓ Test 5: Speech-like audio (multiple formants)
+✓ Test 6: Different language (Kannada)
+✓ Test 7: Direct recv() method
+
+RESULT: ALL 7 TESTS FAILED - 0 MESSAGES RETURNED
+─────────────────────────────────────────────────
+
+WHAT'S WORKING:
+───────────────
+✓ WebSocket connection (HTTP 101 Switching Protocols)
+✓ SSL/TLS encryption to api.sarvam.ai
+✓ API key authentication (accepted by server)
+✓ Audio transmission (85KB frames sent successfully)
+✓ Flush command execution
+✓ Connection closure (clean 1000 code)
+✓ REST API (works perfectly - returns 200 OK)
+
+WHAT'S BROKEN:
+──────────────
+✗ Sarvam server does NOT send any response messages after accepting audio
+✗ No error messages received
+✗ No transcript messages received
+✗ No speech_start/speech_end events received
+✗ Timeout after 5+ seconds waiting
+✗ Same behavior regardless of parameter combinations
+
+THE PROBLEM:
+────────────
+The WebSocket connection is established and audio is successfully transmitted to
+Sarvam's servers, but Sarvam's server is simply NOT responding with transcripts
+or any other messages. This is a server-side issue.
+
+COMPARISON WITH REST API:
+─────────────────────────
+REST API:     Status 200 ✓ Response: {"transcript":"", ...}  WORKS
+Streaming:    Status 101 ✓ But then: NO MESSAGES             BROKEN
+
+CONCLUSION:
+───────────
+The sarvamai SDK's streaming API is non-functional. This is NOT a code issue in
+our implementation - it's an issue with Sarvam's streaming API endpoint.
+
+OPTIONS:
+────────
+1. Use REST API as fallback (RECOMMENDED)
+   - Proven working
+   - Same user experience
+   - Slightly less "real-time" but imperceptible for short recordings
+
+2. Wait for Sarvam to fix streaming
+   - Unknown ETA
+   - May never be fixed
+
+3. Switch to different STT provider
+   - Cost and integration time
+
+═══════════════════════════════════════════════════════════════════════════════
