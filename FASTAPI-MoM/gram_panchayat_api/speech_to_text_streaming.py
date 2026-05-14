@@ -169,9 +169,12 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
             # Check for exceptions in completed tasks
             for task in [receive_task, sarvam_task]:
                 if task.done():
-                    exc = task.exception()
-                    if exc and not isinstance(exc, asyncio.CancelledError):
-                        raise exc
+                    try:
+                        exc = task.exception()
+                        if exc and not isinstance(exc, asyncio.CancelledError):
+                            raise exc
+                    except asyncio.CancelledError:
+                        pass
 
     except WebSocketDisconnect:
         logger.info("Streaming STT session ended by client disconnect.")
