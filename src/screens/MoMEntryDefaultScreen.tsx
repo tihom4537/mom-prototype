@@ -17,6 +17,7 @@ import {
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { FEEDBACK_API } from '../config/api';
 import { WebSocketSTTClient } from '../utils/websocketSttClient';
+import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
@@ -41,7 +42,7 @@ export default function MoMEntryDefaultScreen() {
   const [actionOpen, setActionOpen]                 = useState(false);
   const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const pcmRecorderRef   = useRef<PcmAudioRecorder | null>(null);
   const audioCtxRef      = useRef<AudioContext | null>(null);
   const analyserRef      = useRef<AnalyserNode | null>(null);
   const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
@@ -91,38 +92,28 @@ export default function MoMEntryDefaultScreen() {
       return;
     }
 
-    const audioCtx = new AudioContext();
-    audioCtxRef.current = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    analyserRef.current = analyser;
+    // Initialize PCM recorder for raw audio capture (WAV-compatible format)
+    const pcmRecorder = new PcmAudioRecorder();
+    pcmRecorderRef.current = pcmRecorder;
 
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const mediaRecorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorderRef.current = mediaRecorder;
-
-    // For real-time streaming, we'll handle chunks in handleConfirmRecording after WS connects
-    mediaRecorder.ondataavailable = (e) => {
-      // Chunks will be streamed to WS when they arrive; see handleConfirmRecording
-    };
-
-    // Start with 100ms timeslice for frequent chunks (low-latency streaming)
-    mediaRecorder.start(100);
-    setEntryState('recording');
+    try {
+      await pcmRecorder.start();
+      setEntryState('recording');
+      console.log('[MoM] PCM recording started');
+    } catch (err) {
+      console.error('[MoM] PCM recorder failed:', err);
+      setSttError('Failed to initialize audio recorder. Please check microphone access.');
+      pcmRecorderRef.current = null;
+    }
   };
 
   // ── Cancel recording ───────────────────────────────────────────────────────
   const handleCancelRecording = async () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
+    const recorder = pcmRecorderRef.current;
+    if (!recorder) return;
 
-    // Clear onstop handler to prevent navigation
-    mr.onstop = null;
-    mr.stop();
-    mr.stream.getTracks().forEach(t => t.stop());
-    mediaRecorderRef.current = null;
+    recorder.stop();
+    pcmRecorderRef.current = null;
     teardownAudio();
 
     // Close WebSocket if it's open
@@ -142,8 +133,8 @@ export default function MoMEntryDefaultScreen() {
 
   // ── Confirm recording — stream audio via WebSocket ──────────────────────────
   const handleConfirmRecording = async () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
+    const recorder = pcmRecorderRef.current;
+    if (!recorder) return;
 
     setEntryState('processing');
     setSttError(null);
@@ -181,47 +172,37 @@ export default function MoMEntryDefaultScreen() {
         setSttError(`Speech recognition error: ${msg}`);
       });
 
-      // Setup recorder to stream chunks to WebSocket as they arrive
-      mr.ondataavailable = async (e) => {
-        if (e.data.size > 0 && wsClient.connected()) {
-          try {
-            await wsClient.send(e.data);
-          } catch (err) {
-            console.error('[MoM] Failed to send audio chunk:', err);
-            setSttError('Failed to send audio to server. Please check your connection.');
-          }
+      // Stop recording and get final audio (raw PCM, 16-bit at 16kHz - perfect for Sarvam)
+      const audioData = recorder.stop();
+      pcmRecorderRef.current = null;
+      teardownAudio();
+
+      console.log('[MoM] Sent', audioData.length, 'bytes of audio to server');
+
+      // Send audio to server
+      try {
+        if (wsClient.connected()) {
+          await wsClient.send(audioData);
+
+          // Signal end of stream
+          await wsClient.end();
+          console.log('[MoM] Sent end signal');
+
+          // Wait for server to process
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          await wsClient.close();
         }
-      };
+      } catch (err) {
+        console.error('[MoM] Error sending audio:', err);
+        setSttError('Failed to send audio. Check your connection and try again.');
+      }
 
-      // Setup stop handler to finalize and close connection
-      mr.onstop = async () => {
-        mr.stream.getTracks().forEach(t => t.stop());
-        mediaRecorderRef.current = null;
-        teardownAudio();
+      wsClientRef.current = null;
 
-        try {
-          // Signal end of audio stream
-          if (wsClient.connected()) {
-            await wsClient.end();
-            console.log('[MoM] Sent end signal, waiting for connection to close');
-            // Give server a moment to process and close
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await wsClient.close();
-          }
-        } catch (err) {
-          console.error('[MoM] Error closing WebSocket:', err);
-        }
-
-        wsClientRef.current = null;
-
-        // Navigate to post-recording screen with accumulated text
-        navigate('/mom-entry/post-recording', {
-          state: { agenda, discussionText, meetingId },
-        });
-      };
-
-      // Start streaming with frequent chunks for low latency
-      mr.stop();
+      // Navigate to post-recording screen
+      navigate('/mom-entry/post-recording', {
+        state: { agenda, discussionText, meetingId },
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('[MoM] WebSocket setup error:', msg);
