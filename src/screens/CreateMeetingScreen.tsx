@@ -70,7 +70,7 @@ function getMinSelectableDate(): Date {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function CreateMeetingScreen() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const { meetings } = useMeetings();
 
@@ -197,8 +197,8 @@ export default function CreateMeetingScreen() {
         return;
       }
 
-      // Create WebSocket client
-      wsClient = new WebSocketSTTClient('en');
+      // Create WebSocket client using current language setting
+      wsClient = new WebSocketSTTClient(lang);
       descWsClientRef.current = wsClient;
 
       await wsClient.connect();
