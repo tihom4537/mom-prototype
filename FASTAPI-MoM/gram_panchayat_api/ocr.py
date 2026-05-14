@@ -1,5 +1,5 @@
 """
-OCR (Optical Character Recognition) via Google Cloud Vision API.
+OCR (Optical Character Recognition) via Google Gemini API.
 
 Extracts text from images (JPG, PNG) and detects language (English or Kannada).
 """
@@ -7,10 +7,8 @@ Extracts text from images (JPG, PNG) and detects language (English or Kannada).
 import base64
 import logging
 import os
-from typing import Optional
 
-from google.cloud import vision
-from google.oauth2 import service_account
+import google.generativeai as genai
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +23,7 @@ def detect_language(text: str) -> str:
 
 async def process_image_ocr(image_base64: str, image_format: str) -> dict:
     """
-    Extract text from an image using Google Cloud Vision API.
+    Extract text from an image using Google Gemini API.
 
     Args:
         image_base64: Base64-encoded image bytes.
@@ -65,21 +63,10 @@ async def process_image_ocr(image_base64: str, image_format: str) -> dict:
                 "error": "Image too large. Maximum size is 5MB.",
             }
 
-        # Initialize Google Vision client
-        try:
-            # Try to use service account credentials if available
-            credentials_json = os.getenv("GOOGLE_CLOUD_CREDENTIALS_JSON")
-            if credentials_json:
-                # Parse JSON credentials from env var
-                import json
-                creds_dict = json.loads(credentials_json)
-                credentials = service_account.Credentials.from_service_account_info(creds_dict)
-                client = vision.ImageAnnotatorClient(credentials=credentials)
-            else:
-                # Fall back to default credentials (GOOGLE_APPLICATION_CREDENTIALS env var)
-                client = vision.ImageAnnotatorClient()
-        except Exception as e:
-            logger.error(f"Failed to initialize Google Vision client: {e}")
+        # Get API key
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            logger.error("GEMINI_API_KEY is not set")
             return {
                 "extracted_text": "",
                 "detected_language": "en",
@@ -87,60 +74,49 @@ async def process_image_ocr(image_base64: str, image_format: str) -> dict:
                 "error": "Server configuration error: OCR service not available.",
             }
 
-        # Create image object
-        image = vision.Image(content=image_bytes)
+        # Configure Gemini API
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
-        # Call text detection
+        # Create image data for Gemini
+        image_data = {
+            "mime_type": image_format,
+            "data": image_base64,
+        }
+
+        # Call Gemini with vision
         try:
-            response = client.document_text_detection(image=image)
+            response = model.generate_content([
+                "Extract all text from this image. Return ONLY the extracted text, nothing else. If no text is found, return 'NO_TEXT'.",
+                image_data,
+            ])
+
+            extracted_text = response.text.strip()
+
+            # Check if no text was found
+            if extracted_text == "NO_TEXT" or not extracted_text:
+                extracted_text = ""
+
+            logger.info(
+                f"OCR processed image via Gemini: {len(extracted_text)} chars, "
+                f"language={detect_language(extracted_text)}"
+            )
+
+            return {
+                "extracted_text": extracted_text,
+                "detected_language": detect_language(extracted_text),
+                "confidence": 0.9 if extracted_text else 0.0,
+                "error": None,
+            }
+
         except Exception as e:
-            logger.error(f"Google Vision API call failed: {e}")
+            logger.error(f"Gemini API call failed: {e}")
             return {
                 "extracted_text": "",
                 "detected_language": "en",
                 "confidence": 0,
                 "error": f"OCR processing failed: {str(e)}",
             }
-
-        # Extract text from response
-        if response.error.message:
-            logger.error(f"Google Vision API error: {response.error.message}")
-            return {
-                "extracted_text": "",
-                "detected_language": "en",
-                "confidence": 0,
-                "error": f"OCR error: {response.error.message}",
-            }
-
-        # Get full text from response
-        full_text = ""
-        if response.full_text_annotation:
-            full_text = response.full_text_annotation.text.strip()
-
-        # Calculate confidence (average of all text block confidences)
-        confidence = 0.0
-        if response.text_annotations:
-            confidences = [
-                annotation.confidence for annotation in response.text_annotations
-                if annotation.confidence > 0
-            ]
-            if confidences:
-                confidence = sum(confidences) / len(confidences)
-
-        # Detect language
-        detected_lang = detect_language(full_text)
-
-        logger.info(
-            f"OCR processed image: {len(full_text)} chars, "
-            f"language={detected_lang}, confidence={confidence:.2f}"
-        )
-
-        return {
-            "extracted_text": full_text,
-            "detected_language": detected_lang,
-            "confidence": confidence,
-            "error": None,
-        }
 
     except Exception as e:
         logger.exception(f"Unexpected error in OCR processing: {e}")
