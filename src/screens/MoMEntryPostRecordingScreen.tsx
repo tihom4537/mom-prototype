@@ -98,6 +98,13 @@ export default function MoMEntryPostRecordingScreen() {
 
   // ── Start recording ──────────────────────────────────────────────────────
   const handleMicClick = async () => {
+    if (entryState === 'recording') {
+      // Stop button clicked - process the recording
+      console.log('[PostRecording] Stop button clicked - transitioning to process audio');
+      await handleConfirmRecording();
+      return;
+    }
+
     if (entryState !== 'idle') return;
     setSttError(null);
 
