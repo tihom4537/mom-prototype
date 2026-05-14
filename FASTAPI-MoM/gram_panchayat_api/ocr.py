@@ -76,7 +76,7 @@ async def process_image_ocr(image_base64: str, image_format: str) -> dict:
 
         # Configure Gemini API
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
 
         # Create image data for Gemini
         image_data = {
