@@ -532,7 +532,7 @@ export default function MoMEntryPostRecordingScreen() {
                 onChange={setDiscussionText}
                 onMicClick={handleMicClick}
                 onStopClick={handleMicClick}
-                onScanPhotoClick={handleScanPhotoClick}
+                onScanPhoto={handleScanPhotoClick}
                 scanPhotoLabel={t('btn_scan_photo')}
                 uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={analyserRef.current ?? undefined}

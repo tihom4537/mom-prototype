@@ -19,7 +19,6 @@ import {
 import type { HighlightSpan, Segment } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { FEEDBACK_API } from '../config/api';
-import { WebSocketSTTClient } from '../utils/websocketSttClient';
 
 type MainEntryState = 'idle' | 'recording' | 'processing';
 type CardRecordingState = 'idle' | 'recording' | 'processing';
@@ -368,15 +367,24 @@ export default function MoMEntryFeedbackScreen() {
       const wsClient = new WebSocketSTTClient(lang);
       mainWsClientRef.current = wsClient;
 
-      const updatedTextRef = useRef(discussionText);
+      let transcriptReceived = false;
+      let transcriptPromiseResolve: (() => void) | null = null;
+      const transcriptPromise = new Promise<void>(resolve => {
+        transcriptPromiseResolve = resolve;
+      });
 
       wsClient.on('transcript', (text: string) => {
+        console.log('[Feedback] Transcript received:', text);
+        transcriptReceived = true;
         if (text.trim()) {
           setDiscussionText(prev => {
-            updatedTextRef.current = prev;
             const separator = prev.trim() ? ' ' : '';
             return prev + separator + text;
           });
+        }
+        if (transcriptPromiseResolve) {
+          transcriptPromiseResolve();
+          transcriptPromiseResolve = null;
         }
       });
 
@@ -394,18 +402,21 @@ export default function MoMEntryFeedbackScreen() {
       await wsClient.end();
       console.log('[Feedback] Main end signal sent');
 
-      const transcriptPromise = new Promise<void>(resolve => {
-        const originalResolve = wsClient.on('close', () => resolve());
-      });
-
       const transcriptTimeout = new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('Transcript timeout')), 60000)
+        setTimeout(() => {
+          console.error('[Feedback] Transcript timeout');
+          reject(new Error('Transcript timeout'));
+        }, 60000)
       );
 
       try {
         await Promise.race([transcriptPromise, transcriptTimeout]);
-      } catch (err) {
-        console.error('[Feedback] Transcript wait error:', err);
+        console.log('[Feedback] Transcript received successfully');
+      } catch (timeoutErr) {
+        console.error('[Feedback] Transcript wait error:', timeoutErr);
+        if (!transcriptReceived) {
+          console.warn('[Feedback] Warning: Transcript event never fired');
+        }
       }
 
       try {
