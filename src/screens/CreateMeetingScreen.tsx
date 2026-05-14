@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import { WebSocketSTTClient } from '../utils/websocketSttClient';
+import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
 import {
   Navbar,
   Sidebar,
@@ -89,6 +90,11 @@ export default function CreateMeetingScreen() {
   const [profileOpen,  setProfileOpen]  = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Keep ref in sync with state so we can access updated value during async operations
+  useEffect(() => {
+    descUpdatedTextRef.current = description;
+  }, [description]);
+
   // Cleanup WebSocket on unmount
   useEffect(() => {
     return () => {
@@ -96,6 +102,11 @@ export default function CreateMeetingScreen() {
       if (wsClient) {
         wsClient.close().catch(err => console.error('[CreateMeeting] Cleanup error:', err));
         descWsClientRef.current = null;
+      }
+      const recorder = descRecorderRef.current;
+      if (recorder) {
+        recorder.stop();
+        descRecorderRef.current = null;
       }
     };
   }, []);
@@ -114,63 +125,102 @@ export default function CreateMeetingScreen() {
   // ── Description mic recording ──
   const [descRecording,   setDescRecording]   = useState(false);
   const [descSttError,    setDescSttError]    = useState('');
-  const descMediaRef    = useRef<MediaRecorder | null>(null);
+  const descRecorderRef = useRef<PcmAudioRecorder | null>(null);
   const descAudioCtxRef = useRef<AudioContext | null>(null);
   const descAnalyserRef = useRef<AnalyserNode | null>(null);
   const descWsClientRef = useRef<WebSocketSTTClient | null>(null);
+  const descUpdatedTextRef = useRef<string>(description);
 
   async function handleDescMicClick() {
     if (descRecording) {
-      // Stop recording and finalize
-      const mr = descMediaRef.current;
-      if (mr) {
-        mr.onstop = async () => {
-          mr.stream.getTracks().forEach(t => t.stop());
-          descAudioCtxRef.current?.close();
-          descAudioCtxRef.current = null;
-          descAnalyserRef.current = null;
-          setDescRecording(false);
-
-          try {
-            const wsClient = descWsClientRef.current;
-            if (wsClient && wsClient.connected()) {
-              await wsClient.end();
-              await new Promise(resolve => setTimeout(resolve, 500));
-              await wsClient.close();
-            }
-          } catch (err) {
-            console.error('[CreateMeeting] Error closing WebSocket:', err);
-          }
-          descWsClientRef.current = null;
-        };
-        mr.stop();
-      }
+      // Stop recording and process audio
+      console.log('[CreateMeeting] Stop button clicked - transitioning to process audio');
+      await handleDescConfirmRecording();
       return;
     }
 
     // Start recording
     setDescSttError('');
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioCtx = new AudioContext();
-      descAudioCtxRef.current = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
-      source.connect(analyser);
-      descAnalyserRef.current = analyser;
+    console.log('[CreateMeeting] Mic button clicked - starting recording');
 
-      // Create and connect WebSocket
-      const wsClient = new WebSocketSTTClient('en');
+    let stream: MediaStream;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setDescSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
+      return;
+    }
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
+      setDescSttError(isNotAllowed
+        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+        : 'Could not access the microphone. Please check your browser permissions and try again.'
+      );
+      return;
+    }
+
+    const pcmRecorder = new PcmAudioRecorder();
+    descRecorderRef.current = pcmRecorder;
+
+    try {
+      await pcmRecorder.start();
+      setDescRecording(true);
+      console.log('[CreateMeeting] PCM recording started');
+    } catch (err) {
+      console.error('[CreateMeeting] PCM recorder failed:', err);
+      setDescSttError('Failed to initialize audio recorder. Please check microphone access.');
+      descRecorderRef.current = null;
+    }
+  }
+
+  async function handleDescConfirmRecording() {
+    console.log('[CreateMeeting] handleDescConfirmRecording called');
+    const recorder = descRecorderRef.current;
+    if (!recorder) {
+      console.error('[CreateMeeting] No recorder found!');
+      return;
+    }
+
+    setDescRecording(false);
+    setDescSttError('');
+
+    let wsClient: WebSocketSTTClient | null = null;
+
+    try {
+      // Stop recording and get audio
+      const audioData = recorder.stop();
+      descRecorderRef.current = null;
+      console.log('[CreateMeeting] Recording stopped. Audio data:', audioData.length, 'bytes');
+
+      if (audioData.length === 0) {
+        setDescSttError('No audio data captured');
+        return;
+      }
+
+      // Create WebSocket client
+      wsClient = new WebSocketSTTClient('en');
       descWsClientRef.current = wsClient;
 
       await wsClient.connect();
-      console.log('[CreateMeeting] WebSocket connected for description');
+      console.log('[CreateMeeting] WebSocket connected');
 
-      // Setup event handlers
+      let transcriptReceived = false;
+      let transcriptPromiseResolve: (() => void) | null = null;
+      const transcriptPromise = new Promise<void>(resolve => {
+        transcriptPromiseResolve = resolve;
+      });
+
       wsClient.on('transcript', (text: string) => {
+        console.log('[CreateMeeting] Transcript received:', text);
+        transcriptReceived = true;
         if (text.trim()) {
-          setDescription(prev => prev ? prev + ' ' + text : text);
+          const newText = descUpdatedTextRef.current + (descUpdatedTextRef.current.trim() ? ' ' : '') + text;
+          descUpdatedTextRef.current = newText;
+          setDescription(newText);
+        }
+        if (transcriptPromiseResolve) {
+          transcriptPromiseResolve();
+          transcriptPromiseResolve = null;
         }
       });
 
@@ -179,35 +229,52 @@ export default function CreateMeetingScreen() {
         setDescSttError(`Speech recognition error: ${msg}`);
       });
 
-      // Setup MediaRecorder for streaming
-      const mr = new MediaRecorder(stream);
-      descMediaRef.current = mr;
+      // Send audio
+      console.log('[CreateMeeting] Sending audio...');
+      await wsClient.send(audioData);
+      console.log('[CreateMeeting] Audio sent. Sending end signal...');
 
-      mr.ondataavailable = async (e) => {
-        if (e.data.size > 0 && wsClient.connected()) {
-          try {
-            await wsClient.send(e.data);
-          } catch (err) {
-            console.error('[CreateMeeting] Failed to send audio chunk:', err);
-            setDescSttError('Failed to send audio to server.');
-          }
+      await wsClient.end();
+      console.log('[CreateMeeting] End signal sent. Waiting for transcript...');
+
+      // Wait for transcript response
+      const transcriptTimeout = new Promise<void>((_, reject) =>
+        setTimeout(() => {
+          console.error('[CreateMeeting] Transcript timeout');
+          reject(new Error('Transcript response timeout'));
+        }, 60000)
+      );
+
+      try {
+        await Promise.race([transcriptPromise, transcriptTimeout]);
+        console.log('[CreateMeeting] Transcript received successfully');
+      } catch (timeoutErr) {
+        console.error('[CreateMeeting] Promise race failed:', timeoutErr);
+        if (!transcriptReceived) {
+          console.warn('[CreateMeeting] Warning: Transcript event never fired');
         }
-      };
+        throw timeoutErr;
+      }
 
-      mr.start(100); // 100ms timeslice for real-time streaming
-      setDescRecording(true);
+      if (wsClient) {
+        await wsClient.close();
+        console.log('[CreateMeeting] WebSocket closed');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       console.error('[CreateMeeting] Error:', msg);
-      setDescSttError(msg === 'NotAllowedError' ? 'Microphone access denied.' : 'Failed to start recording.');
+      setDescSttError(`Speech recognition failed — ${msg}`);
 
-      // Close WebSocket if it was created
-      const wsClient = descWsClientRef.current;
       if (wsClient) {
-        wsClient.close().catch(() => {});
-        descWsClientRef.current = null;
+        try {
+          await wsClient.close();
+        } catch (closeErr) {
+          console.error('[CreateMeeting] Error closing WebSocket:', closeErr);
+        }
       }
     }
+
+    descWsClientRef.current = null;
   }
 
   // ── Section 2: Participants ──
