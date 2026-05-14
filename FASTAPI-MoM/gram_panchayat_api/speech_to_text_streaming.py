@@ -67,6 +67,7 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
             language_code=language_code,
             high_vad_sensitivity=True,
             vad_signals=True,
+            flush_signal=True,  # Enable manual flushing to force processing
         ) as sarvam_ws:
 
             async def _receive_from_client() -> None:
@@ -145,9 +146,15 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
                 return_when=asyncio.FIRST_COMPLETED,
             )
 
-            # If receive_task finished first (expected), wait a bit for Sarvam to send final messages
+            # If receive_task finished first (expected), flush and wait for Sarvam to send final messages
             if receive_task in done:
-                logger.info("Client finished sending; waiting for Sarvam to complete...")
+                logger.info("Client finished sending; flushing Sarvam buffer...")
+                try:
+                    await sarvam_ws.flush()
+                    logger.info("Sarvam buffer flushed. Waiting for responses...")
+                except Exception as e:
+                    logger.warning(f"Error flushing Sarvam: {e}")
+
                 try:
                     # Give Sarvam up to 10 seconds to send final responses
                     await asyncio.wait_for(sarvam_task, timeout=10.0)
