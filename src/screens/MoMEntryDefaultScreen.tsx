@@ -148,15 +148,20 @@ export default function MoMEntryDefaultScreen() {
       console.log('[MoM] WebSocket connected, starting to stream audio');
 
       // Setup handlers for transcript events
-      let hasReceivedTranscript = false;
+      let transcriptPromiseResolve: (() => void) | null = null;
+      const transcriptPromise = new Promise<void>(resolve => {
+        transcriptPromiseResolve = resolve;
+      });
+
       wsClient.on('transcript', (text: string) => {
         if (text.trim()) {
-          hasReceivedTranscript = true;
           setDiscussionText(prev => {
             const separator = prev.trim() ? ' ' : '';
             return prev + separator + text;
           });
         }
+        // Signal that transcript was received (even if empty)
+        transcriptPromiseResolve?.();
       });
 
       wsClient.on('speech_start', () => {
@@ -188,8 +193,13 @@ export default function MoMEntryDefaultScreen() {
           await wsClient.end();
           console.log('[MoM] Sent end signal');
 
-          // Wait for server to process
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Wait for transcript response from server (with timeout)
+          const transcriptTimeout = new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error('Transcript response timeout')), 30000)
+          );
+          await Promise.race([transcriptPromise, transcriptTimeout]);
+          console.log('[MoM] Received transcript from server');
+
           await wsClient.close();
         }
       } catch (err) {
