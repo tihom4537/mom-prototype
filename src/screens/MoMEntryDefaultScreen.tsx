@@ -211,7 +211,7 @@ export default function MoMEntryDefaultScreen() {
       wsClientRef.current = null;
 
       // Stop the recorder if it's still going
-      const mr = mediaRecorderRef.current;
+      const recorder = pcmRecorderRef.current;
       if (recorder) {
         recorder.stop();
         pcmRecorderRef.current = null;

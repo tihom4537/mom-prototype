@@ -156,6 +156,6 @@ export class PcmAudioRecorder {
     view.setUint32(36, 0x61746164, true); // "data"
     view.setUint32(40, audioLength, true); // subchunk2 size
 
-    return new Blob([new Uint8Array(wavHeader), pcmData], { type: 'audio/wav' });
+    return new Blob([wavHeader, pcmData.buffer.slice(pcmData.byteOffset, pcmData.byteOffset + pcmData.byteLength)], { type: 'audio/wav' });
   }
 }
