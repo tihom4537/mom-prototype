@@ -214,6 +214,8 @@ export default function MoMEntryFeedbackScreen() {
   };
 
   const MOCK_FEEDBACK: FeedbackResult = {
+    category: 'Multi-Topic / Miscellaneous',
+    category_reason: 'The minutes cover multiple unrelated subjects.',
     feedback: [
       'Specify the exact number of beneficiaries identified under PM Awas Yojana — provide [count] and [ward name].',
       'Mention the name of the KUWSDB official contacted regarding water supply disruptions in [ward number].',
@@ -222,6 +224,7 @@ export default function MoMEntryFeedbackScreen() {
     ],
     spans: [null, null, null, null],
     modes: ['APPEND', 'APPEND', 'REPHRASE', 'APPEND'],
+    flag: null,
     flag_message: null,
   };
 
