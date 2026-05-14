@@ -77,6 +77,7 @@ async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
 
                         if "bytes" in message and message["bytes"] is not None:
                             audio_chunk: bytes = message["bytes"]
+                            logger.info(f"Received audio chunk: {len(audio_chunk)} bytes")
                             # Convert binary audio to base64 string for Sarvam API
                             audio_base64 = base64.b64encode(audio_chunk).decode('utf-8')
                             await sarvam_ws.transcribe(
