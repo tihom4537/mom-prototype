@@ -213,6 +213,7 @@ export class WebSocketSTTClient {
    * Parses JSON text frames and dispatches events.
    */
   private handleMessage(data: ArrayBuffer | string): void {
+    console.log('[STT WS] Received message:', typeof data === 'string' ? data.substring(0, 100) : 'binary');
     try {
       // Binary frames (unexpected, log but ignore)
       if (data instanceof ArrayBuffer) {
@@ -223,9 +224,11 @@ export class WebSocketSTTClient {
       // Parse JSON text frame
       const msg = JSON.parse(data);
       const type = msg.type;
+      console.log('[STT WS] Parsed message type:', type);
 
       switch (type) {
         case 'transcript':
+          console.log('[STT WS] Emitting transcript event with text:', msg.text);
           this.emit('transcript', msg.text || '');
           break;
         case 'speech_start':
