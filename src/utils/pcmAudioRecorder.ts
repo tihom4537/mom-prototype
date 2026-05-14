@@ -11,6 +11,7 @@ export class PcmAudioRecorder {
   private isRecording = false;
   private audioChunks: Int16Array[] = [];
   private onChunk?: (chunk: Uint8Array) => void;
+  private sampleRate: number = 16000;
 
   /**
    * Start recording audio as raw PCM
@@ -26,8 +27,8 @@ export class PcmAudioRecorder {
       // Create audio context
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-      // Resample to 16kHz if needed
-      const sampleRate = this.audioContext.sampleRate;
+      // Store the actual sample rate from the audio context
+      this.sampleRate = this.audioContext.sampleRate;
       const bufferSize = 4096;
 
       // Create source from microphone
@@ -54,7 +55,7 @@ export class PcmAudioRecorder {
       this.processor.connect(this.audioContext.destination);
 
       this.isRecording = true;
-      console.log('[PCM Recorder] Started recording at', sampleRate, 'Hz');
+      console.log('[PCM Recorder] Started recording at', this.sampleRate, 'Hz');
     } catch (error) {
       console.error('[PCM Recorder] Error starting recording:', error);
       throw error;
@@ -99,8 +100,9 @@ export class PcmAudioRecorder {
     const pcmData = this.uint8FromInt16(result);
     console.log('[PCM Recorder] Stopped recording. Total:', totalLength, 'samples, PCM size:', pcmData.length, 'bytes');
 
-    // Wrap PCM data in WAV header for Sarvam compatibility
-    const wavData = this.createWavFromPcm(pcmData, 16000, 1, 16);
+    // Wrap PCM data in WAV header using actual sample rate from audio context
+    console.log('[PCM Recorder] Creating WAV file at', this.sampleRate, 'Hz');
+    const wavData = this.createWavFromPcm(pcmData, this.sampleRate, 1, 16);
     console.log('[PCM Recorder] Created WAV file:', wavData.length, 'bytes');
     return wavData;
   }
