@@ -25,6 +25,7 @@ interface TableProps<T extends Record<string, unknown>> {
   onRowClick?: (row: T) => void;
   className?: string;
   emptyMessage?: string;
+  footerRow?: React.ReactNode[];
 }
 
 export default function Table<T extends Record<string, unknown>>({
@@ -35,6 +36,7 @@ export default function Table<T extends Record<string, unknown>>({
   onRowClick,
   className = '',
   emptyMessage = 'No results found',
+  footerRow,
 }: TableProps<T>) {
   return (
     <div className={`flex flex-col overflow-hidden rounded-[6px] border border-[#c6c6c6] ${className}`}>
@@ -53,10 +55,10 @@ export default function Table<T extends Record<string, unknown>>({
         ))}
       </TableRow>
 
-      {/* Data rows */}
+      {/* Data rows + footer inside same gap-px wrapper */}
       <div className="flex flex-col gap-px bg-[#c6c6c6] overflow-y-auto flex-1">
         {rows.length === 0 ? (
-          <div className="bg-white flex items-center justify-center py-12 text-[12px] text-[#727272]"
+          <div className="bg-white flex items-center justify-center py-12 text-[14px] text-[#727272]"
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
             {emptyMessage}
           </div>
@@ -84,6 +86,21 @@ export default function Table<T extends Record<string, unknown>>({
             </TableRow>
           );
         })}
+
+        {/* Footer / totals row — inside gap-px so it gets the same 1px separator */}
+        {footerRow && (
+          <div className="flex" style={{ background: '#f3f3f3' }}>
+            {footerRow.map((cell, i) => (
+              <div
+                key={i}
+                className={`${columns[i]?.width ?? 'flex-1 min-w-0'} px-[12px] py-[10px] text-[14px] font-semibold text-[#212121] whitespace-nowrap`}
+                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+              >
+                {cell}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DEMO_MODE } from '../config/demo';
+import type { StructuredProceedings } from '../utils/agendaClassifier';
+
+export type ProceedingsData = string | StructuredProceedings;
 
 // ─── Shared attendance types ───────────────────────────────────────────────────
 export type BiometricStatus = 'none' | 'taken' | 'pending' | 'failed';
@@ -306,7 +309,7 @@ export interface MeetingAgendaItem {
   title: string;
   description: string;
   completed: boolean;
-  proceedingsText: string;
+  proceedingsText: ProceedingsData;
 }
 
 export type MeetingAgendasMap = Record<number, MeetingAgendaItem[]>;
@@ -320,7 +323,7 @@ interface MeetingsContextValue {
   // Per-meeting agendas (user-created meetings)
   meetingAgendas: MeetingAgendasMap;
   setMeetingAgendas: (meetingId: number, agendas: MeetingAgendaItem[]) => void;
-  saveMeetingProceedings: (meetingId: number, agendaId: number, text: string) => void;
+  saveMeetingProceedings: (meetingId: number, agendaId: number, data: ProceedingsData) => void;
   // Persisted screen state
   attendanceRows: AttendanceRow[] | null;
   setAttendanceRows: (rows: AttendanceRow[]) => void;
@@ -357,13 +360,13 @@ export function MeetingsProvider({ children }: { children: ReactNode }) {
     setMeetingAgendasState(prev => ({ ...prev, [meetingId]: agendas }));
   }
 
-  function saveMeetingProceedings(meetingId: number, agendaId: number, text: string) {
+  function saveMeetingProceedings(meetingId: number, agendaId: number, data: ProceedingsData) {
     setMeetingAgendasState(prev => {
       const existing = prev[meetingId] ?? [];
       return {
         ...prev,
         [meetingId]: existing.map(a =>
-          a.id === agendaId ? { ...a, proceedingsText: text, completed: true } : a
+          a.id === agendaId ? { ...a, proceedingsText: data, completed: true } : a
         ),
       };
     });

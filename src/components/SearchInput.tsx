@@ -7,6 +7,8 @@ interface SearchInputProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  showMic?: boolean;
+  onMicClick?: () => void;
 }
 
 export default function SearchInput({
@@ -15,6 +17,8 @@ export default function SearchInput({
   placeholder = 'Search',
   className,
   disabled = false,
+  showMic = false,
+  onMicClick,
 }: SearchInputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -45,6 +49,15 @@ export default function SearchInput({
           className="flex items-center justify-center p-2 shrink-0"
         >
           <Icon name="close" size="small" color="#727272" />
+        </button>
+      )}
+      {showMic && !value && (
+        <button
+          type="button"
+          onClick={onMicClick}
+          className="flex items-center justify-center px-3 shrink-0 bg-transparent border-none cursor-pointer"
+        >
+          <Icon name="mic" size="small" color="#727272" />
         </button>
       )}
     </div>

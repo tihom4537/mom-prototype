@@ -108,6 +108,7 @@ export { default as Chip } from './Chip';
 export { default as TimelineRow } from './TimelineRow';
 export { default as TaskRow } from './TaskRow';
 export { default as DocumentCard } from './DocumentCard';
+export { default as TabOptions } from './TabOptions';
 export { default as HelplineCard } from './HelplineCard';
 export { default as DashboardMenuBarItem } from './DashboardMenuBarItem';
 export { default as QuorumBar } from './QuorumBar';
@@ -124,3 +125,40 @@ export type { NoticeBadgeVariant } from './UpcomingMeetingRow';
 export type { ComplianceStatus } from './ComplianceCard';
 export type { DashboardMenuBarItemState } from './DashboardMenuBarItem';
 export { default as StepNavBar } from './StepNavBar';
+
+// Group 12: Karnataka Map
+export { default as KarnatakaMap, KarnatakaMapTooltip } from './KarnatakaMap';
+export type { KarnatakaMapProps } from './KarnatakaMap';
+export { default as KarnatakaLeafletMap, TALUK_NAME_MAP, toGeoTalukName } from './KarnatakaLeafletMap';
+export type { KarnatakaLeafletMapProps } from './KarnatakaLeafletMap';
+export { default as MapLegend } from './MapLegend';
+
+// Group 11: Homepage content components
+export { default as DashboardMetricCard } from './DashboardMetricCard';
+export type { MetricCardTrend } from './DashboardMetricCard';
+export { default as PageSectionHeading } from './PageSectionHeading';
+export { default as SearchSuggestions } from './SearchSuggestions';
+
+// Group 10b: Homepage chrome components
+export { default as AccessibilityBar } from './AccessibilityBar';
+export { default as EyebrowPill } from './EyebrowPill';
+export { default as LangToggle } from './LangToggle';
+export type { LangToggleSelected } from './LangToggle';
+export { default as HomepageSearch } from './HomepageSearch';
+export type { HomepageSearchState } from './HomepageSearch';
+
+// Group 10: Landing page / public-facing components
+export { default as Card } from './Card';
+export type { CardVariant } from './Card';
+export { default as LiveCounterStrip } from './LiveCounterStrip';
+export { default as OrientationStrip } from './OrientationStrip';
+export { default as NewsCard } from './NewsCard';
+export { InitiativesCard, EventsCard, GuidelinesCard, NotificationsCard } from './NewsCard';
+export type { NewsCardType, InitiativesCardProps, EventsCardProps, GuidelinesCardProps, NotificationsCardProps } from './NewsCard';
+export { default as EcosystemAppCard } from './EcosystemAppCard';
+export { default as VariantSwitcherPill } from './VariantSwitcherPill';
+export { default as AboutStakeholdersCard } from './AboutStakeholdersCard';
+export type { AboutStakeholdersCardProps } from './AboutStakeholdersCard';
+export { default as ModuleCardV3 } from './ModuleCardV3';
+export type { ModuleCardV3Props } from './ModuleCardV3';
+export { default as Reveal } from './Reveal';

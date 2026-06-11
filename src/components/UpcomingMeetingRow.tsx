@@ -7,6 +7,7 @@ export type NoticeBadgeVariant = 'green' | 'yellow';
 
 interface UpcomingMeetingRowProps {
   daysLabel: string;
+  daysLabelVariant?: 'default' | 'red';
   meetingName: string;
   meetingMeta: string;
   noticeBadge?: NoticeBadgeVariant;
@@ -19,9 +20,10 @@ interface UpcomingMeetingRowProps {
 
 export default function UpcomingMeetingRow({
   daysLabel,
+  daysLabelVariant = 'default',
   meetingName,
   meetingMeta,
-  noticeBadge = 'yellow',
+  noticeBadge,
   noticeBadgeLabel = 'Notice sent',
   viewDetailsLabel = 'View details',
   onViewDetails,
@@ -37,8 +39,8 @@ export default function UpcomingMeetingRow({
       {/* Left: day pill + name/meta + notice badge */}
       <div className="flex items-start gap-[14px]">
         {/* Day pill */}
-        <div className="bg-[#f7f0ee] flex items-center px-[10px] py-[4px] rounded-full shrink-0">
-          <p className="font-semibold text-[12px] leading-[16px] text-[#6a3e31] tracking-[0.3px] whitespace-nowrap" style={NS}>
+        <div className={`flex items-center px-[10px] py-[4px] rounded-full shrink-0 ${daysLabelVariant === 'red' ? 'bg-[#ffebee]' : 'bg-[#f7f0ee]'}`}>
+          <p className={`font-semibold text-[12px] leading-[16px] tracking-[0.3px] whitespace-nowrap ${daysLabelVariant === 'red' ? 'text-[#c62828]' : 'text-[#6a3e31]'}`} style={NS}>
             {daysLabel}
           </p>
         </div>

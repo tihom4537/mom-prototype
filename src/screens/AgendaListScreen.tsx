@@ -4,8 +4,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda } from '../context/AgendaContext';
 import { useMeetings } from '../context/MeetingsContext';
 import type { MeetingAgendaItem } from '../context/MeetingsContext';
-import { AgendaCard, AgendaListCard, MeetingDetailsCard, Button, ViewProceedingsModal } from '../components';
+import { AgendaCard, AgendaListCard, MeetingDetailsCard, Button, ViewProceedingsModal, SectionHolder, InfoBox, Icon } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+import ProceedingsPreviewDocument from '../components/ProceedingsPreviewDocument';
+
+const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
 export default function AgendaListScreen() {
   const { t } = useLanguage();
@@ -36,6 +39,16 @@ export default function AgendaListScreen() {
   const handleAddProceedings = (id: number) => {
     const item = effectiveAgendaItems.find(a => a.id === id)!;
     navigate('/mom-entry', { state: { agenda: item, meetingId } });
+  };
+
+  const handleEditProceedings = (id: number) => {
+    const item = effectiveAgendaItems.find(a => a.id === id)!;
+    const ctxProceedings = meetingId != null
+      ? meetingAgendas[meetingId]?.find(a => a.id === id)?.proceedingsText
+      : undefined;
+    const proceedings = ctxProceedings ?? item.proceedingsText ?? '';
+    // Pass as discussionText regardless of type — MoMEntryDefaultScreen parses it
+    navigate('/mom-entry', { state: { agenda: item, meetingId, discussionText: proceedings, feedbackCompleted: item.completed } });
   };
 
   const handleViewProceedings = (id: number) => {
@@ -81,7 +94,7 @@ export default function AgendaListScreen() {
             completionTagLabel={item.completed ? btnText('tag_completed') : btnText('tag_pending')}
             onAddProceedings={() => handleAddProceedings(item.id)}
             onViewProceedings={() => handleViewProceedings(item.id)}
-            onEditProceedings={() => handleAddProceedings(item.id)}
+            onEditProceedings={() => handleEditProceedings(item.id)}
           />
         ))}
 
@@ -101,7 +114,7 @@ export default function AgendaListScreen() {
                 completionTagLabel={item.completed ? btnText('tag_completed') : btnText('tag_pending')}
                 onAddProceedings={() => handleAddProceedings(item.id)}
                 onViewProceedings={() => handleViewProceedings(item.id)}
-                onEditProceedings={() => handleAddProceedings(item.id)}
+                onEditProceedings={() => handleEditProceedings(item.id)}
               />
               <div className="flex items-center justify-end gap-2 shrink-0 w-full">
                 <button
@@ -138,6 +151,61 @@ export default function AgendaListScreen() {
         })()}
       </AgendaListCard>
 
+      {/* ── Proceedings Preview — shown when all agendas completed ── */}
+      {allCompleted && (
+        <SectionHolder
+          variant="default"
+          title={t('proceedings_preview_section_title')}
+          bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
+        >
+          <InfoBox
+            type="plain"
+            text={`${t('proceedings_preview_disclaimer')} ${t('proceedings_preview_disclaimer_en')}`}
+          />
+          <div className="max-w-[760px] mx-auto w-full flex flex-col gap-3">
+            <div className="shadow-[0_2px_12px_rgba(0,0,0,0.10)]">
+              <ProceedingsPreviewDocument
+                t={t}
+                meeting={{
+                  name: t('mock_meeting_title'),
+                  meetingType: t('meeting_type_gp_general_body'),
+                  date: '19/03/2026',
+                  time: '10:00 a.m',
+                  venue: 'Kakanur GP Office (1501001003)',
+                  chairperson: 'Suresh Patil',
+                }}
+                agendaItems={effectiveAgendaItems.map(a => ({
+                  id: a.id,
+                  heading: a.heading,
+                  description: a.description,
+                  completed: a.completed,
+                  proceedingsText: a.proceedingsText,
+                }))}
+                summary=""
+                nextMeetingDate=""
+                nextMeetingType=""
+                page={1}
+              />
+            </div>
+            {/* Edit buttons per agenda */}
+            <div className="flex flex-wrap gap-[8px] justify-end">
+              {effectiveAgendaItems.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleEditProceedings(item.id)}
+                  className="flex items-center gap-[5px] text-[12px] text-[#6a3e31] border border-[rgba(106,62,49,0.4)] rounded-[8px] px-[10px] py-[5px] hover:bg-[#f7f0ee] transition-colors bg-white"
+                  style={NS}
+                >
+                  <Icon name="edit" size="small" color="#6a3e31" />
+                  {t('proceedings_inline_preview_edit')} #{item.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        </SectionHolder>
+      )}
+
       {/* Proceed Next — disabled until all agenda items completed */}
       <div className="flex items-center justify-center gap-[10px] pb-2 mt-[20px]">
         <Button
@@ -167,7 +235,7 @@ export default function AgendaListScreen() {
           onClose={() => setModalAgendaId(null)}
           onEdit={() => {
             setModalAgendaId(null);
-            handleAddProceedings(modalItem.id);
+            handleEditProceedings(modalItem.id);
           }}
         />
       )}

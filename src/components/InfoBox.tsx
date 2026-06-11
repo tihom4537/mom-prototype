@@ -18,7 +18,7 @@ export default function InfoBox({
 
   if (isPlain) {
     return (
-      <div className={`flex gap-[8px] items-center ${className ?? 'w-full'}`}>
+      <div className={`flex gap-[8px] items-start ${className ?? 'w-full'}`}>
         <Icon name="info" size="small" color="#727272" />
         <p
           className="flex-1 font-medium text-[12px] text-[#727272] leading-5 tracking-[0.1px] min-w-px"

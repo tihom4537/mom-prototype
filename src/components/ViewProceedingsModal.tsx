@@ -4,6 +4,7 @@ import Button from './Button';
 import CloseButton from './CloseButton';
 import NumberCircle from './NumberCircle';
 import { useLanguage } from '../i18n/LanguageContext';
+import type { StructuredProceedings } from '../utils/agendaClassifier';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -11,7 +12,7 @@ interface ViewProceedingsModalProps {
   agendaNumber: string | number;
   agendaHeading: string;
   agendaDescription?: string;
-  proceedingsText: string;
+  proceedingsText: string | StructuredProceedings;
   onClose: () => void;
   onEdit: () => void;
 }
@@ -79,16 +80,31 @@ export default function ViewProceedingsModal({
               </div>
             </div>
 
-            {/* Proceedings text box — indented to align with heading text (32px circle + 15px gap) */}
-            <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] pt-[8px] pb-[10px] ml-[47px]">
-              <p
-                className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap"
-                style={NS}
-              >
-                {proceedingsText || (
-                  <span className="text-[#727272] italic">{t('view_proceedings_empty')}</span>
-                )}
-              </p>
+            {/* Proceedings content — indented to align with heading text */}
+            <div className="ml-[47px] flex flex-col rounded-[8px] border border-[rgba(106,62,49,0.24)] overflow-hidden">
+              {typeof proceedingsText === 'object' ? (
+                Object.entries(proceedingsText).map(([label, value], idx, arr) => (
+                  <div
+                    key={label}
+                    className={`flex min-h-[40px] ${idx < arr.length - 1 ? 'border-b border-[rgba(106,62,49,0.14)]' : ''}`}
+                  >
+                    <div className="w-[150px] shrink-0 bg-[#faf7f6] px-[12px] py-[10px] border-r border-[rgba(106,62,49,0.14)]">
+                      <span className="text-[11px] font-semibold text-[#6a3e31] leading-[16px]" style={NS}>{label}</span>
+                    </div>
+                    <div className="flex-1 bg-[rgba(221,221,221,0.1)] px-[12px] py-[10px]">
+                      <p className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
+                        {value || <span className="text-[#bdbdbd] italic">—</span>}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-[rgba(221,221,221,0.15)] px-[15px] pt-[8px] pb-[10px]">
+                  <p className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
+                    {proceedingsText || <span className="text-[#727272] italic">{t('view_proceedings_empty')}</span>}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

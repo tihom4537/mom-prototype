@@ -32,8 +32,8 @@ export default function TableCell({
 }: TableCellProps) {
   if (cellType === 'header') {
     return (
-      <div className={`flex items-center px-[20px] h-[43px] bg-[#ddd] shrink-0 ${className}`}>
-        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px]" style={NS}>
+      <div className={`flex items-start pt-[13px] pb-[13px] px-[20px] min-h-[43px] bg-[#ddd] shrink-0 ${className}`}>
+        <span className="text-[14px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] whitespace-nowrap" style={NS}>
           {children}
         </span>
       </div>
@@ -61,7 +61,7 @@ export default function TableCell({
           value={value ?? ''}
           onChange={e => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className="w-full border border-[#b0b0b0] rounded-[8px] px-[8px] py-[5px] text-[12px] text-[#212121] placeholder-[#868686] outline-none focus:border-[#ae6651] focus:shadow-[0_0_0_2px_rgba(106,62,49,0.12)] transition-all"
+          className="w-full border border-[#b0b0b0] rounded-[8px] px-[8px] py-[5px] text-[14px] text-[#212121] placeholder-[#868686] outline-none focus:border-[#ae6651] focus:shadow-[0_0_0_2px_rgba(106,62,49,0.12)] transition-all"
           style={NS}
         />
       </div>
@@ -78,7 +78,7 @@ export default function TableCell({
             value={value ?? ''}
             onChange={e => onChange?.(e.target.value)}
             placeholder={placeholder}
-            className="flex-1 min-w-0 text-[12px] text-[#212121] placeholder-[#868686] outline-none bg-transparent"
+            className="flex-1 min-w-0 text-[14px] text-[#212121] placeholder-[#868686] outline-none bg-transparent"
             style={NS}
           />
           <button
@@ -100,7 +100,7 @@ export default function TableCell({
         ${selected ? 'bg-[#e8f5e9]' : 'bg-white group-hover:bg-[#eeeeee]'} ${className}`}
       onClick={onClick}
     >
-      <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] truncate w-full" style={NS}>
+      <span className="text-[14px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] truncate w-full" style={NS}>
         {children}
       </span>
     </div>

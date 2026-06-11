@@ -38,7 +38,7 @@ export default function RadioButton({
         aria-checked={selected}
         disabled={isDisabled}
         onClick={() => !isDisabled && onChange?.(!selected)}
-        className={`size-6 rounded-full flex items-center justify-center bg-white ${outerRing} ${focusRing} ${opacity} transition-all duration-150 shrink-0 cursor-pointer border-none p-0`}
+        className={`size-6 rounded-full flex items-center justify-center bg-white ${outerRing} ${focusRing} ${opacity} transition-all duration-150 shrink-0 cursor-pointer p-0`}
       >
         {selected && (
           <div className="size-3 rounded-full bg-[#6a3e31]" />

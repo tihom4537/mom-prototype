@@ -8,6 +8,7 @@ interface DropdownBoxOfProfileProps {
   items?: string[];
   isOpen?: boolean;
   onToggle?: () => void;
+  onItemClick?: (item: string) => void;
   userName?: string;
   userRole?: string;
   gpInfo?: string;
@@ -19,6 +20,7 @@ export default function DropdownBoxOfProfile({
   items = ['Label1', 'Label2', 'Label3', 'Label4', 'Label5'],
   isOpen = false,
   onToggle,
+  onItemClick,
   userName = 'MANOJ MANDYA MANDYA',
   userRole = 'PDO',
   gpInfo = 'Gram Panchayat, kakanur (1501001003)',
@@ -68,6 +70,7 @@ export default function DropdownBoxOfProfile({
               <button
                 key={i}
                 className="bg-white flex items-center justify-between px-6 py-[11px] w-full hover:bg-[#f7f0ee] transition-colors"
+                onClick={() => { onItemClick?.(item); toggle(); }}
               >
                 <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
                   {item}

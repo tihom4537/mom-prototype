@@ -4,12 +4,14 @@ interface SectionHeadingProps {
   text?: string;
   variant?: SectionHeadingVariant;
   className?: string;
+  fullWidth?: boolean;
 }
 
 export default function SectionHeading({
   text = '2nd GP General Body Meeting 2026',
   variant = 'default',
   className,
+  fullWidth = false,
 }: SectionHeadingProps) {
   const label = (
     <p
@@ -21,6 +23,13 @@ export default function SectionHeading({
   );
 
   if (variant === 'with-box') {
+    if (fullWidth) {
+      return (
+        <div className={`w-full bg-[#f7f0ee] px-5 py-[10px] flex items-center justify-center rounded-t-[10px] ${className ?? ''}`}>
+          {label}
+        </div>
+      );
+    }
     return (
       <div className={`flex items-center justify-start ${className ?? ''}`}>
         <div className="bg-[#f7f0ee] px-5 py-[10px] rounded-[10px]">

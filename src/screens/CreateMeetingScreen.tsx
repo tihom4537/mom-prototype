@@ -13,8 +13,6 @@ import {
   StepNavBar,
   Button,
   Icon,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
   InputField,
   DropdownField,
   DatePicker,
@@ -87,8 +85,6 @@ export default function CreateMeetingScreen() {
   };
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Section 1: Meeting details ──
   const [meetingType,  setMeetingType]  = useState('');
@@ -396,32 +392,7 @@ export default function CreateMeetingScreen() {
 
       {/* ── Navbar ── */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg z-50">
-            <DropdownBoxOfProfile
-              isOpen
-              onToggle={() => setProfileOpen(false)}
-              menuLabel="Switch Profile"
-              items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-              className="w-[293px]"
-            />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg z-50">
-            <DropdownBoxOfIcon
-              isOpen
-              onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
-            />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* ── Sidebar + main ── */}
@@ -864,7 +835,7 @@ function SelectParticipantsModal({
       <div className="flex flex-col gap-0 w-[960px] max-h-[85vh] shadow-2xl">
 
         {/* Header */}
-        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] pt-[20px] pb-[20px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 border-b border-[#e0e0e0]">
+        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] pt-[20px] pb-[20px] rounded-tl-[20px] rounded-tr-[20px] shrink-0 border-b border-[#c6c6c6]">
           <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
             {t('popup_select_participants_title')}
           </span>

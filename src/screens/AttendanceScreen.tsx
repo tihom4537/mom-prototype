@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
@@ -17,13 +17,15 @@ import {
   QuorumBar,
   Checkbox,
   Tooltip,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
   InfoBox,
 } from '../components';
 
 const QUORUM_PERCENT   = 51;
 const NO_BIOMETRIC_MAX = 2;
+
+const ELECTED_DESIGNATIONS = ['President', 'Vice President', 'Ward Member'];
+const isElected = (designation: string) =>
+  ELECTED_DESIGNATIONS.some(d => designation.toLowerCase().startsWith(d.toLowerCase()));
 
 const INITIAL: AttendanceRow[] = [
   { id: 1,  name: 'Ramesh Kumar',    designation: 'PDO',            gpName: 'Kakanur GP',  phone: '9876543210', email: 'ramesh@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
@@ -96,12 +98,12 @@ export default function AttendanceScreen() {
   const { setOpeningAbsentIds, attendanceRows, setAttendanceRows } = useMeetings();
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [permissionFiles, setPermissionFiles] = useState<Record<number, File | null>>({});
+  const permFileRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const rows = attendanceRows ?? INITIAL;
   function setRows(updater: AttendanceRow[] | ((prev: AttendanceRow[]) => AttendanceRow[])) {
@@ -113,7 +115,10 @@ export default function AttendanceScreen() {
   const present  = rows.filter(r => r.status === 'present').length;
   const absent   = rows.filter(r => r.status === 'absent').length;
   const noBiometricCount = rows.filter(r => r.status === 'present' && r.biometric === 'none').length;
-  const quorumPct = total > 0 ? Math.round((present / total) * 100) : 0;
+  const electedRows = rows.filter(r => isElected(r.designation));
+  const electedTotal   = electedRows.length;
+  const electedPresent = electedRows.filter(r => r.status === 'present').length;
+  const quorumPct = electedTotal > 0 ? Math.round((electedPresent / electedTotal) * 100) : 0;
   const quorumMet = quorumPct >= QUORUM_PERCENT;
   const atBiometricLimit = noBiometricCount >= NO_BIOMETRIC_MAX;
   const canProceed = quorumMet && noBiometricCount <= NO_BIOMETRIC_MAX;
@@ -181,21 +186,7 @@ export default function AttendanceScreen() {
     <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
 
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg">
-            <DropdownBoxOfProfile isOpen onToggle={() => setProfileOpen(false)} menuLabel="Switch Profile" items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']} className="w-[293px]" />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg">
-            <DropdownBoxOfIcon isOpen onToggle={() => setSettingsOpen(false)} menuLabel="Settings" items={['Settings', 'Help & Support', 'Log out']} />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       <div className="flex flex-1 min-h-0">
@@ -240,7 +231,7 @@ export default function AttendanceScreen() {
                 <InfoBox type="plain" text={t('attendance_hint')} />
 
                 <QuorumBar
-                  total={total} present={present} absent={absent} unmarked={0}
+                  total={electedTotal} present={electedPresent} absent={electedTotal - electedPresent} unmarked={0}
                   noBiometricCount={noBiometricCount} quorumPct={quorumPct} quorumMet={quorumMet}
                   quorumRequired={QUORUM_PERCENT}
                 />
@@ -362,22 +353,50 @@ export default function AttendanceScreen() {
                             tRetry={t('attendance_biometric_retry')}
                           />
                         </td>
-                        <td className={`px-[8px] h-[50px] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[8px] align-middle ${hoverCls}${borderB}`}>
                           {showReason(row) ? (
-                            <div className="flex items-center w-full border border-[#b0b0b0] rounded-[8px] px-[8px] py-[5px] gap-[4px] focus-within:border-[#ae6651] transition-all bg-white">
-                              <input
-                                type="text"
-                                value={row.reason}
-                                onChange={e => update(row.id, { reason: e.target.value })}
-                                placeholder={row.status === 'absent' ? t('attendance_reason_absence') : t('attendance_reason_no_biometric')}
-                                className="flex-1 min-w-0 text-[12px] text-[#212121] placeholder-[#b0b0b0] outline-none bg-transparent"
-                                style={NS}
-                              />
-                              <Tooltip text={t('attendance_tooltip_attach')} direction="top">
-                                <button type="button" className="flex items-center justify-center size-[20px] hover:opacity-70 transition-opacity">
-                                  <Icon name="attach_file" size="small" color="#6a3e31" />
-                                </button>
-                              </Tooltip>
+                            <div className="flex flex-col gap-[4px] py-[6px]">
+                              {/* Absent reason dropdown */}
+                              {row.status === 'absent' ? (
+                                <>
+                                  <DropdownField
+                                    value={row.reason === 'with_permission' ? t('attendance_absent_with_permission') : row.reason === 'without_permission' ? t('attendance_absent_without_permission') : ''}
+                                    onChange={val => update(row.id, { reason: val === t('attendance_absent_with_permission') ? 'with_permission' : val === t('attendance_absent_without_permission') ? 'without_permission' : '' })}
+                                    options={[t('attendance_absent_with_permission'), t('attendance_absent_without_permission')]}
+                                    placeholder={t('attendance_absent_select')}
+                                  />
+                                  {row.reason === 'with_permission' && (
+                                    <div className="flex items-center gap-[6px]">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        ref={el => { permFileRefs.current[row.id] = el; }}
+                                        onChange={e => {
+                                          const file = e.target.files?.[0] ?? null;
+                                          setPermissionFiles(prev => ({ ...prev, [row.id]: file }));
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => permFileRefs.current[row.id]?.click()}
+                                        className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors"
+                                        style={NS}
+                                      >
+                                        <Icon name="upload" size="small" color="#6a3e31" />
+                                        {permissionFiles[row.id] ? permissionFiles[row.id]!.name : t('attendance_upload_permission')}
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <DropdownField
+                                  value={row.reason === 'with_permission' ? t('attendance_absent_with_permission') : row.reason === 'without_permission' ? t('attendance_absent_without_permission') : ''}
+                                  onChange={val => update(row.id, { reason: val === t('attendance_absent_with_permission') ? 'with_permission' : val === t('attendance_absent_without_permission') ? 'without_permission' : '' })}
+                                  options={[t('attendance_absent_with_permission'), t('attendance_absent_without_permission')]}
+                                  placeholder={t('attendance_absent_select')}
+                                />
+                              )}
                             </div>
                           ) : (
                             <span className="text-[12px] text-[#c6c6c6] px-[4px]" style={NS}>—</span>

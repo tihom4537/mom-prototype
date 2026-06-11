@@ -13,8 +13,6 @@ import {
   DescriptionField,
   InputField,
   InfoBox,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
 } from '../components';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
@@ -89,8 +87,6 @@ export default function CreateMeetingAgendaScreen() {
   const meetingData = location.state ?? {};
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Agenda items — first two pre-populated ────────────────────────────────
   const nextId = useRef(3);
@@ -98,7 +94,6 @@ export default function CreateMeetingAgendaScreen() {
     buildDefaultAgendas(meetingData.meetingType ?? '', meetingData.date, t)
   );
 
-  const [agendaSaved, setAgendaSaved] = useState(false);
 
   // ── Per-agenda mic state ──
   const [agendaRecording, setAgendaRecording] = useState<Record<number, boolean>>({});
@@ -159,8 +154,6 @@ export default function CreateMeetingAgendaScreen() {
   }
 
   // ── Uploaded files ──
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Template modals ──
   const [sampleModalOpen,    setSampleModalOpen]    = useState(false);
@@ -401,20 +394,6 @@ export default function CreateMeetingAgendaScreen() {
     setAgendas(prev => prev.map(a => a.id === id ? { ...a, [field]: value } : a));
   }
 
-  function handleUploadClick() {
-    fileInputRef.current?.click();
-  }
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    setUploadedFiles(prev => [...prev, ...files]);
-    e.target.value = '';
-  }
-
-  function removeFile(idx: number) {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
-  }
-
   // Submit enable: at least one agenda with both fields filled
   const canSubmit = agendas.some(a => a.title.trim() && a.description.trim());
 
@@ -423,32 +402,7 @@ export default function CreateMeetingAgendaScreen() {
 
       {/* ── Navbar ── */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg z-50">
-            <DropdownBoxOfProfile
-              isOpen
-              onToggle={() => setProfileOpen(false)}
-              menuLabel="Switch Profile"
-              items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-              className="w-[293px]"
-            />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg z-50">
-            <DropdownBoxOfIcon
-              isOpen
-              onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
-            />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* ── Sidebar + main ── */}
@@ -501,177 +455,106 @@ export default function CreateMeetingAgendaScreen() {
                     iconPlacement="left"
                     iconName="add"
                     text={t('btn_add_agenda')}
-                    state={agendaSaved ? 'disabled' : 'default'}
-                    onClick={agendaSaved ? undefined : addAgenda}
+                    onClick={addAgenda}
                   />
                 </div>
 
                 {/* Section body */}
-                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[25px] pb-[35px] flex flex-col">
-                  <div className="w-3/4 flex flex-col gap-[16px]">
-                      {agendas.map((agenda, idx) => (
-                        <div key={agenda.id} className="flex flex-col gap-[0px]">
-                          <div className="bg-[#f5f5f5] rounded-[15px] px-[20px] pt-[24px] pb-[32px] flex gap-[20px] items-start">
-                            {/* Number circle */}
-                            <div className="shrink-0 flex items-center mt-[4px]">
-                              <div className="bg-[#efe0dc] flex flex-col items-center justify-center px-1 py-[6px] rounded-full size-[32px]">
-                                <span className="font-medium text-sm text-[#6a3e31] text-center leading-5 tracking-[0.1px]" style={NS}>
-                                  {idx + 1}
-                                </span>
-                              </div>
+                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[25px] pb-[35px] flex flex-row gap-[30px] items-start">
+                  {/* Agenda list — left side */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-[16px]">
+                    {agendas.map((agenda, idx) => (
+                      <div key={agenda.id} className="flex flex-col gap-[0px]">
+                        <div className="bg-[#f5f5f5] rounded-[15px] px-[20px] pt-[24px] pb-[32px] flex gap-[20px] items-start">
+                          {/* Number circle */}
+                          <div className="shrink-0 flex items-center mt-[4px]">
+                            <div className="bg-[#efe0dc] flex flex-col items-center justify-center px-1 py-[6px] rounded-full size-[32px]">
+                              <span className="font-medium text-sm text-[#6a3e31] text-center leading-5 tracking-[0.1px]" style={NS}>
+                                {idx + 1}
+                              </span>
                             </div>
-
-                            {/* Fields */}
-                            <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
-                              <InputField
-                                label={t('agenda_title_label')}
-                                placeholder={t('agenda_title_placeholder')}
-                                required
-                                value={agenda.title}
-                                onChange={val => updateAgenda(agenda.id, 'title', val)}
-                                disabled={agendaSaved}
-                              />
-                              <div>
-                                <DescriptionField
-                                  label={t('agenda_description_label')}
-                                  placeholder={t('agenda_description_placeholder')}
-                                  required
-                                  value={agenda.description}
-                                  onChange={val => updateAgenda(agenda.id, 'description', val)}
-                                  onMicClick={() => handleAgendaMicClick(agenda.id)}
-                                  micRecording={!!agendaRecording[agenda.id]}
-                                  micAnalyserNode={agendaAnalyserRefs.current[agenda.id] ?? undefined}
-                                  disabled={agendaSaved}
-                                />
-                                {agendaSttError[agenda.id] && (
-                                  <p className="text-xs text-[#b7131a] mt-1" style={{ fontFamily: 'Noto Sans' }}>{agendaSttError[agenda.id]}</p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Remove button — visible for user-added agendas, invisible spacer for defaults */}
-                            {agenda.id >= 3 ? (
-                              <button
-                                type="button"
-                                onClick={!agendaSaved ? () => removeAgenda(agenda.id) : undefined}
-                                disabled={agendaSaved}
-                                className={`shrink-0 flex items-center justify-center size-9 rounded-[8px] transition-colors ${!agendaSaved ? 'hover:bg-[#ebebeb] cursor-pointer' : 'cursor-not-allowed opacity-30'}`}
-                              >
-                                <Icon name="close" size="medium" color="#424242" />
-                              </button>
-                            ) : (
-                              <div className="shrink-0 size-9" />
-                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
 
-                  {/* Add Agenda button — separate row */}
-                  <div className="flex items-center justify-start mt-[20px]">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      iconPlacement="left"
-                      iconName="add"
-                      text={t('btn_add_agenda')}
-                      state={agendaSaved ? 'disabled' : 'default'}
-                      onClick={agendaSaved ? undefined : addAgenda}
-                    />
+                          {/* Fields */}
+                          <div className="flex-1 min-w-0 flex flex-col gap-[20px]">
+                            <InputField
+                              label={t('agenda_title_label')}
+                              placeholder={t('agenda_title_placeholder')}
+                              required
+                              value={agenda.title}
+                              onChange={val => updateAgenda(agenda.id, 'title', val)}
+                            />
+                            <div>
+                              <DescriptionField
+                                label={t('agenda_description_label')}
+                                placeholder={t('agenda_description_placeholder')}
+                                required
+                                value={agenda.description}
+                                onChange={val => updateAgenda(agenda.id, 'description', val)}
+                                onMicClick={() => handleAgendaMicClick(agenda.id)}
+                                micRecording={!!agendaRecording[agenda.id]}
+                                micAnalyserNode={agendaAnalyserRefs.current[agenda.id] ?? undefined}
+                              />
+                              {agendaSttError[agenda.id] && (
+                                <p className="text-xs text-[#b7131a] mt-1" style={{ fontFamily: 'Noto Sans' }}>{agendaSttError[agenda.id]}</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Remove button — visible for user-added agendas, invisible spacer for defaults */}
+                          {agenda.id >= 3 ? (
+                            <button
+                              type="button"
+                              onClick={() => removeAgenda(agenda.id)}
+                              className="shrink-0 flex items-center justify-center size-9 rounded-[8px] transition-colors hover:bg-[#ebebeb] cursor-pointer"
+                            >
+                              <Icon name="close" size="medium" color="#424242" />
+                            </button>
+                          ) : (
+                            <div className="shrink-0 size-9" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add Agenda button */}
+                    <div className="flex items-center justify-start mt-[4px]">
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        iconPlacement="left"
+                        iconName="add"
+                        text={t('btn_add_agenda')}
+                        onClick={addAgenda}
+                      />
+                    </div>
                   </div>
 
-                  {/* Divider */}
-                  <div className="w-full h-px bg-[#e0e0e0] mt-[15px]" />
-
-                  {/* Save + Edit buttons */}
-                  <div className="flex items-center justify-start gap-[10px] mt-[30px]">
-                    <Button
-                      variant="filled"
-                      size="small"
-                      iconPlacement="none"
-                      text={t('btn_save')}
-                      state={agendaSaved ? 'disabled' : 'default'}
-                      onClick={agendaSaved ? undefined : () => setAgendaSaved(true)}
-                    />
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      iconPlacement="left"
-                      iconName="edit"
-                      text={t('btn_edit_proceedings')}
-                      state={agendaSaved ? 'default' : 'disabled'}
-                      onClick={agendaSaved ? () => setAgendaSaved(false) : undefined}
-                    />
+                  {/* Tips panel — right side */}
+                  <div className="w-[360px] shrink-0 bg-[#f7f0ee] rounded-[12px] px-[20px] py-[20px] flex flex-col gap-[10px] self-start">
+                    <div className="flex items-center gap-[6px]">
+                      <Icon name="tips_and_updates" size="small" color="#6a3e31" />
+                      <span className="font-semibold text-[18px] text-[#6a3e31] leading-[24px]" style={NS}>{t('agenda_tips_title')}</span>
+                    </div>
+                    <ul className="flex flex-col gap-[8px] list-none m-0 p-0">
+                      {['agenda_tips_1','agenda_tips_2','agenda_tips_3','agenda_tips_4','agenda_tips_5'].map(key => (
+                        <li key={key} className="flex items-start gap-[6px]">
+                          <span className="shrink-0 mt-[5px] size-[5px] rounded-full bg-[#6a3e31]" />
+                          <span className="text-[14px] text-[#3b3b3b] leading-[20px]" style={NS}>{t(key)}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </div>
 
-              {/* ── Section 2: Upload Documents ── */}
-              <div className="flex flex-col gap-[3px]">
-                <div className="bg-white flex items-center px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
-                  <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
-                    {t('section_upload_docs')}
-                  </span>
-                </div>
-                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[30px] flex flex-col gap-[18px]">
-                  {/* Info row */}
-                  <div className="flex items-center gap-[8px]">
-                    <Icon name="info" size="small" color="#727272" />
-                    <span className="font-medium text-[12px] leading-5 text-[#727272] tracking-[0.1px]" style={NS}>
-                      {t('upload_info')}
-                    </span>
-                  </div>
-
-                  {/* Uploaded files list */}
-                  {uploadedFiles.length > 0 && (
-                    <div className="flex flex-col gap-[8px]">
-                      {uploadedFiles.map((file, idx) => (
-                        <div key={idx} className="flex items-center gap-[8px] px-[12px] py-[8px] bg-[#f7f0ee] rounded-[8px]">
-                          <Icon name="attach_file" size="small" color="#6a3e31" />
-                          <span className="flex-1 text-[13px] text-[#212121] truncate" style={NS}>{file.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(idx)}
-                            className="flex items-center justify-center size-6 rounded hover:bg-[#efe0dc] transition-colors"
-                          >
-                            <Icon name="close" size="small" color="#727272" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                  <div className="flex">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      iconPlacement="left"
-                      iconName="upload"
-                      text={t('btn_upload')}
-                      onClick={handleUploadClick}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Section 3: Generate Template ── */}
+              {/* ── Section 2: Generate Template ── */}
               <SectionHolder
                 variant="with-description"
                 title={t('section_generate_template')}
                 subtitle={t('generate_template_subtitle')}
                 bodyClassName="px-[30px] pt-[20px] pb-[30px] flex flex-col gap-[18px]"
               >
-                {!agendaSaved && (
-                  <InfoBox type="plain" text="Please save the agenda above to be able to generate the template." />
-                )}
                 {/* Clickable thumbnail — opens sample image preview */}
                 <div className="flex flex-col gap-[10px] w-[450px]">
                   <button
@@ -701,8 +584,7 @@ export default function CreateMeetingAgendaScreen() {
                     iconPlacement="left"
                     iconName="description"
                     text={t('btn_get_template')}
-                    state={agendaSaved ? 'default' : 'disabled'}
-                    onClick={agendaSaved ? handleGetTemplate : undefined}
+                    onClick={handleGetTemplate}
                   />
                 </div>
               </SectionHolder>
@@ -735,7 +617,7 @@ export default function CreateMeetingAgendaScreen() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-[24px]">
           <div className="w-full max-w-[820px] max-h-[90vh] flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('template_modal_title')}
               </span>
@@ -812,7 +694,7 @@ export default function CreateMeetingAgendaScreen() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="w-[800px] max-h-[90vh] flex flex-col shadow-2xl">
             {/* Header */}
-            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('template_preview_info')}
               </span>

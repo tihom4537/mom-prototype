@@ -69,12 +69,19 @@ export default function MeetingShellLayout({
 
         {/* Profile dropdown */}
         {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg">
+          <div
+            className="absolute right-[88px] top-full shadow-lg z-50"
+            onMouseLeave={() => setProfileOpen(false)}
+          >
             <DropdownBoxOfProfile
               isOpen={true}
               onToggle={() => setProfileOpen(false)}
               menuLabel="Switch Profile"
               items={['PDO — kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
+              onItemClick={item => {
+                setProfileOpen(false);
+                if (item === 'Log out') navigate('/homepage');
+              }}
               className="w-[293px]"
             />
           </div>
@@ -82,12 +89,18 @@ export default function MeetingShellLayout({
 
         {/* Settings dropdown */}
         {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg">
+          <div
+            className="absolute right-[26px] top-full shadow-lg z-50"
+            onMouseLeave={() => setSettingsOpen(false)}
+          >
             <DropdownBoxOfIcon
               isOpen={true}
               onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
+              items={['Help & Support', 'Log out']}
+              onItemClick={item => {
+                setSettingsOpen(false);
+                if (item === 'Log out') navigate('/homepage');
+              }}
             />
           </div>
         )}

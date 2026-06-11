@@ -1,13 +1,16 @@
 import { createContext, useContext, useState, useMemo } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { DEMO_MODE, DEMO_PROCEEDINGS } from '../config/demo';
+import type { StructuredProceedings } from '../utils/agendaClassifier';
+
+export type ProceedingsData = string | StructuredProceedings;
 
 export interface AgendaItem {
   id: number;
   heading: string;
   description: string;
   completed: boolean;
-  proceedingsText: string;
+  proceedingsText: ProceedingsData;
 }
 
 interface AgendaItemKey {
@@ -15,7 +18,7 @@ interface AgendaItemKey {
   headingKey: string;
   descriptionKey: string;
   completed: boolean;
-  proceedingsText: string;
+  proceedingsText: ProceedingsData;
 }
 
 const INITIAL_AGENDA_KEYS: AgendaItemKey[] = [
@@ -28,7 +31,7 @@ const INITIAL_AGENDA_KEYS: AgendaItemKey[] = [
 interface AgendaContextValue {
   agendaItems: AgendaItem[];
   markCompleted: (id: number) => void;
-  saveProceedings: (id: number, text: string) => void;
+  saveProceedings: (id: number, data: ProceedingsData) => void;
 }
 
 const AgendaContext = createContext<AgendaContextValue | null>(null);
@@ -43,9 +46,9 @@ export function AgendaProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const saveProceedings = (id: number, text: string) => {
+  const saveProceedings = (id: number, data: ProceedingsData) => {
     setKeys(items =>
-      items.map(item => (item.id === id ? { ...item, proceedingsText: text, completed: true } : item))
+      items.map(item => (item.id === id ? { ...item, proceedingsText: data, completed: true } : item))
     );
   };
 

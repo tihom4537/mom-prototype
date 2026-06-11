@@ -250,8 +250,7 @@ Both `en` and `kn` keys added to `translations.js`:
 - Use a `LanguageContext` (React Context) at `/src/i18n/LanguageContext.jsx` to provide the active language and a `t("key")` helper throughout the app
 - Every string rendered in the UI — buttons, labels, headings, placeholders, error messages, info text — must go through `t("key")`. No exceptions.
 - **Never add new hardcoded strings.** If a new string is needed, add it to both `en` and `kn` in `translations.js` first, then reference it via `t("key")`
-- **Never auto-translate** using any external service. All translations come from `translations.js` only.
-- Do not auto-translate using any external service whatsoever.
+- Auto-translation is allowed only when the user explicitly requests it. Otherwise, all translations come from `translations.js` only.
 
 ---
 

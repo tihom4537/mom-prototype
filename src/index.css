@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease-out, transform 0.55s ease-out;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-delay-1 { transition-delay: 0.08s; }
+.reveal-delay-2 { transition-delay: 0.16s; }
+.reveal-delay-3 { transition-delay: 0.24s; }
+.reveal-delay-4 { transition-delay: 0.32s; }
+
+/* Remove Leaflet's default grey tile background */
+.leaflet-container {
+  background: transparent !important;
+}
+
 :root {
   /* ── Base color tokens ── */
   --primary-50: #f7f0ee;
@@ -159,4 +179,9 @@ body {
   font-family: 'Noto Sans', sans-serif;
   background-color: #f5f5f5;
   margin: 0;
+}
+
+/* Smooth hover expand on recharts pie slices */
+.recharts-pie-sector path {
+  transition: d 0.2s ease, transform 0.2s ease;
 }

@@ -119,8 +119,8 @@ export default function DescriptionField({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onChange={e => onChange?.(e.target.value)}
-          rows={3}
-          className="w-full min-h-[70px] resize-none px-3 py-2 text-sm text-[#212121] placeholder-[#727272] leading-5 tracking-[0.25px] bg-transparent border-none outline-none overflow-hidden"
+          rows={1}
+          className="w-full min-h-[20px] resize-none px-3 pt-2 pb-0 text-sm text-[#212121] placeholder-[#727272] leading-5 tracking-[0.25px] bg-transparent border-none outline-none overflow-hidden"
           style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
         />
 

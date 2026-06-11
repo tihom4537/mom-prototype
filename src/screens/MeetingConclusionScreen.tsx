@@ -74,8 +74,6 @@ export default function MeetingConclusionScreen() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-
   const wPct = Math.round((STATS.women / TOTAL_ATTENDED) * 100);
   const mPct = 100 - wPct;
 
@@ -84,16 +82,7 @@ export default function MeetingConclusionScreen() {
 
       {/* Navbar */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => setProfileOpen(o => !o)}
-          onSettingsClick={() => {}}
-        />
-        {profileOpen && (
-          <div className="absolute top-full right-[60px] z-50" onClick={() => setProfileOpen(false)}>
-            <div className="bg-white shadow-lg rounded-lg p-2 text-sm" style={NS}>Profile menu</div>
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       <div className="flex flex-1 min-h-0">

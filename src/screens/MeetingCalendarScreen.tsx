@@ -9,8 +9,6 @@ import {
   Icon,
   StatusBadge,
   AgendaNoLabel,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
 } from '../components';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
@@ -86,8 +84,6 @@ export default function MeetingCalendarScreen() {
   );
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
 
@@ -149,32 +145,7 @@ export default function MeetingCalendarScreen() {
 
       {/* ── Navbar ── */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg z-50">
-            <DropdownBoxOfProfile
-              isOpen
-              onToggle={() => setProfileOpen(false)}
-              menuLabel="Switch Profile"
-              items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-              className="w-[293px]"
-            />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg z-50">
-            <DropdownBoxOfIcon
-              isOpen
-              onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
-            />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* ── Sidebar + main ── */}

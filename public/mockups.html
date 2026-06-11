@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Proceedings Entry — 3 Mockups</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f1f2f2; color: #212121; }
+
+  /* NAV */
+  .nav { background: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e0e0e0; }
+  .nav-title { font-size: 15px; font-weight: 600; color: #6a3e31; }
+  .tabs { display: flex; gap: 8px; }
+  .tab { padding: 6px 18px; border-radius: 20px; border: 1.5px solid #6a3e31; font-size: 13px; cursor: pointer; background: #fff; color: #6a3e31; }
+  .tab.active { background: #6a3e31; color: #fff; }
+
+  /* PAGE */
+  .page { display: none; padding: 28px; max-width: 900px; margin: 0 auto; }
+  .page.visible { display: block; }
+
+  /* AGENDA CARD */
+  .agenda-card { background: #fff; border: 1px solid rgba(106,62,49,0.2); border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
+  .agenda-num { font-size: 12px; color: #6a3e31; font-weight: 600; margin-bottom: 4px; }
+  .agenda-heading { font-size: 15px; font-weight: 600; color: #212121; margin-bottom: 4px; }
+  .agenda-desc { font-size: 13px; color: #727272; }
+
+  /* SECTION LABEL */
+  .section-label { font-size: 13px; font-weight: 600; color: #212121; margin-bottom: 10px; }
+  .mandatory { color: #b7131a; }
+
+  /* ENTRY CARD WRAPPER */
+  .entry-card { background: #fff; border-radius: 12px; padding: 20px; border: 1px solid rgba(106,62,49,0.2); }
+
+  /* BOTTOM TOOLBAR */
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .tool-btn { display: flex; align-items: center; gap-6px; gap: 6px; padding: 6px 14px; border-radius: 8px; border: 1.5px solid #6a3e31; background: #fff; font-size: 12px; color: #6a3e31; cursor: pointer; }
+  .tool-btn .icon { font-size: 15px; }
+  .mic-btn { width: 38px; height: 38px; border-radius: 50%; background: #6a3e31; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-left: auto; }
+  .mic-btn .icon { color: #fff; font-size: 18px; }
+
+  /* ── OPTION A — Table ── */
+  .opt-a-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .opt-a-table th { background: #f7f0ee; color: #6a3e31; font-weight: 600; padding: 10px 12px; text-align: left; border: 1px solid #dfc2b9; font-size: 12px; }
+  .opt-a-table td { border: 1px solid #e0e0e0; padding: 0; vertical-align: top; }
+  .opt-a-table td input,
+  .opt-a-table td textarea { width: 100%; border: none; outline: none; padding: 10px 12px; font-size: 13px; font-family: inherit; background: transparent; resize: none; min-height: 60px; color: #212121; }
+  .opt-a-table td input::placeholder,
+  .opt-a-table td textarea::placeholder { color: #bdbdbd; }
+  .opt-a-table tr:focus-within td { background: #fdf6f4; }
+  .add-row-btn { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6a3e31; cursor: pointer; background: none; border: none; font-weight: 500; }
+
+  /* active mic indicator on cell */
+  .cell-mic { position: relative; }
+  .cell-mic-btn { position: absolute; bottom: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: #6a3e31; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity 0.15s; }
+  .cell-mic-btn .icon { color: #fff; font-size: 14px; }
+  td:hover .cell-mic-btn,
+  td:focus-within .cell-mic-btn { opacity: 1; }
+
+  /* ── OPTION B — Rows ── */
+  .row-item { background: #fff; border: 1.5px solid #e0e0e0; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 10px; transition: border-color 0.15s; }
+  .row-item:focus-within { border-color: #6a3e31; }
+  .row-header { display: flex; align-items: center; gap: 8px; }
+  .row-num { width: 22px; height: 22px; border-radius: 50%; background: #6a3e31; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; shrink: 0; }
+  .row-label { font-size: 12px; font-weight: 600; color: #6a3e31; }
+  .row-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row-field { display: flex; flex-direction: column; gap: 4px; }
+  .row-field-label { font-size: 11px; color: #727272; font-weight: 500; }
+  .row-field textarea, .row-field input { border: 1px solid #e0e0e0; border-radius: 6px; padding: 7px 10px; font-size: 13px; font-family: inherit; resize: none; min-height: 48px; color: #212121; background: #fafafa; width: 100%; outline: none; }
+  .row-field textarea:focus, .row-field input:focus { border-color: #6a3e31; background: #fff; }
+  .row-field textarea::placeholder, .row-field input::placeholder { color: #bdbdbd; }
+  .row-actions { display: flex; align-items: center; justify-content: space-between; }
+  .row-mic { width: 30px; height: 30px; border-radius: 50%; background: #6a3e31; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .row-mic .icon { color: #fff; font-size: 15px; }
+  .row-delete { background: none; border: none; cursor: pointer; color: #bdbdbd; font-size: 14px; }
+  .add-row-btn-b { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6a3e31; cursor: pointer; background: #f7f0ee; border: 1.5px dashed #dfc2b9; border-radius: 10px; padding: 10px 16px; width: 100%; font-weight: 500; margin-top: 4px; }
+
+  /* ── OPTION C — Wizard ── */
+  .wizard-step { background: #fff; border: 1.5px solid #6a3e31; border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; }
+  .wizard-step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .wizard-step-num { width: 28px; height: 28px; border-radius: 50%; background: #6a3e31; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .wizard-step-title { font-size: 14px; font-weight: 600; color: #212121; }
+  .wizard-field { margin-bottom: 12px; }
+  .wizard-field label { display: block; font-size: 12px; font-weight: 600; color: #727272; margin-bottom: 5px; }
+  .wizard-field textarea { width: 100%; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 12px; font-size: 13px; font-family: inherit; resize: none; min-height: 56px; background: #fafafa; outline: none; color: #212121; }
+  .wizard-field textarea:focus { border-color: #6a3e31; background: #fff; }
+  .wizard-field textarea::placeholder { color: #bdbdbd; }
+  .wizard-done { background: #edfaf4; border: 1.5px solid #6a3e31; border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: default; opacity: 0.85; }
+  .wizard-done-num { width: 24px; height: 24px; border-radius: 50%; background: #27ae60; color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .wizard-done-label { font-size: 13px; color: #3b3b3b; }
+  .wizard-done-text { font-size: 12px; color: #727272; margin-left: auto; max-width: 300px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wizard-next { display: flex; justify-content: flex-end; margin-top: 4px; }
+  .btn-next { background: #6a3e31; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .btn-add-point { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6a3e31; cursor: pointer; background: #f7f0ee; border: 1.5px dashed #dfc2b9; border-radius: 10px; padding: 10px 16px; width: 100%; font-weight: 500; }
+
+  /* SHARED FOOTER BTNS */
+  .footer-btns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+  .btn-outline { border: 1.5px solid #6a3e31; background: #fff; color: #6a3e31; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-filled { background: #6a3e31; color: #fff; border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+  /* label pill */
+  .category-pill { display: inline-block; background: #f7f0ee; color: #6a3e31; border-radius: 20px; padding: 3px 12px; font-size: 11px; font-weight: 600; margin-bottom: 14px; }
+
+  /* info line */
+  .info-line { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #727272; margin-bottom: 14px; }
+  .info-line .icon { font-size: 15px; margin-top: 1px; }
+
+  /* material icons */
+  @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+  .icon { font-family: 'Material Icons'; font-style: normal; display: inline-block; line-height: 1; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <span class="nav-title">Proceedings Entry — Format Mockups</span>
+  <div class="tabs">
+    <button class="tab active" onclick="show('a')">Option A — Table</button>
+    <button class="tab" onclick="show('b')">Option B — Rows</button>
+    <button class="tab" onclick="show('c')">Option C — Wizard</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     OPTION A — Structured Table
+     ══════════════════════════════════════════════════════════════ -->
+<div id="page-a" class="page visible">
+  <div class="agenda-card">
+    <div class="agenda-num">Agenda 3</div>
+    <div class="agenda-heading">Hearing and disposal of petitions received</div>
+    <div class="agenda-desc">Petitions received from citizens regarding land disputes, ration cards, and public amenities are to be heard and disposal orders recorded.</div>
+  </div>
+
+  <div class="category-pill">📋 Category: Petition Disposal</div>
+
+  <div class="section-label">Enter the Agenda discussion points <span class="mandatory">*</span></div>
+  <div class="info-line">
+    <span class="icon">info</span>
+    Each row represents one petition or discussion point. Use the mic icon in a cell to dictate into that field.
+  </div>
+
+  <div class="entry-card">
+    <table class="opt-a-table">
+      <thead>
+        <tr>
+          <th style="width:30%">Point / Petition</th>
+          <th style="width:30%">Decision / Resolution</th>
+          <th style="width:22%">Responsible Person</th>
+          <th style="width:18%">Target Date</th>
+        </tr>
+      </thead>
+      <tbody id="table-a-body">
+        <tr>
+          <td class="cell-mic"><textarea rows="2" placeholder="e.g. Petition regarding water supply in Ward 4…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><textarea rows="2" placeholder="e.g. Referred to KUWSDB for inspection…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><textarea rows="2" placeholder="e.g. Secretary"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><input type="text" placeholder="dd/mm/yyyy" /></td>
+        </tr>
+        <tr>
+          <td class="cell-mic"><textarea rows="2" placeholder="Point 2…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><textarea rows="2" placeholder="Decision…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><textarea rows="2" placeholder="Name / role…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+          <td class="cell-mic"><input type="text" placeholder="dd/mm/yyyy" /></td>
+        </tr>
+      </tbody>
+    </table>
+    <button class="add-row-btn" onclick="addRowA()">
+      <span class="icon" style="font-size:16px;color:#6a3e31">add_circle</span> Add another point
+    </button>
+
+    <div class="toolbar" style="margin-top:16px;">
+      <button class="tool-btn"><span class="icon">photo_camera</span> Scan Photo</button>
+      <button class="tool-btn"><span class="icon">upload_file</span> Upload Audio</button>
+      <button class="mic-btn"><span class="icon">mic</span></button>
+    </div>
+  </div>
+
+  <div class="footer-btns">
+    <button class="btn-outline">Check my entry</button>
+    <button class="btn-filled">Save</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     OPTION B — Rows with focused fields
+     ══════════════════════════════════════════════════════════════ -->
+<div id="page-b" class="page">
+  <div class="agenda-card">
+    <div class="agenda-num">Agenda 3</div>
+    <div class="agenda-heading">Hearing and disposal of petitions received</div>
+    <div class="agenda-desc">Petitions received from citizens regarding land disputes, ration cards, and public amenities are to be heard and disposal orders recorded.</div>
+  </div>
+
+  <div class="category-pill">📋 Category: Petition Disposal</div>
+
+  <div class="section-label">Enter the Agenda discussion points <span class="mandatory">*</span></div>
+  <div class="info-line">
+    <span class="icon">info</span>
+    Each row is one discussion point. Tap the mic on a row to dictate into that row's field.
+  </div>
+
+  <div id="rows-b">
+    <div class="row-item">
+      <div class="row-header">
+        <div class="row-num">1</div>
+        <span class="row-label">Discussion Point</span>
+      </div>
+      <div class="row-fields">
+        <div class="row-field" style="grid-column:1/-1">
+          <div class="row-field-label">What was discussed</div>
+          <textarea rows="2" placeholder="e.g. Petition from Ramaiah regarding ration card delay in Ward 6…"></textarea>
+        </div>
+        <div class="row-field">
+          <div class="row-field-label">Decision / Action taken</div>
+          <textarea rows="2" placeholder="e.g. Referred to Taluk Supply Office…"></textarea>
+        </div>
+        <div class="row-field">
+          <div class="row-field-label">Responsible person</div>
+          <textarea rows="2" placeholder="Name or designation…"></textarea>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="row-mic"><span class="icon">mic</span></button>
+        <button class="row-delete" title="Remove row"><span class="icon">delete_outline</span></button>
+      </div>
+    </div>
+
+    <div class="row-item">
+      <div class="row-header">
+        <div class="row-num">2</div>
+        <span class="row-label">Discussion Point</span>
+      </div>
+      <div class="row-fields">
+        <div class="row-field" style="grid-column:1/-1">
+          <div class="row-field-label">What was discussed</div>
+          <textarea rows="2" placeholder="e.g. Request for street light repair in Ward 2…"></textarea>
+        </div>
+        <div class="row-field">
+          <div class="row-field-label">Decision / Action taken</div>
+          <textarea rows="2" placeholder="e.g. Approved — PWD to action within 15 days…"></textarea>
+        </div>
+        <div class="row-field">
+          <div class="row-field-label">Responsible person</div>
+          <textarea rows="2" placeholder="Name or designation…"></textarea>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="row-mic"><span class="icon">mic</span></button>
+        <button class="row-delete"><span class="icon">delete_outline</span></button>
+      </div>
+    </div>
+  </div>
+
+  <button class="add-row-btn-b" onclick="addRowB()">
+    <span class="icon" style="font-size:16px">add_circle</span> Add another discussion point
+  </button>
+
+  <div class="toolbar" style="margin-top:16px;">
+    <button class="tool-btn"><span class="icon">photo_camera</span> Scan Photo</button>
+    <button class="tool-btn"><span class="icon">upload_file</span> Upload Audio</button>
+    <button class="mic-btn"><span class="icon">mic</span></button>
+  </div>
+
+  <div class="footer-btns">
+    <button class="btn-outline">Check my entry</button>
+    <button class="btn-filled">Save</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     OPTION C — Step-by-step Wizard
+     ══════════════════════════════════════════════════════════════ -->
+<div id="page-c" class="page">
+  <div class="agenda-card">
+    <div class="agenda-num">Agenda 3</div>
+    <div class="agenda-heading">Hearing and disposal of petitions received</div>
+    <div class="agenda-desc">Petitions received from citizens regarding land disputes, ration cards, and public amenities are to be heard and disposal orders recorded.</div>
+  </div>
+
+  <div class="category-pill">📋 Category: Petition Disposal</div>
+
+  <div class="section-label">Enter the Agenda discussion points <span class="mandatory">*</span></div>
+  <div class="info-line">
+    <span class="icon">info</span>
+    Fill one discussion point at a time. Complete each step before moving to the next.
+  </div>
+
+  <!-- Completed step example -->
+  <div class="wizard-done">
+    <div class="wizard-done-num"><span class="icon" style="font-size:14px">check</span></div>
+    <span class="wizard-done-label">Point 1 — Ration card delay, Ward 6</span>
+    <span class="wizard-done-text">Referred to Taluk Supply Office · Secretary · 30/06/2025</span>
+  </div>
+
+  <!-- Active step -->
+  <div class="wizard-step">
+    <div class="wizard-step-header">
+      <div class="wizard-step-num">2</div>
+      <span class="wizard-step-title">Discussion Point 2</span>
+      <button class="row-mic" style="margin-left:auto"><span class="icon">mic</span></button>
+    </div>
+
+    <div class="wizard-field">
+      <label>What was discussed <span class="mandatory">*</span></label>
+      <textarea rows="2" placeholder="Describe the petition or topic raised…"></textarea>
+    </div>
+    <div class="wizard-field">
+      <label>Decision / Action taken <span class="mandatory">*</span></label>
+      <textarea rows="2" placeholder="What was resolved or decided…"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="wizard-field">
+        <label>Responsible person</label>
+        <textarea rows="1" placeholder="Name or designation…" style="min-height:38px;"></textarea>
+      </div>
+      <div class="wizard-field">
+        <label>Target date</label>
+        <textarea rows="1" placeholder="dd/mm/yyyy" style="min-height:38px;"></textarea>
+      </div>
+    </div>
+
+    <div class="wizard-next">
+      <button class="btn-next"><span class="icon" style="font-size:15px">check</span> Done with this point</button>
+    </div>
+  </div>
+
+  <button class="btn-add-point">
+    <span class="icon" style="font-size:16px">add_circle</span> Add another discussion point
+  </button>
+
+  <div class="toolbar" style="margin-top:16px;">
+    <button class="tool-btn"><span class="icon">photo_camera</span> Scan Photo</button>
+    <button class="tool-btn"><span class="icon">upload_file</span> Upload Audio</button>
+  </div>
+
+  <div class="footer-btns">
+    <button class="btn-outline">Check my entry</button>
+    <button class="btn-filled">Save</button>
+  </div>
+</div>
+
+<script>
+function show(opt) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + opt).classList.add('visible');
+  event.target.classList.add('active');
+}
+
+function addRowA() {
+  const tbody = document.getElementById('table-a-body');
+  const n = tbody.rows.length + 1;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td class="cell-mic"><textarea rows="2" placeholder="Point ${n}…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+    <td class="cell-mic"><textarea rows="2" placeholder="Decision…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+    <td class="cell-mic"><textarea rows="2" placeholder="Name / role…"></textarea><button class="cell-mic-btn"><span class="icon">mic</span></button></td>
+    <td class="cell-mic"><input type="text" placeholder="dd/mm/yyyy" /></td>`;
+  tbody.appendChild(tr);
+}
+
+function addRowB() {
+  const container = document.getElementById('rows-b');
+  const n = container.querySelectorAll('.row-item').length + 1;
+  const div = document.createElement('div');
+  div.className = 'row-item';
+  div.innerHTML = `
+    <div class="row-header">
+      <div class="row-num">${n}</div>
+      <span class="row-label">Discussion Point</span>
+    </div>
+    <div class="row-fields">
+      <div class="row-field" style="grid-column:1/-1">
+        <div class="row-field-label">What was discussed</div>
+        <textarea rows="2" placeholder="Describe the topic raised…"></textarea>
+      </div>
+      <div class="row-field">
+        <div class="row-field-label">Decision / Action taken</div>
+        <textarea rows="2" placeholder="What was resolved…"></textarea>
+      </div>
+      <div class="row-field">
+        <div class="row-field-label">Responsible person</div>
+        <textarea rows="2" placeholder="Name or designation…"></textarea>
+      </div>
+    </div>
+    <div class="row-actions">
+      <button class="row-mic"><span class="icon">mic</span></button>
+      <button class="row-delete"><span class="icon">delete_outline</span></button>
+    </div>`;
+  container.appendChild(div);
+}
+</script>
+</body>
+</html>

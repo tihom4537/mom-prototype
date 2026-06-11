@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useMeetings } from '../context/MeetingsContext';
 import {
   Navbar,
   Sidebar,
   Breadcrumb,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
   UrgencyBanner,
   QuickActionCard,
   UpcomingMeetingRow,
@@ -66,10 +65,10 @@ const ACTION_ITEMS_DATA: ActionItemData[] = [
 export default function MeetingOverviewScreen() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const { meetings } = useMeetings();
+  const draftMeetings = meetings.filter(m => m.tab === 'drafts');
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab,    setActiveTab]    = useState<MandatoryTab>('all');
   const [actionTab,    setActionTab]    = useState<ActionTab>('pending');
   const [actionItems,  setActionItems]  = useState(ACTION_ITEMS_DATA);
@@ -112,32 +111,7 @@ export default function MeetingOverviewScreen() {
 
       {/* ── Navbar ── */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg z-50">
-            <DropdownBoxOfProfile
-              isOpen
-              onToggle={() => setProfileOpen(false)}
-              menuLabel="Switch Profile"
-              items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-              className="w-[293px]"
-            />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg z-50">
-            <DropdownBoxOfIcon
-              isOpen
-              onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
-            />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* ── Sidebar + main ── */}
@@ -189,7 +163,7 @@ export default function MeetingOverviewScreen() {
               </div>
 
               {/* ── Section 2: Quick Actions ── */}
-              <div className="flex flex-col gap-[3px]">
+              <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-white flex items-center px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
                   <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
@@ -220,8 +194,37 @@ export default function MeetingOverviewScreen() {
                 </div>
               </div>
 
+              {/* ── Section 2b: Draft Reminders ── */}
+              {draftMeetings.length > 0 && (
+                <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
+                  <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
+                    <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
+                      {t('section_draft_reminders')}
+                    </span>
+                    <AgendaNoLabel
+                      type="default"
+                      text={`${draftMeetings.length} ${t('draft_reminder_tag')}`}
+                    />
+                  </div>
+                  <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[10px] pb-[10px]">
+                    {draftMeetings.map((m, idx) => (
+                      <UpcomingMeetingRow
+                        key={m.id}
+                        daysLabel={t('draft_reminder_tag')}
+                        daysLabelVariant="red"
+                        meetingName={m.name}
+                        meetingMeta={`${m.date} · ${m.venue}`}
+                        viewDetailsLabel={t('draft_reminder_cta')}
+                        isLast={idx === draftMeetings.length - 1}
+                        onViewDetails={() => navigate('/meetings/create', { state: { draftId: m.id } })}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* ── Section 3: Upcoming Meetings ── */}
-              <div className="flex flex-col gap-[3px]">
+              <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
                   <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
@@ -251,7 +254,7 @@ export default function MeetingOverviewScreen() {
               </div>
 
               {/* ── Section 4: Mandatory Meetings ── */}
-              <div className="flex flex-col gap-[3px]">
+              <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-white flex flex-col gap-[6px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
                   <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
@@ -375,7 +378,7 @@ export default function MeetingOverviewScreen() {
               </div>
 
               {/* ── Section 5: Action Items ── */}
-              <div className="flex flex-col gap-[3px]">
+              <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
                 {/* Header */}
                 <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
                   <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>

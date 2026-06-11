@@ -277,7 +277,7 @@ export default function ProceedingsReviewScreen() {
           <div className="w-[820px] max-h-[90vh] flex flex-col shadow-2xl">
             <div className="flex flex-col min-h-0">
             {/* Header */}
-            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[15px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('review_modal_title')}
               </span>
@@ -304,7 +304,12 @@ export default function ProceedingsReviewScreen() {
                 </div>
                 <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[10px] ml-[47px]">
                   <p className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
-                    {reviewModalItem.proceedingsText || t(`agenda_proceedings_${reviewModalItem.id}`)}
+                    {(() => {
+                      const pt = reviewModalItem.proceedingsText;
+                      if (!pt) return t(`agenda_proceedings_${reviewModalItem.id}`);
+                      if (typeof pt === 'object') return Object.entries(pt).filter(([,v]) => v.trim()).map(([k,v]) => `${k}: ${v}`).join('\n');
+                      return pt;
+                    })()}
                   </p>
                 </div>
               </div>

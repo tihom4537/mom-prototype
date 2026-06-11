@@ -13,8 +13,6 @@ import {
   SectionHolder,
   DashboardMenuBarItem,
   StatusBadge,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
 } from '../components';
 import type { NumberCircleType } from '../components';
 import type { MeetingData, MeetingTab } from '../context/MeetingsContext';
@@ -73,8 +71,6 @@ export default function MeetingListScreen() {
   const { meetings } = useMeetings();
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen, setProfileOpen]   = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [activeTab, setActiveTab]       = useState<MeetingTab>('today');
 
   const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
@@ -97,32 +93,7 @@ export default function MeetingListScreen() {
 
       {/* ── Navbar ── */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute right-[88px] top-full shadow-lg">
-            <DropdownBoxOfProfile
-              isOpen
-              onToggle={() => setProfileOpen(false)}
-              menuLabel="Switch Profile"
-              items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-              className="w-[293px]"
-            />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute right-[26px] top-full shadow-lg">
-            <DropdownBoxOfIcon
-              isOpen
-              onToggle={() => setSettingsOpen(false)}
-              menuLabel="Settings"
-              items={['Settings', 'Help & Support', 'Log out']}
-            />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* ── Sidebar + main ── */}
@@ -268,7 +239,7 @@ function ActionsMenu({ actions, t }: ActionsMenuProps) {
       />
 
       {open && (
-        <div className="absolute bottom-full mb-[4px] right-0 z-50 bg-white rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.14)] border border-[#e0e0e0] overflow-hidden min-w-[200px]">
+        <div className="absolute bottom-full mb-[4px] right-0 z-50 bg-white rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.14)] border border-[#c6c6c6] overflow-hidden min-w-[200px]">
           {actions.map(({ key, disabled }) => (
             <button
               key={key}

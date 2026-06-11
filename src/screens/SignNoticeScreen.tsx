@@ -10,8 +10,6 @@ import {
   StepNavBar,
   Button,
   Icon,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
 } from '../components';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
@@ -37,8 +35,6 @@ export default function SignNoticeScreen() {
   const meetingData = location.state ?? {};
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signed,      setSigned]      = useState(false);
@@ -164,32 +160,7 @@ export default function SignNoticeScreen() {
 
         {/* ── Navbar ── */}
         <div className="shrink-0 relative z-40">
-          <Navbar
-            version="default-with-welcome"
-            onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-            onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-          />
-          {profileOpen && (
-            <div className="absolute right-[88px] top-full shadow-lg z-50">
-              <DropdownBoxOfProfile
-                isOpen
-                onToggle={() => setProfileOpen(false)}
-                menuLabel="Switch Profile"
-                items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
-                className="w-[293px]"
-              />
-            </div>
-          )}
-          {settingsOpen && (
-            <div className="absolute right-[26px] top-full shadow-lg z-50">
-              <DropdownBoxOfIcon
-                isOpen
-                onToggle={() => setSettingsOpen(false)}
-                menuLabel="Settings"
-                items={['Settings', 'Help & Support', 'Log out']}
-              />
-            </div>
-          )}
+          <Navbar version="default-with-welcome" />
         </div>
 
         {/* ── Sidebar + main ── */}
@@ -221,7 +192,7 @@ export default function SignNoticeScreen() {
                 {/* Notice preview card */}
                 <div className="bg-white rounded-[20px] flex flex-col">
                   {/* Header */}
-                  <div className="flex items-center justify-between px-[25px] py-[20px] border-b border-[#e0e0e0]">
+                  <div className="flex items-center justify-between px-[25px] py-[20px] border-b border-[#c6c6c6]">
                     <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                       {t('sign_notice_preview_heading')}
                     </span>
@@ -318,7 +289,7 @@ export default function SignNoticeScreen() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-[500px] shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('sign_confirm_title')}
               </span>

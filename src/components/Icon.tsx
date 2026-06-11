@@ -152,7 +152,34 @@ export type IconName =
   | 'reorder'
   | 'swap_vert'
   | 'unfold_more'
-  | 'unfold_less';
+  | 'unfold_less'
+  // Accessibility & display
+  | 'contrast'
+  | 'accessibility'
+  | 'accessibility_new'
+  | 'invert_colors'
+  | 'format_size'
+  | 'text_increase'
+  | 'text_decrease'
+  // Finance & civic
+  | 'account_balance'
+  | 'payments'
+  | 'account_tree'
+  | 'school'
+  | 'groups'
+  // Analytics & data
+  | 'analytics'
+  | 'bar_chart'
+  | 'pie_chart'
+  | 'trending_up'
+  | 'trending_down'
+  | 'trending_flat'
+  | 'show_chart'
+  | 'leaderboard'
+  // Map
+  | 'map'
+  | 'public'
+  | 'language';
 
 // Keep for backward compat
 export type IconType = IconName;

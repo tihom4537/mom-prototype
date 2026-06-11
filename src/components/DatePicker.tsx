@@ -62,6 +62,18 @@ export default function DatePicker({
     return d < m;
   }
 
+  function handleOpen() {
+    if (!open) {
+      // Jump to the month that contains the first selectable date
+      if (minDate && !value) {
+        setViewYear(minDate.getFullYear());
+        setViewMonth(minDate.getMonth());
+      }
+      setView('day');
+    }
+    setOpen(o => !o);
+  }
+
   function selectDay(y: number, m: number, d: number) {
     if (blocked(new Date(y, m, d))) return;
     onChange(fmt(y, m, d));
@@ -99,7 +111,7 @@ export default function DatePicker({
       <div className="relative w-full">
         <button
           type="button"
-          onClick={() => { setOpen(o => !o); setView('day'); }}
+          onClick={handleOpen}
           className={`flex items-center w-full bg-white rounded-lg border ${border} py-[10px] pl-3 pr-3 transition-all duration-150 cursor-pointer`}
         >
           <span className={`flex-1 text-sm text-left ${value ? 'text-[#212121]' : 'text-[#727272]'}`} style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
@@ -151,12 +163,13 @@ export default function DatePicker({
                       <button
                         key={i}
                         type="button"
-                        onClick={() => !cell.other && !isBlocked && selectDay(cell.y, cell.m, cell.d)}
-                        className={`flex items-center justify-center size-6 mx-auto rounded-[4px] text-sm font-medium transition-colors border-none
+                        onClick={() => !isBlocked && selectDay(cell.y, cell.m, cell.d)}
+                        className={`flex items-center justify-center size-6 mx-auto rounded-[4px] text-sm font-medium transition-colors
                           ${isSel ? 'bg-[#6a3e31] text-white border border-[#6a3e31] cursor-pointer' :
-                            cell.other || isBlocked ? 'text-[#c6c6c6] cursor-default bg-transparent' :
+                            isBlocked ? 'text-[#c6c6c6] cursor-default bg-transparent border-none' :
+                            cell.other ? 'text-[#b0b0b0] cursor-pointer bg-transparent border border-[rgba(106,62,49,0.18)] hover:bg-[#f7f0ee]' :
                             isToday ? 'bg-[#f7f0ee] text-[#6a3e31] border border-[#6a3e31] cursor-pointer hover:bg-[#efe0dc]' :
-                            'text-[#212121] hover:bg-[#f7f0ee] cursor-pointer bg-transparent'}`}
+                            'text-[#6a3e31] font-semibold border border-[rgba(106,62,49,0.35)] hover:bg-[#f7f0ee] cursor-pointer bg-transparent'}`}
                         style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                       >
                         {cell.d}

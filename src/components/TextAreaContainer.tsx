@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Icon from './Icon';
 import MicButton from './MicButton';
+import Tooltip from './Tooltip';
 
 export type TextAreaState = 'default' | 'filled' | 'recording';
 
@@ -60,6 +62,7 @@ interface TextAreaContainerProps {
   onUploadAudio?: () => void;
   scanPhotoLabel?: string;
   uploadAudioLabel?: string;
+  readAloudLabel?: string;
   /** When provided, renders rich-text view with highlighted spans */
   highlights?: HighlightSpan[];
   onSpanHoverEnter?: (cardId: string) => void;
@@ -89,6 +92,7 @@ export default function TextAreaContainer({
   onUploadAudio,
   scanPhotoLabel = 'Scan Photo',
   uploadAudioLabel = 'Upload Audio',
+  readAloudLabel = 'Read out the minutes',
   highlights,
   onSpanHoverEnter,
   onSpanHoverLeave,
@@ -103,6 +107,22 @@ export default function TextAreaContainer({
   const isFilled    = state === 'filled';
   const isRecording = state === 'recording';
   const hasExplicitHeight = !!(style?.height || style?.maxHeight);
+  const hasText = (value ?? '').trim().length > 0;
+
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const handleReadAloud = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(value ?? '');
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+  };
 
   const useRichText = highlights !== undefined && highlights.length > 0;
 
@@ -216,24 +236,37 @@ export default function TextAreaContainer({
           </button>
         </div>
 
-        {/* Right: mic / stop / processing */}
-        {isProcessing ? (
-          <div className="flex items-center gap-[6px] shrink-0">
-            <svg className="animate-spin shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
-              <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            <span className="text-[12px] text-[#6a3e31] font-medium whitespace-nowrap" style={NS}>
-              Transcribing…
-            </span>
-          </div>
-        ) : (
-          <MicButton
-            isRecording={isRecording}
-            onClick={isRecording ? onStopClick : onMicClick}
-            analyserNode={analyserNode}
-          />
-        )}
+        {/* Right: read-aloud + mic / stop / processing */}
+        <div className="flex items-center gap-[8px] shrink-0">
+          {hasText && !isRecording && !isProcessing && (
+            <Tooltip text={readAloudLabel} direction="top" autoWidth>
+              <button
+                type="button"
+                onClick={handleReadAloud}
+                className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-[#f0ebe9] transition-colors border-none bg-transparent cursor-pointer"
+              >
+                <Icon name={isSpeaking ? 'stop_circle' : 'volume_up'} size="medium" color="#6a3e31" />
+              </button>
+            </Tooltip>
+          )}
+          {isProcessing ? (
+            <div className="flex items-center gap-[6px]">
+              <svg className="animate-spin shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
+                <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              <span className="text-[12px] text-[#6a3e31] font-medium whitespace-nowrap" style={NS}>
+                Transcribing…
+              </span>
+            </div>
+          ) : (
+            <MicButton
+              isRecording={isRecording}
+              onClick={isRecording ? onStopClick : onMicClick}
+              analyserNode={analyserNode}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

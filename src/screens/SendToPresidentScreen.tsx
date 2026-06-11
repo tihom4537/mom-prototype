@@ -13,8 +13,6 @@ import {
   Button,
   Icon,
   InfoBox,
-  DropdownBoxOfProfile,
-  DropdownBoxOfIcon,
   TaskRow,
   DropdownField,
   DatePicker,
@@ -135,7 +133,7 @@ function TaskModal({ initial, onSave, onClose }: TaskModalProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-[540px] max-w-[92vw] flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
           <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
             {initial ? t('task_modal_title_edit') : t('task_modal_title_add')}
           </span>
@@ -231,7 +229,7 @@ function ConfirmModal({ onConfirm, onCancel, title, body, labelYes, labelNo }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-[520px] max-w-[92vw] flex flex-col shadow-2xl">
-        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#e0e0e0] shrink-0">
+        <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
           <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>{title}</span>
           <button type="button" onClick={onCancel} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
             <Icon name="close" size="small" color="#6a3e31" />
@@ -271,7 +269,7 @@ function SuccessBanner({ message }: { message: string }) {
 interface ProceedingsPreviewProps {
   t: (key: string) => string;
   meeting: { name: string; meetingType?: string; date: string; time: string; venue: string; chairperson?: string; description?: string; } | undefined;
-  agendaItems: { id: number; heading: string; description: string; completed: boolean; proceedingsText?: string; }[];
+  agendaItems: { id: number; heading: string; description: string; completed: boolean; proceedingsText?: string | Record<string,string>; }[];
   summary: string;
   nextMeetingDate: string;
   nextMeetingType: string;
@@ -412,7 +410,9 @@ function ProceedingsPreviewDocument({ t, meeting, agendaItems, summary, nextMeet
                 </td>
                 <td style={tdStyle}>
                   {item.proceedingsText
-                    ? item.proceedingsText
+                    ? (typeof item.proceedingsText === 'object'
+                        ? Object.entries(item.proceedingsText).filter(([,v]) => v.trim()).map(([k,v]) => `${k}: ${v}`).join('\n')
+                        : item.proceedingsText)
                     : item.completed && summary
                     ? (idx === 0 ? summary : t('proceedings_preview_mock_summary'))
                     : <span style={{ color: '#9e9e9e', fontStyle: 'italic' }}>{t('proceedings_preview_no_proceedings')}</span>
@@ -455,7 +455,7 @@ function ProceedingsPreviewDocument({ t, meeting, agendaItems, summary, nextMeet
         </tbody>
       </table>
 
-      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e0e0e0' }}>
+      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #c6c6c6' }}>
         {summary && (
           <div style={{ marginBottom: '14px' }}>
             <p style={{ fontSize: '11px', fontWeight: 600, color: '#5a3a2e', marginBottom: '6px', fontFamily: NS_FONT }}>
@@ -509,8 +509,6 @@ export default function SendToPresidentScreen() {
   const meetingTypeOptions = MEETING_TYPE_KEYS.map(k => t(k));
 
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const [profileOpen,  setProfileOpen]  = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   const [summary, setSummary] = useState(MOCK_SUMMARY);
@@ -528,6 +526,17 @@ export default function SendToPresidentScreen() {
   const [showModal,   setShowModal]   = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [proceedingsPage, setProceedingsPage] = useState<1 | 2>(1);
+  const [pdoSigned,   setPdoSigned]   = useState(false);
+  const [pdoSignedAt, setPdoSignedAt] = useState('');
+  const [signConfirmOpen, setSignConfirmOpen] = useState(false);
+
+  function handlePdoSign() {
+    const now = new Date();
+    const ts = now.toLocaleString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    setPdoSignedAt(ts);
+    setPdoSigned(true);
+    setSignConfirmOpen(false);
+  }
 
   function removeTask(id: number) {
     setTasks(prev => prev.filter(t => t.id !== id));
@@ -599,23 +608,44 @@ export default function SendToPresidentScreen() {
       )}
       {showSuccess && <SuccessBanner message={t('send_president_success_msg')} />}
 
+      {/* PDO Sign Confirm Modal */}
+      {signConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-[500px] shadow-2xl flex flex-col">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
+              <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>{t('sign_confirm_title')}</span>
+              <button type="button" onClick={() => setSignConfirmOpen(false)} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
+                <Icon name="close" size="small" color="#6a3e31" />
+              </button>
+            </div>
+            <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[25px] pt-[20px] pb-[25px] flex flex-col gap-[20px]">
+              <p className="text-[14px] leading-[22px] text-[#3b3b3b]" style={NS}>{t('sign_proceedings_confirm_body')}</p>
+              <div className="bg-[#f7f0ee] rounded-[10px] px-[20px] py-[15px] flex flex-col gap-[10px]">
+                <div className="flex items-center gap-[10px]">
+                  <Icon name="person" size="small" color="#6a3e31" />
+                  <span className="text-[14px] font-medium text-[#212121]" style={NS}>{t('sign_pdo_name')}</span>
+                </div>
+                <div className="flex items-center gap-[10px]">
+                  <Icon name="badge" size="small" color="#6a3e31" />
+                  <span className="text-[13px] text-[#727272]" style={NS}>{t('sign_pdo_designation')}</span>
+                </div>
+                <div className="flex items-center gap-[10px]">
+                  <Icon name="calendar_today" size="small" color="#6a3e31" />
+                  <span className="text-[13px] text-[#727272]" style={NS}>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-[12px]">
+                <Button variant="outlined" iconPlacement="none" text={t('sign_confirm_no')} onClick={() => setSignConfirmOpen(false)} />
+                <Button variant="filled" iconPlacement="left" iconName="verified" text={t('sign_confirm_yes')} onClick={handlePdoSign} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navbar */}
       <div className="shrink-0 relative z-40">
-        <Navbar
-          version="default-with-welcome"
-          onProfileClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
-          onSettingsClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
-        />
-        {profileOpen && (
-          <div className="absolute top-full right-[60px] z-50">
-            <DropdownBoxOfProfile isOpen onToggle={() => setProfileOpen(false)} menuLabel="Switch Profile" items={['PDO — Kakanur GP', 'Secretary — Hosakote GP', 'Log out']} className="w-[293px]" />
-          </div>
-        )}
-        {settingsOpen && (
-          <div className="absolute top-full right-[12px] z-50">
-            <DropdownBoxOfIcon isOpen onToggle={() => setSettingsOpen(false)} menuLabel="Settings" items={['Settings', 'Help & Support', 'Log out']} />
-          </div>
-        )}
+        <Navbar version="default-with-welcome" />
       </div>
 
       {/* Sidebar + main */}
@@ -770,6 +800,40 @@ export default function SendToPresidentScreen() {
                 </div>
               </SectionHolder>
 
+              {/* ── PDO Sign Section ───────────────────────────────────────── */}
+              <SectionHolder
+                variant="default"
+                title={t('sign_pdo_section_title')}
+                bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
+              >
+                {!pdoSigned ? (
+                  <div className="flex flex-col gap-[12px] items-start">
+                    <div className="flex flex-col gap-[2px]">
+                      <p className="font-medium text-[14px] text-[#212121]" style={NS}>{t('sign_pdo_name')}</p>
+                      <p className="text-[12px] text-[#727272]" style={NS}>{t('sign_pdo_designation')}</p>
+                    </div>
+                    <Button
+                      variant="filled"
+                      size="small"
+                      iconPlacement="left"
+                      iconName="draw"
+                      text={t('btn_sign_proceedings')}
+                      onClick={() => setSignConfirmOpen(true)}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-[12px]">
+                    <div className="bg-[#e8f5e9] rounded-full size-[36px] flex items-center justify-center shrink-0">
+                      <Icon name="check" size="small" color="#2e7d32" />
+                    </div>
+                    <div className="flex flex-col gap-[2px]">
+                      <p className="font-medium text-[14px] text-[#212121]" style={NS}>{t('sign_pdo_name')}</p>
+                      <p className="text-[12px] text-[#2e7d32]" style={NS}>{t('sign_proceedings_success_label')} · {pdoSignedAt}</p>
+                    </div>
+                  </div>
+                )}
+              </SectionHolder>
+
               {/* Action buttons */}
               <div className="flex items-center justify-center gap-[10px] mt-[20px]">
                 <Button
@@ -782,9 +846,9 @@ export default function SendToPresidentScreen() {
                 <Button
                   text={t('send_president_btn_end')}
                   variant="filled"
-                  state="default"
+                  state={pdoSigned ? 'default' : 'disabled'}
                   iconPlacement="none"
-                  onClick={() => setShowModal(true)}
+                  onClick={() => pdoSigned && setShowModal(true)}
                 />
               </div>
 

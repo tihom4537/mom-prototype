@@ -13,6 +13,8 @@ interface DropdownFieldProps {
   className?: string;
   disabled?: boolean;
   opensUp?: boolean;
+  showAll?: boolean;
+  allLabel?: string;
 }
 
 export default function DropdownField({
@@ -27,6 +29,8 @@ export default function DropdownField({
   className,
   disabled = false,
   opensUp = false,
+  showAll = false,
+  allLabel = 'All',
 }: DropdownFieldProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -69,16 +73,27 @@ export default function DropdownField({
           className={`flex items-center w-full bg-white rounded-lg border ${borderColor} ${ring} py-[10px] pl-3 pr-3 transition-all duration-150 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           <span
-            className={`flex-1 text-sm text-left truncate ${value ? 'text-[#212121]' : 'text-[#727272]'}`}
+            className={`flex-1 text-sm text-left truncate ${value || (showAll && !disabled && value === '') ? 'text-[#212121]' : 'text-[#727272]'}`}
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >
-            {value || placeholder}
+            {value || (showAll && !disabled ? allLabel : placeholder)}
           </span>
           <Icon name={open ? 'arrow_drop_up' : 'arrow_drop_down'} size="small" color="#727272" />
         </button>
 
         {open && (
           <div className={`absolute left-0 right-0 bg-white border border-[#e0e0e0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.12)] z-50 overflow-hidden ${opensUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+            {showAll && (
+              <button
+                type="button"
+                onClick={() => { onChange(''); setOpen(false); }}
+                className={`w-full text-left px-4 py-[10px] text-sm hover:bg-[#f5f5f5] transition-colors border-b border-[#f0f0f0]
+                  ${value === '' ? 'bg-[#f0ece9] text-[#6a3e31] font-medium' : 'text-[#525c66] italic'}`}
+                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+              >
+                {allLabel}
+              </button>
+            )}
             {options.map(option => (
               <button
                 key={option}
