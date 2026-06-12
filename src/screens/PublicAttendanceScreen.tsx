@@ -230,7 +230,7 @@ export default function PublicAttendanceScreen() {
                 <p className="font-medium text-[13px] text-[#6a3e31]" style={NS}>
                   {t('pub_attend_biometric_section')}
                 </p>
-                <div className="bg-[rgba(106,62,49,0.16)] border border-[rgba(176,176,176,0.6)] flex items-center justify-between px-[20px] py-[16px] rounded-[10px] h-[80px] w-[648px]">
+                <div className="bg-[#f7f0ee] border border-[rgba(176,176,176,0.6)] flex items-center justify-between px-[20px] py-[16px] rounded-[10px] h-[80px] w-[648px]">
                   <div className="flex items-center gap-[14px]">
                     <div className="bg-[#f7f0ee] flex items-center justify-center rounded-full size-[44px] shrink-0">
                       <Icon name="fingerprint" size="medium" color="rgba(106,62,49,0.7)" />
@@ -238,9 +238,6 @@ export default function PublicAttendanceScreen() {
                     <div className="flex flex-col gap-[3px]">
                       <p className="font-semibold text-[13px] text-[rgba(33,33,33,0.8)] whitespace-nowrap" style={NS}>
                         {t('pub_attend_biometric_prompt')}
-                      </p>
-                      <p className="font-normal text-[11px] text-[rgba(82,92,102,0.6)] whitespace-nowrap" style={NS}>
-                        {t('pub_attend_biometric_waiting')}
                       </p>
                     </div>
                   </div>

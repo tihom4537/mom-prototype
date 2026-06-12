@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -11,20 +11,28 @@ import {
   QuestionFieldsSmall,
   Button,
   InfoBox,
-  TextAreaContainer,
   SmallDetailsText,
+  Icon,
+  MicButton,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { FEEDBACK_API } from '../config/api';
-import { WebSocketSTTClient } from '../utils/websocketSttClient';
-import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
+import { STT_API, FEEDBACK_API } from '../config/api';
+import {
+  classifyAgenda,
+  CATEGORY_FIELDS,
+  flattenProceedings,
+  parseProceedings,
+  type StructuredProceedings,
+} from '../utils/agendaClassifier';
 
-type EntryState = 'idle' | 'recording' | 'processing';
+type FieldRecordingState = 'idle' | 'recording' | 'processing';
+
+const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
 export default function MoMEntryDefaultScreen() {
   const { lang, t } = useLanguage();
   const { saveProceedings } = useAgenda();
-  const { saveMeetingProceedings } = useMeetings();
+  const { saveMeetingProceedings, meetingAgendas } = useMeetings();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -33,296 +41,176 @@ export default function MoMEntryDefaultScreen() {
   const agenda = routeState?.agenda;
   const meetingId = routeState?.meetingId;
 
-  const [discussionText, setDiscussionText]         = useState(routeState?.discussionText ?? '');
-  const [entryState, setEntryState]                 = useState<EntryState>('idle');
-  const [sttError, setSttError]                     = useState<string | null>(null);
-  const [feedbackError, setFeedbackError]           = useState<string | null>(null);
-  const [ocrLoading, setOcrLoading]                 = useState(false);
-  const [ocrError, setOcrError]                     = useState<string | null>(null);
+  // Derive fields from agenda category
+  const category = agenda
+    ? classifyAgenda(agenda.heading, agenda.description)
+    : classifyAgenda('', '');
+  const fields = CATEGORY_FIELDS[category];
+
+  // Parse any pre-existing proceedings into structured form
+  const initialStructured = (): StructuredProceedings => {
+    const existing = routeState?.discussionText;
+    if (!existing) return Object.fromEntries(fields.map(f => [f, '']));
+    if (typeof existing === 'object') return existing as StructuredProceedings;
+    return parseProceedings(existing, fields);
+  };
+
+  const [fieldValues, setFieldValues] = useState<StructuredProceedings>(initialStructured);
+  const [activeField, setActiveField] = useState<string | null>(null);
+  const [feedbackCompleted, setFeedbackCompleted] = useState(routeState?.feedbackCompleted ?? false);
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
-  const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
-  const [actionOpen, setActionOpen]                 = useState(false);
-  const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
+  const [actionOpen, setActionOpen] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
 
-  const pcmRecorderRef   = useRef<PcmAudioRecorder | null>(null);
-  const audioCtxRef      = useRef<AudioContext | null>(null);
-  const analyserRef      = useRef<AnalyserNode | null>(null);
-  const wsClientRef      = useRef<WebSocketSTTClient | null>(null);
-  const updatedTextRef   = useRef<string>(discussionText);
-  const fileInputRef     = useRef<HTMLInputElement | null>(null);
+  // Per-field recording state
+  const [fieldRecState, setFieldRecState] = useState<Record<string, FieldRecordingState>>({});
+  const [fieldSttError, setFieldSttError] = useState<Record<string, string | null>>({});
 
-  const teardownAudio = useCallback(() => {
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    analyserRef.current = null;
+  // Per-field audio refs keyed by field name
+  const mediaRecordersRef = useRef<Record<string, MediaRecorder>>({});
+  const audioChunksRef    = useRef<Record<string, Blob[]>>({});
+  const audioCtxRef       = useRef<Record<string, AudioContext>>({});
+  const analyserRef       = useRef<Record<string, AnalyserNode>>({});
+  const [analyserNodes, setAnalyserNodes] = useState<Record<string, AnalyserNode | null>>({});
+  const [speakingField, setSpeakingField] = useState<string | null>(null);
+
+  // File input refs per field
+  const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const audioInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const hasAnyText = fields.some(f => (fieldValues[f] ?? '').trim().length > 0);
+  const isFeedbackEnabled = hasAnyText && !isFetchingFeedback &&
+    !Object.values(fieldRecState).some(s => s !== 'idle');
+
+  const updateField = (field: string, value: string) => {
+    setFieldValues(prev => ({ ...prev, [field]: value }));
+  };
+
+  const teardownFieldAudio = useCallback((field: string) => {
+    audioCtxRef.current[field]?.close();
+    delete audioCtxRef.current[field];
+    delete analyserRef.current[field];
+    setAnalyserNodes(prev => { const n = { ...prev }; delete n[field]; return n; });
   }, []);
 
-  // Keep ref in sync with state so we can access updated value during async operations
-  useEffect(() => {
-    updatedTextRef.current = discussionText;
-  }, [discussionText]);
-
-  const isRecording      = entryState === 'recording';
-  const isProcessing     = entryState === 'processing';
-  const isIdle           = entryState === 'idle';
-  const hasText          = discussionText.trim().length > 0;
-  const isFeedbackEnabled = hasText && isIdle && !isFetchingFeedback;
-  const isSaveEnabled     = hasText && feedbackCompleted;
-
-  // Cleanup WebSocket on unmount
-  useEffect(() => {
-    return () => {
-      const wsClient = wsClientRef.current;
-      if (wsClient) {
-        wsClient.close().catch(err => console.error('[MoM] Cleanup error:', err));
-        wsClientRef.current = null;
-      }
-    };
-  }, []);
-
-  // ── Start recording ────────────────────────────────────────────────────────
-  const handleMicClick = async () => {
-    console.log('[MoM] handleMicClick called, entryState:', entryState);
-    if (entryState !== 'idle') {
-      console.log('[MoM] Ignoring click - not idle');
+  const handleReadAloud = (field: string) => {
+    if (speakingField === field) {
+      window.speechSynthesis.cancel();
+      setSpeakingField(null);
       return;
     }
-    setSttError(null);
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(fieldValues[field] ?? '');
+    utterance.onend = () => setSpeakingField(null);
+    utterance.onerror = () => setSpeakingField(null);
+    window.speechSynthesis.speak(utterance);
+    setSpeakingField(field);
+  };
 
-    let stream: MediaStream;
+  const handleMicClick = async (field: string) => {
+    if ((fieldRecState[field] ?? 'idle') !== 'idle') return;
+    setFieldSttError(prev => ({ ...prev, [field]: null }));
+    setActiveField(field);
+
     if (!navigator.mediaDevices?.getUserMedia) {
-      setSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
+      setFieldSttError(prev => ({ ...prev, [field]: 'Microphone not available on this connection.' }));
       return;
     }
+    let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (err) {
-      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
-      setSttError(isNotAllowed
-        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
-        : 'Could not access the microphone. Please check your browser permissions and try again.'
-      );
+      const denied = err instanceof DOMException && err.name === 'NotAllowedError';
+      setFieldSttError(prev => ({ ...prev, [field]: denied ? 'Microphone access denied.' : 'Could not access microphone.' }));
       return;
     }
 
-    // Initialize PCM recorder for raw audio capture (WAV-compatible format)
-    const pcmRecorder = new PcmAudioRecorder();
-    pcmRecorderRef.current = pcmRecorder;
+    const audioCtx = new AudioContext();
+    audioCtxRef.current[field] = audioCtx;
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    source.connect(analyser);
+    analyserRef.current[field] = analyser;
+    setAnalyserNodes(prev => ({ ...prev, [field]: analyser }));
 
-    try {
-      await pcmRecorder.start();
-      setEntryState('recording');
-      console.log('[MoM] PCM recording started');
-    } catch (err) {
-      console.error('[MoM] PCM recorder failed:', err);
-      setSttError('Failed to initialize audio recorder. Please check microphone access.');
-      pcmRecorderRef.current = null;
-    }
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+    const mr = new MediaRecorder(stream, { mimeType });
+    mediaRecordersRef.current[field] = mr;
+    audioChunksRef.current[field] = [];
+    mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current[field]?.push(e.data); };
+    mr.start();
+    setFieldRecState(prev => ({ ...prev, [field]: 'recording' }));
   };
 
-  // ── Cancel recording ───────────────────────────────────────────────────────
-  const handleCancelRecording = async () => {
-    console.log('[MoM] handleCancelRecording called');
-    const recorder = pcmRecorderRef.current;
-    if (!recorder) return;
+  const handleMicConfirm = (field: string) => {
+    const mr = mediaRecordersRef.current[field];
+    if (!mr) return;
+    setFieldRecState(prev => ({ ...prev, [field]: 'processing' }));
+    const existingText = fieldValues[field] ?? '';
 
-    recorder.stop();
-    pcmRecorderRef.current = null;
-    teardownAudio();
-
-    // Close WebSocket if it's open
-    const wsClient = wsClientRef.current;
-    if (wsClient) {
-      try {
-        await wsClient.close();
-      } catch (err) {
-        console.error('[MoM] Error closing WebSocket:', err);
-      }
-      wsClientRef.current = null;
-    }
-
-    setEntryState('idle');
-    setSttError(null);
-  };
-
-  // ── On stop button click — immediately process the recording ────────────────
-  const handleStopRecording = async () => {
-    console.log('[MoM] Stop button clicked - transitioning to confirm recording');
-    // When user clicks stop, immediately trigger the confirmation flow
-    // This processes the recorded audio and sends it to the server
-    await handleConfirmRecording();
-  };
-
-  // ── Confirm recording — stream audio via WebSocket ──────────────────────────
-  const handleConfirmRecording = async () => {
-    console.log('[MoM] handleConfirmRecording called');
-    const recorder = pcmRecorderRef.current;
-    if (!recorder) {
-      console.error('[MoM] No recorder found!');
-      return;
-    }
-
-    setEntryState('processing');
-    setSttError(null);
-
-    let wsClient: WebSocketSTTClient | null = null;
-
-    try {
-      // Create and connect WebSocket client
-      wsClient = new WebSocketSTTClient(lang);
-      wsClientRef.current = wsClient;
-
-      await wsClient.connect();
-      console.log('[MoM] WebSocket connected');
-
-      // Stop recording and get final audio FIRST (before setting up listeners)
-      const audioData = recorder.stop();
-      pcmRecorderRef.current = null;
-      teardownAudio();
-      console.log('[MoM] Recording stopped. Audio data:', audioData.length, 'bytes');
-      console.log('[MoM] Audio type:', audioData.constructor.name);
-      if (audioData.length === 0) {
-        throw new Error('No audio data captured');
-      }
-
-      // Setup promise for waiting on transcript (MUST be created BEFORE sending)
-      let transcriptReceived = false;
-      let transcriptPromiseResolve: (() => void) | null = null;
-      const transcriptPromise = new Promise<void>(resolve => {
-        transcriptPromiseResolve = resolve;
-      });
-
-      // Register event listeners BEFORE sending audio
-      wsClient.on('transcript', (text: string) => {
-        console.log('[MoM] Transcript event fired with text:', text);
-        transcriptReceived = true;
-        if (text.trim()) {
-          const newText = updatedTextRef.current + (updatedTextRef.current.trim() ? ' ' : '') + text;
-          updatedTextRef.current = newText;
-          setDiscussionText(newText);
-          console.log('[MoM] Discussion text updated to:', newText);
-        }
-        // Resolve promise immediately
-        if (transcriptPromiseResolve) {
-          transcriptPromiseResolve();
-          transcriptPromiseResolve = null;
-        }
-      });
-
-      wsClient.on('error', (msg: string) => {
-        console.error('[MoM] WebSocket error event:', msg);
-        setSttError(`Speech recognition error: ${msg}`);
-      });
-
-      // Send audio in chunks if large, or all at once if small
-      console.log('[MoM] Sending audio data...', 'size:', audioData.length, 'type:', audioData.constructor.name);
-      try {
-        await wsClient.send(audioData);
-        console.log('[MoM] Audio sent successfully. Sending end signal...');
-      } catch (sendErr) {
-        console.error('[MoM] Failed to send audio:', sendErr);
-        throw sendErr;
-      }
-
-      // Signal end of stream
-      await wsClient.end();
-      console.log('[MoM] End signal sent. Waiting for transcript...');
-
-      // Wait for transcript response from server (with longer timeout for REST API processing)
-      const transcriptTimeout = new Promise<void>((_, reject) =>
-        setTimeout(() => {
-          console.error('[MoM] Transcript timeout - no response after 60 seconds');
-          reject(new Error('Transcript response timeout'));
-        }, 60000)
-      );
-
-      try {
-        await Promise.race([transcriptPromise, transcriptTimeout]);
-        console.log('[MoM] Transcript received successfully');
-      } catch (timeoutErr) {
-        console.error('[MoM] Promise race failed:', timeoutErr);
-        if (!transcriptReceived) {
-          console.warn('[MoM] Warning: Transcript event never fired');
-        }
-        throw timeoutErr;
-      }
-
-      // Now safe to close the connection
-      console.log('[MoM] Closing WebSocket...');
-      if (wsClient) {
-        await wsClient.close();
-        console.log('[MoM] WebSocket closed');
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[MoM] Error in handleConfirmRecording:', msg);
-      setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-      setEntryState('idle');
-
-      // Attempt to close the connection if still open
-      if (wsClient) {
+    mr.onstop = async () => {
+      mr.stream.getTracks().forEach(t => t.stop());
+      delete mediaRecordersRef.current[field];
+      teardownFieldAudio(field);
+      const chunks = audioChunksRef.current[field] ?? [];
+      audioChunksRef.current[field] = [];
+      const mimeType = chunks[0]?.type ?? 'audio/webm';
+      const blob = new Blob(chunks, { type: mimeType });
+      const reader = new FileReader();
+      reader.onloadend = async () => {
         try {
-          await wsClient.close();
-        } catch (closeErr) {
-          console.error('[MoM] Error closing WebSocket:', closeErr);
+          const res = await fetch(STT_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audioDataUri: reader.result as string, locale: lang }),
+          });
+          if (!res.ok) throw new Error(`STT API ${res.status}`);
+          const data: { transcription: string } = await res.json();
+          const sep = existingText.trim() ? ' ' : '';
+          updateField(field, existingText + sep + data.transcription);
+          setFieldRecState(prev => ({ ...prev, [field]: 'idle' }));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          setFieldSttError(prev => ({ ...prev, [field]: `Speech recognition failed — ${msg}` }));
+          setFieldRecState(prev => ({ ...prev, [field]: 'idle' }));
         }
-      }
-
-      // Stop the recorder if it's still going
-      const recorder = pcmRecorderRef.current;
-      if (recorder) {
-        recorder.stop();
-        pcmRecorderRef.current = null;
-        teardownAudio();
-      }
-
-      return;
-    }
-
-    wsClientRef.current = null;
-
-    // Navigate to post-recording screen with the updated text (from ref to ensure it includes transcript)
-    navigate('/mom-entry/post-recording', {
-      state: { agenda, discussionText: updatedTextRef.current, meetingId },
-    });
+      };
+      reader.readAsDataURL(blob);
+    };
+    mr.stop();
   };
 
   // ── Get Feedback ──────────────────────────────────────────────────────────
   const handleGetFeedback = async () => {
     if (!isFeedbackEnabled) return;
     setFeedbackError(null);
-    setSttError(null);
     setFeedbackCompleted(true);
     setIsFetchingFeedback(true);
 
-    // MOCK INTERCEPT — remove this block when API is live
+    const flatText = flattenProceedings(fieldValues);
+
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
-    if (discussionText.trim() === MOCK_TEXT) {
+    if (flatText.trim() === MOCK_TEXT || Object.values(fieldValues).join(' ').includes('Swachh Saturday')) {
       const feedbackResult: FeedbackResult = {
-        category: 'Public Health & Sanitation',
-        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
+        category: 'Information / Intimation',
+        category_reason: 'The agenda shares updates on sanitation, observances, and health.',
         feedback: [
-          'The following information was given about Swachh Saturday —',
-          'The following information was given about Village Sanitation —',
-          'The following information was given about Onagalu Day —',
-          'The following information was given about COVID JN.1 —',
-          'The following information was given about precautionary measures —',
-          'The meeting discussed the following key topics:',
+          'Specify the exact number of beneficiaries identified under PM Awas Yojana — provide [count] and [ward name].',
+          'Mention the name of the KUWSDB official contacted regarding water supply disruptions in [ward number].',
+          'Include the resolution number and date for the decision on caste and income certificate delays.',
         ],
-        spans: [
-          'Swachh Saturday village cleanliness activities',
-          null,
-          'Onagalu Day observance',
-          'COVID-19 JN.1 precautionary measures',
-          null,
-          'Information was provided regarding',
-        ],
+        spans: [null, null, null],
+        modes: ['APPEND', 'APPEND', 'APPEND'],
+        flag_message: null,
       };
       setIsFetchingFeedback(false);
-      navigate('/mom-entry/feedback', { state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId } });
+      navigate('/mom-entry/feedback', {
+        state: { agenda, discussionText: flatText, structuredProceedings: fieldValues, feedbackResult, feedbackCompleted: true, meetingId },
+      });
       return;
     }
-    // END MOCK INTERCEPT
 
     try {
       const res = await fetch(FEEDBACK_API, {
@@ -331,19 +219,17 @@ export default function MoMEntryDefaultScreen() {
         body: JSON.stringify({
           agenda_id:         agenda ? String(agenda.id) : '1',
           agenda_subject:    agenda?.heading || 'General Discussion',
-          mom_discussion:    discussionText,
-          feedback_language: /[\u0C80-\u0CFF]/.test(discussionText) ? 'kn' : 'en',
+          mom_discussion:    flatText,
+          feedback_language: /[ಀ-೿]/.test(flatText) ? 'kn' : 'en',
         }),
       });
-
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
         throw new Error(`Feedback API returned ${res.status}${detail ? `: ${detail}` : ''}`);
       }
-
       const feedbackResult: FeedbackResult = await res.json();
       navigate('/mom-entry/feedback', {
-        state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId },
+        state: { agenda, discussionText: flatText, structuredProceedings: fieldValues, feedbackResult, feedbackCompleted: true, meetingId },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -353,112 +239,23 @@ export default function MoMEntryDefaultScreen() {
     }
   };
 
-  // ── OCR: Scan Photo ───────────────────────────────────────────────────────
-  const handleScanPhotoClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handlePhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setOcrError(null);
-    setOcrLoading(true);
-
-    try {
-      // Validate file type
-      if (!['image/jpeg', 'image/png'].includes(file.type)) {
-        setOcrError('Please select a JPG or PNG image.');
-        setOcrLoading(false);
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        setOcrError('Image is too large. Maximum size is 5MB.');
-        setOcrLoading(false);
-        return;
-      }
-
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const base64String = (e.target?.result as string).split(',')[1];
-
-          console.log('[MoM] Sending image to OCR endpoint...');
-          const response = await fetch('/ocr', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              image: base64String,
-              format: file.type,
-            }),
-          });
-
-          if (!response.ok) {
-            const error = await response.text().catch(() => '');
-            throw new Error(`OCR API returned ${response.status}${error ? `: ${error}` : ''}`);
-          }
-
-          const result = await response.json();
-
-          if (result.error) {
-            setOcrError(result.error);
-            setOcrLoading(false);
-            return;
-          }
-
-          if (result.extracted_text.trim()) {
-            const newText = discussionText + (discussionText.trim() ? ' ' : '') + result.extracted_text;
-            setDiscussionText(newText);
-            updatedTextRef.current = newText;
-            console.log('[MoM] OCR text added:', result.extracted_text);
-          } else {
-            setOcrError('No text found in the image. Please try a clearer image.');
-          }
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          console.error('[MoM] OCR error:', msg);
-          setOcrError(`Failed to extract text — ${msg}`);
-        } finally {
-          setOcrLoading(false);
-          // Reset file input
-          if (fileInputRef.current) {
-            fileInputRef.current.value = '';
-          }
-        }
-      };
-
-      reader.onerror = () => {
-        setOcrError('Failed to read the image file.');
-        setOcrLoading(false);
-      };
-
-      reader.readAsDataURL(file);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setOcrError(`Failed to process image — ${msg}`);
-      setOcrLoading(false);
-    }
-  };
-
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = () => {
     if (agenda) {
-      if (meetingId != null) {
-        saveMeetingProceedings(meetingId, agenda.id, discussionText);
+      const hasUserAgendas = meetingId != null && (meetingAgendas[meetingId]?.length ?? 0) > 0;
+      if (hasUserAgendas) {
+        saveMeetingProceedings(meetingId!, agenda.id, fieldValues);
       } else {
-        saveProceedings(agenda.id, discussionText);
+        saveProceedings(agenda.id, fieldValues);
       }
     }
     navigate('/agenda-list', { state: { meetingId } });
   };
 
+  const isSaveEnabled = hasAnyText && feedbackCompleted;
+
   return (
     <MeetingShellLayout stepperActiveState={2} showBack={false}>
-
       <div className="flex flex-col gap-[3px]">
 
         {/* Header bar */}
@@ -476,7 +273,6 @@ export default function MoMEntryDefaultScreen() {
 
             <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
-            {/* Agenda card */}
             <AgendaCard
               stage="subpage"
               agendaNumber={agenda ? String(agenda.id) : '1'}
@@ -512,7 +308,7 @@ export default function MoMEntryDefaultScreen() {
                           className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
                           onClick={() => { setSelectedAction(key); setActionOpen(false); }}
                         >
-                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
+                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={NS}>
                             {t(key)}
                           </span>
                         </button>
@@ -523,54 +319,144 @@ export default function MoMEntryDefaultScreen() {
               </div>
             </div>
 
-            {/* Discussion field */}
+            {/* Structured field rows */}
             <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
                 type="mandatory"
                 questionText={t('discussion_field_label')}
                 className="shrink-0"
               />
-
-              {sttError ? (
-                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
-                  We were unable to record your voice at the moment. Please try again in sometime.
-                </p>
-              ) : (
-                <InfoBox
-                  type="plain"
-                  text={t('discussion_field_info')}
-                  className="shrink-0 w-full"
-                />
-              )}
-
-              <TextAreaContainer
-                state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
-                placeholder={t('discussion_field_placeholder')}
-                value={discussionText}
-                onChange={setDiscussionText}
-                onMicClick={handleMicClick}
-                onStopClick={handleStopRecording}
-                onScanPhoto={handleScanPhotoClick}
-                scanPhotoLabel={t('btn_scan_photo')}
-                uploadAudioLabel={t('btn_upload_audio')}
-                analyserNode={analyserRef.current ?? undefined}
-                isProcessing={isProcessing || ocrLoading}
-                highlighted
-                className="w-full"
-                style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
-              />
+              <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
 
               {feedbackError && (
-                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={{ fontFamily: 'Noto Sans' }}>
+                <p className="text-[12px] text-[#b7131a] shrink-0 w-full" style={NS}>
                   {feedbackError}
                 </p>
               )}
+
+              <div className="w-full flex flex-col rounded-[12px] border border-[rgba(106,62,49,0.24)] overflow-hidden">
+                {fields.map((field, idx) => {
+                  const isActive = activeField === field;
+                  const recState = fieldRecState[field] ?? 'idle';
+                  const isRecording = recState === 'recording';
+                  const isProcessing = recState === 'processing';
+                  const err = fieldSttError[field];
+
+                  return (
+                    <div
+                      key={field}
+                      className={`flex min-h-[80px] transition-colors ${idx < fields.length - 1 ? 'border-b border-[rgba(106,62,49,0.18)]' : ''} bg-white`}
+                      onClick={() => setActiveField(field)}
+                    >
+                      {/* Left label column */}
+                      <div className={`w-[180px] shrink-0 flex items-start px-[16px] py-[14px] border-r transition-colors ${isActive ? 'border-[#6a3e31] bg-[#faf7f6]' : 'border-[rgba(106,62,49,0.18)] bg-[#faf7f6]'}`}>
+                        <span className="text-[14px] font-semibold leading-[20px] text-[#6a3e31]" style={NS}>
+                          {field}
+                        </span>
+                      </div>
+
+                      {/* Right entry column */}
+                      <div className={`flex-1 flex flex-col min-w-0 transition-colors ${isActive ? 'border-l-2 border-[#6a3e31]' : ''}`}>
+                        {isProcessing ? (
+                          <div className="flex items-center gap-[8px] px-[14px] py-[14px] flex-1">
+                            <svg className="animate-spin shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                              <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
+                              <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                            <span className="text-[12px] text-[#6a3e31] font-medium" style={NS}>Transcribing…</span>
+                          </div>
+                        ) : (
+                          <textarea
+                            value={fieldValues[field] ?? ''}
+                            onChange={e => updateField(field, e.target.value)}
+                            onFocus={() => setActiveField(field)}
+                            placeholder={`Enter ${field.toLowerCase()}…`}
+                            rows={2}
+                            className="flex-1 w-full resize-none bg-transparent border-none outline-none px-[14px] py-[14px] text-[13px] text-[#212121] leading-[20px] placeholder:text-[#bdbdbd]"
+                            style={NS}
+                          />
+                        )}
+
+                        {/* Per-field STT error */}
+                        {err && (
+                          <p className="text-[11px] text-[#b7131a] px-[14px] pb-[6px]" style={NS}>{err}</p>
+                        )}
+
+                        {/* Active row toolbar */}
+                        {isActive && !isProcessing && (
+                          <div className="flex items-center justify-between px-[10px] pb-[10px]">
+                            {/* Hidden file inputs */}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              ref={el => { photoInputRefs.current[field] = el; }}
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) updateField(field, (fieldValues[field] ?? '') + ` [Photo: ${file.name}]`);
+                              }}
+                            />
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              className="hidden"
+                              ref={el => { audioInputRefs.current[field] = el; }}
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) updateField(field, (fieldValues[field] ?? '') + ` [Audio: ${file.name}]`);
+                              }}
+                            />
+
+                            {/* Left: scan + upload buttons */}
+                            <div className="flex items-center gap-[8px]">
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); photoInputRefs.current[field]?.click(); }}
+                                className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <Icon name="photo_camera" size="small" color="#6a3e31" />
+                                <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_scan_photo')}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); audioInputRefs.current[field]?.click(); }}
+                                className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+                              >
+                                <Icon name="upload_file" size="small" color="#6a3e31" />
+                                <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_upload_audio')}</span>
+                              </button>
+                            </div>
+
+                            {/* Right: read-aloud + mic */}
+                            <div className="flex items-center gap-[8px]">
+                              {(fieldValues[field] ?? '').trim().length > 0 && !isRecording && (
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); handleReadAloud(field); }}
+                                  className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-[#f0ebe9] transition-colors border-none bg-transparent cursor-pointer"
+                                >
+                                  <Icon name={speakingField === field ? 'stop_circle' : 'volume_up'} size="medium" color="#6a3e31" />
+                                </button>
+                              )}
+                              <MicButton
+                                isRecording={isRecording}
+                                onClick={() => isRecording ? handleMicConfirm(field) : handleMicClick(field)}
+                                analyserNode={analyserNodes[field] ?? undefined}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Footer buttons */}
             <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
               {isFetchingFeedback && (
-                <span className="text-sm text-[#727272] mr-2" style={{ fontFamily: 'Noto Sans' }}>
+                <span className="text-sm text-[#727272] mr-2" style={NS}>
                   {t('feedback_fetching')}
                 </span>
               )}
@@ -591,7 +477,7 @@ export default function MoMEntryDefaultScreen() {
             </div>
           </div>
 
-          {/* ── Right: feedback card ── */}
+          {/* ── Right: feedback placeholder ── */}
           <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch overflow-y-auto">
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
             <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
@@ -599,16 +485,6 @@ export default function MoMEntryDefaultScreen() {
 
         </div>
       </div>
-
-      {/* Hidden file input for OCR */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png"
-        onChange={handlePhotoSelected}
-        style={{ display: 'none' }}
-      />
-
     </MeetingShellLayout>
   );
 }
