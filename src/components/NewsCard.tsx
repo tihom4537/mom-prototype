@@ -18,11 +18,11 @@ function StatusTag({ label }: { label: string }) {
 
 function DateRange({ startDate, endDate }: { startDate: string; endDate: string }) {
   return (
-    <div className="bg-[#f7f0ee] flex gap-[6px] items-center overflow-clip px-[10px] py-[6px] rounded-[6px] shrink-0 whitespace-nowrap leading-normal">
-      <span className="font-normal text-[11px] text-[rgba(75,75,75,0.7)]" style={NS}>Start:</span>
+    <div className="bg-[#fdf0e8] flex gap-[6px] items-center overflow-clip px-[10px] py-[6px] rounded-[6px] shrink-0 whitespace-nowrap leading-normal">
+      <span className="font-normal text-[11px] text-[#5E5E5E]" style={NS}>Start:</span>
       <span className="font-medium text-[12px] text-[#212121]" style={NS}>{startDate}</span>
       <span className="font-bold text-[11px] text-[#ff7468]" style={NS}>→</span>
-      <span className="font-normal text-[11px] text-[rgba(75,75,75,0.7)]" style={NS}>End:</span>
+      <span className="font-normal text-[11px] text-[#5E5E5E]" style={NS}>End:</span>
       <span className="font-medium text-[12px] text-[#212121]" style={NS}>{endDate}</span>
     </div>
   );
@@ -39,7 +39,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 
 function DatePill({ date }: { date: string }) {
   return (
-    <div className="bg-[rgba(106,62,49,0.16)] flex gap-[4px] items-center overflow-clip px-[5px] py-[2px] rounded-[8px] shrink-0 whitespace-nowrap">
+    <div className="bg-[#fae1d1] flex gap-[4px] items-center overflow-clip px-[5px] py-[2px] rounded-[8px] shrink-0 whitespace-nowrap">
       <span className="font-normal text-[11px] text-[rgba(75,75,75,0.7)]" style={NS}>Date:</span>
       <span className="font-medium text-[12px] text-[#212121]" style={NS}>{date}</span>
     </div>

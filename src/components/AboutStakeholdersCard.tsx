@@ -38,7 +38,7 @@ export default function AboutStakeholdersCard({
       onClick={onCta}
     >
       <div className="flex gap-[10px] items-center overflow-clip shrink-0">
-        <div className="bg-[#f7f0ee] flex items-center justify-center overflow-clip p-[8px] rounded-[8px] shrink-0 size-[36px]">
+        <div className="bg-[#fae1d1] flex items-center justify-center overflow-clip p-[8px] rounded-[8px] shrink-0 size-[36px]">
           <Icon name={icon} size="medium" color="#6a3e31" />
         </div>
         <span className="font-semibold text-[20px] leading-[24px] text-[#212121] whitespace-nowrap" style={NS}>

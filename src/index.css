@@ -29,9 +29,27 @@
   --primary-200: #dfc2b9;
   --primary-source: #6a3e31;
   --secondary-50: #ffe8e5;
+  --secondary-100: #FFD0CC;
+  --secondary-200: #FFA199;
   --secondary-300: #ff7266;
+  --secondary-400: #FF4333;
+  --secondary-500: #FF1400;
   --secondary-source: #ff7468;
   --secondary-600: #cc1000;
+  --secondary-700: #990C00;
+  --secondary-800: #660800;
+  --secondary-900: #330400;
+  --accent-50: #fdf0e8;
+  --accent-100: #fae1d1;
+  --accent-200: #f6c4a2;
+  --accent-300: #f1a674;
+  --accent-400: #ed8845;
+  --accent-source: #ED8243;
+  --accent-500: #e86b17;
+  --accent-600: #ba5512;
+  --accent-700: #8b400e;
+  --accent-800: #5d2b09;
+  --accent-900: #2e1505;
   /* ── Danger (red) ── */
   --danger-50:  #FFEEEA;
   --danger-100: #FFCDC0;
@@ -89,6 +107,13 @@
   --stroke-300: #b0b0b0;
   --font-family-headings: 'Noto Sans', sans-serif;
   --font-family-body: 'Noto Sans', sans-serif;
+  /* ── Accent opacity scale ── */
+  --accent-8: rgba(237,130,67,0.08);
+  --accent-16: rgba(237,130,67,0.16);
+  --accent-24: rgba(237,130,67,0.24);
+  --accent-32: rgba(237,130,67,0.32);
+  --accent-40: rgba(237,130,67,0.40);
+  --accent-48: rgba(237,130,67,0.48);
 
   /* ── Figma slash-notation aliases (used in generated Figma code) ── */
   --primary\/50: #f7f0ee;

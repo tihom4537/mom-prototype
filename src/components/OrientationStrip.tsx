@@ -51,11 +51,11 @@ export default function OrientationStrip({
 
       {/* Dot grids */}
       {(['top-left', 'bottom-right'] as const).map(pos => (
-        <div key={pos} className={`absolute ${pos === 'top-left' ? 'left-0 top-[40px]' : 'right-0 bottom-[40px]'} pointer-events-none select-none`} style={{ opacity: 0.10 }} aria-hidden>
+        <div key={pos} className={`absolute ${pos === 'top-left' ? 'left-0 top-[40px]' : 'right-0 bottom-[40px]'} pointer-events-none select-none`} aria-hidden>
           {Array.from({ length: 5 }).map((_, row) => (
             <div key={row} className="flex gap-[26px] mb-[26px]">
               {Array.from({ length: 5 }).map((_, col) => (
-                <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(106,62,49,1)]" />
+                <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(237,130,67,0.32)]" />
               ))}
             </div>
           ))}

@@ -160,7 +160,7 @@ const MAP_TALUK_DATA: Record<string, number> = Object.fromEntries(
   })
 );
 
-function DotGrid({ position, opacity = 0.10, color = 'rgba(106,62,49,1)' }: { position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; opacity?: number; color?: string }) {
+function DotGrid({ position, opacity = 0.10, color = 'rgba(237,130,67,0.32)' }: { position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'; opacity?: number; color?: string }) {
   const posClass = {
     'top-left':     'left-0 top-[40px]',
     'top-right':    'right-0 top-[40px]',
@@ -168,7 +168,7 @@ function DotGrid({ position, opacity = 0.10, color = 'rgba(106,62,49,1)' }: { po
     'bottom-right': 'right-0 bottom-[40px]',
   }[position];
   return (
-    <div className={`absolute ${posClass} pointer-events-none select-none`} style={{ opacity }} aria-hidden>
+    <div className={`absolute ${posClass} pointer-events-none select-none`} aria-hidden>
       {Array.from({ length: 5 }).map((_, row) => (
         <div key={row} className="flex gap-[26px] mb-[26px]">
           {Array.from({ length: 5 }).map((_, col) => (
@@ -265,13 +265,13 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
 
       {/* ── Hero Section ─────────────────────────────────────────────────── */}
       {heroVariant === 'centered' ? (
-        <section className="bg-[rgba(106,62,49,0.08)] relative flex flex-col gap-[45px] items-center justify-center overflow-hidden pb-[80px] pt-[80px] px-[200px] rounded-bl-[100px] rounded-br-[100px] w-full">
+        <section className="bg-[rgba(106,62,49,0.08)] relative flex flex-col gap-[45px] items-center justify-center overflow-hidden pb-[80px] pt-[65px] px-[200px] rounded-bl-[100px] rounded-br-[100px] w-full">
           {/* Dot grid — left */}
           <div className="absolute left-0 top-[93px] pointer-events-none select-none" aria-hidden>
             {Array.from({ length: 5 }).map((_, row) => (
               <div key={row} className="flex gap-[26px] mb-[26px]">
                 {Array.from({ length: 5 }).map((_, col) => (
-                  <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(106,62,49,0.18)]" />
+                  <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(237,130,67,0.32)]" />
                 ))}
               </div>
             ))}
@@ -281,7 +281,7 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
             {Array.from({ length: 5 }).map((_, row) => (
               <div key={row} className="flex gap-[26px] mb-[26px]">
                 {Array.from({ length: 5 }).map((_, col) => (
-                  <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(106,62,49,0.18)]" />
+                  <div key={col} className="w-[14px] h-[14px] rounded-full bg-[rgba(237,130,67,0.32)]" />
                 ))}
               </div>
             ))}
@@ -413,8 +413,8 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
 
       {/* ── GP Lookup + Metrics Section ──────────────────────────────────── */}
       <section className={`relative overflow-hidden bg-[#6a3e31] flex flex-col gap-[55px] items-center pb-[80px] pt-[70px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>
-        <DotGrid position="top-right" opacity={0.18} color="#f7f0ee" />
-        <DotGrid position="bottom-left" opacity={0.18} color="#f7f0ee" />
+        <DotGrid position="top-right" opacity={0.18} color="rgba(237,130,67,0.32)" />
+        <DotGrid position="bottom-left" opacity={0.18} color="rgba(237,130,67,0.32)" />
         <Reveal className="flex flex-col items-center gap-[12px] w-full">
           <EyebrowPill text={t('homepage_eyebrow_gp_lookup')} />
           <PageSectionHeading

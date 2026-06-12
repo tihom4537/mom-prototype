@@ -10,6 +10,7 @@ interface LiveCounterStripProps {
   liveText?: string;
   liveSubtext?: string;
   stats?: StatItem[];
+  valueColor?: string;
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export default function LiveCounterStrip({
   liveText = 'Live data',
   liveSubtext = 'Updated in real time from 5,963 Gram Panchayats across Karnataka',
   stats = DEFAULT_STATS,
+  valueColor,
   className,
 }: LiveCounterStripProps) {
   return (
@@ -51,19 +53,19 @@ export default function LiveCounterStrip({
         {stats.map((stat, i) => (
           <>
             {i > 0 && (
-              <div key={`div-${i}`} className="bg-[#6a3e31] h-[44px] shrink-0 w-px" />
+              <div key={`div-${i}`} className="bg-[#ED8243] h-[44px] shrink-0 w-px" />
             )}
             <div
               key={`stat-${i}`}
               className={`flex flex-col gap-[2px] items-start leading-normal overflow-clip whitespace-nowrap text-[#6a3e31] ${i === 0 ? 'pr-[28px]' : i === stats.length - 1 ? 'pl-[28px]' : 'px-[28px]'} shrink-0`}
             >
-              <p className="font-bold text-[30px] tracking-[-0.5px]" style={NS}>{stat.value}</p>
+              <p className="font-bold text-[30px] tracking-[-0.5px] text-[#6a3e31]" style={NS}>{stat.value}</p>
               <div className="flex gap-[4px] items-center overflow-clip">
-                <span className="font-medium text-[12px]" style={NS}>{stat.label}</span>
+                <span className="font-medium text-[12px] text-[#ED8243]" style={NS}>{stat.label}</span>
                 {stat.suffix && (
                   <>
-                    <span className="font-normal text-[11px]" style={NS}> · </span>
-                    <span className="font-normal text-[12px]" style={NS}>{stat.suffix}</span>
+                    <span className="font-normal text-[11px] text-[#ED8243]" style={NS}> · </span>
+                    <span className="font-normal text-[12px] text-[#ED8243]" style={NS}>{stat.suffix}</span>
                   </>
                 )}
               </div>

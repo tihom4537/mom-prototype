@@ -38,7 +38,7 @@ export default function DashboardMetricCard({
     >
       {/* Top row: icon box + trend badge */}
       <div className="flex items-center justify-between overflow-hidden shrink-0 w-full">
-        <div className="bg-[#f7f0ee] flex items-center justify-center overflow-hidden p-[10px] rounded-[10px] shrink-0 size-[40px]">
+        <div className="bg-[#fae1d1] flex items-center justify-center overflow-hidden p-[10px] rounded-[10px] shrink-0 size-[40px]">
           <Icon name={icon} size="medium" color="#6a3e31" />
         </div>
 

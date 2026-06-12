@@ -356,7 +356,7 @@ export default function KarnatakaLeafletMap({
     layer.on({
       mouseover: (e: LeafletMouseEvent) => {
         if (gpDataRef.current[name] === -1) return;
-        target.setStyle({ fillColor: '#F3F3F3', fillOpacity: 0.85, color: '#6a3e31', weight: 2.5 });
+        target.setStyle({ fillColor: '#ED8243', fillOpacity: 0.85, color: '#6a3e31', weight: 2.5 });
         const gpCount    = gpDataRef.current[name] ?? 0;
         const talukCount = talukDataRef.current[name] ?? 0;
         if (tooltipElRef.current) {
