@@ -314,7 +314,7 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
           {/* Variant toggle */}
         </section>
       ) : (
-        <section className="bg-[rgba(106,62,49,0.08)] relative flex gap-[60px] items-start justify-center pt-[75px] pb-[75px] pl-[200px] pr-[200px] rounded-bl-[100px] rounded-br-[100px] w-full overflow-hidden">
+        <section className="bg-[rgba(106,62,49,0.08)] relative flex gap-[60px] items-start justify-center pt-[70px] pb-[70px] pl-[200px] pr-[200px] rounded-bl-[100px] rounded-br-[100px] w-full overflow-hidden">
           {/* Left col */}
           <div className="flex flex-col gap-[45px] items-start flex-1 min-w-0">
             <Reveal threshold={0} className="flex flex-col gap-[20px] items-start w-full">
@@ -357,9 +357,7 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
       <LiveCounterStrip />
 
       {/* ── Orientation Strip ────────────────────────────────────────────── */}
-      <Reveal className="w-full">
-        <OrientationStrip cards={orientationCards} />
-      </Reveal>
+      <OrientationStrip cards={orientationCards} />
 
       {/* ── All Modules Section ──────────────────────────────────────────── */}
       <section ref={modulesRef} className={`relative overflow-hidden flex flex-col gap-[45px] items-center justify-center pb-[80px] pt-[80px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>

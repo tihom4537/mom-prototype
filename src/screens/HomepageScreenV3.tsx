@@ -275,9 +275,7 @@ export default function HomepageScreenV3() {
       <LiveCounterStrip />
 
       {/* ── Orientation Strip ────────────────────────────────────────────── */}
-      <Reveal className="w-full">
-        <OrientationStrip cards={orientationCards} />
-      </Reveal>
+      <OrientationStrip cards={orientationCards} />
 
       {/* ── All Modules Section ──────────────────────────────────────────── */}
       <section ref={modulesRef} className="relative overflow-hidden flex flex-col gap-[60px] items-center justify-center pb-[80px] pt-[80px] px-[100px] w-full">

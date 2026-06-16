@@ -1,6 +1,7 @@
 import EyebrowPill from './EyebrowPill';
 import AboutStakeholdersCard from './AboutStakeholdersCard';
 import type { AboutStakeholdersCardProps } from './AboutStakeholdersCard';
+import Reveal from './Reveal';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -62,37 +63,39 @@ export default function OrientationStrip({
         </div>
       ))}
 
-      {/* Left col */}
-      <div className="flex flex-col items-start overflow-clip shrink-0 w-[500px]">
-        <EyebrowPill text="About The Platform" />
-        <div className="h-[12px] shrink-0 w-full" />
-        <h2 className="font-semibold text-[32px] leading-[40px] text-[#6a3e31] w-full" style={NS}>
-          {heading}
-        </h2>
-        <div className="h-[16px] shrink-0 w-full" />
-        <p className="font-medium text-[14px] leading-[20px] text-[#525c66] tracking-[0.1px] w-full" style={NS}>
-          {body}
-        </p>
-        <div className="h-[24px] shrink-0 w-full" />
-      </div>
-
-      {/* Vertical divider */}
-      <div className="flex flex-row items-center self-stretch shrink-0 w-[80px] justify-center">
-        <div className="bg-[rgba(106,62,49,0.15)] h-[240px] shrink-0 w-px" />
-      </div>
-
-      {/* Right col */}
-      <div className="flex flex-col items-start shrink-0 w-[700px]">
-        <p className="font-semibold text-[24px] leading-[28px] text-[#6a3e31] whitespace-nowrap" style={NS}>
-          {personasHeading}
-        </p>
-        <div className="h-[20px] shrink-0 w-full" />
-        <div className="flex flex-col gap-[15px] w-full">
-          {cards.map((card, i) => (
-            <AboutStakeholdersCard key={i} {...card} />
-          ))}
+      <Reveal className="flex items-center justify-center w-full">
+        {/* Left col */}
+        <div className="flex flex-col items-start overflow-clip shrink-0 w-[500px]">
+          <EyebrowPill text="About The Platform" />
+          <div className="h-[12px] shrink-0 w-full" />
+          <h2 className="font-semibold text-[32px] leading-[40px] text-[#6a3e31] w-full" style={NS}>
+            {heading}
+          </h2>
+          <div className="h-[16px] shrink-0 w-full" />
+          <p className="font-medium text-[14px] leading-[20px] text-[#525c66] tracking-[0.1px] w-full" style={NS}>
+            {body}
+          </p>
+          <div className="h-[24px] shrink-0 w-full" />
         </div>
-      </div>
+
+        {/* Vertical divider */}
+        <div className="flex flex-row items-center self-stretch shrink-0 w-[80px] justify-center">
+          <div className="bg-[rgba(106,62,49,0.15)] h-[240px] shrink-0 w-px" />
+        </div>
+
+        {/* Right col */}
+        <div className="flex flex-col items-start shrink-0 w-[700px]">
+          <p className="font-semibold text-[24px] leading-[28px] text-[#6a3e31] whitespace-nowrap" style={NS}>
+            {personasHeading}
+          </p>
+          <div className="h-[20px] shrink-0 w-full" />
+          <div className="flex flex-col gap-[15px] w-full">
+            {cards.map((card, i) => (
+              <AboutStakeholdersCard key={i} {...card} />
+            ))}
+          </div>
+        </div>
+      </Reveal>
 
     </div>
   );
