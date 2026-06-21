@@ -1,3 +1,4 @@
+import AccessibilityFab from '../components/AccessibilityFab';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -12,6 +13,7 @@ import {
   Button,
   Icon,
   EyebrowPill,
+  ScaleToFit,
 } from '../components';
 import DatePicker from '../components/DatePicker';
 import TimePicker from '../components/TimePicker';
@@ -46,6 +48,7 @@ export default function PublicAttendanceScreen() {
   const [time, setTime]         = useState('');
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col w-full min-h-screen bg-white">
 
       <AccessibilityBar />
@@ -62,7 +65,7 @@ export default function PublicAttendanceScreen() {
         onLoginClick={() => {}}
       />
 
-      <main className="flex flex-col gap-[40px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+      <main id="main-content" tabIndex={-1} className="flex flex-col gap-[40px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">
@@ -259,7 +262,8 @@ export default function PublicAttendanceScreen() {
 
       <AppDownloadCTA />
       <Footer />
-
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

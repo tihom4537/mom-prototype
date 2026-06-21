@@ -3,7 +3,9 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveBar } from '@nivo/bar';
 import AccessibilityBar from '../components/AccessibilityBar';
+import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
+import ScaleToFit from '../components/ScaleToFit';
 import SectionTopper from '../components/SectionTopper';
 import DropdownField from '../components/DropdownField';
 import SectionHeading from '../components/SectionHeading';
@@ -416,6 +418,7 @@ export default function RevenueScreen() {
   ];
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col min-h-screen w-full bg-white">
       <AccessibilityBar />
       <Navbar version="home-page-identity" />
@@ -439,7 +442,7 @@ export default function RevenueScreen() {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col gap-[24px] px-[200px] pt-[40px] pb-[50px] w-full">
+      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[24px] px-[200px] pt-[40px] pb-[50px] w-full">
 
         {/* Filter row 1: Zilla / Taluk / GP */}
         <div className="flex gap-[20px] items-end w-full">
@@ -596,7 +599,7 @@ export default function RevenueScreen() {
                   </div>
                 </div>
                 <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                  <div style={{ width: Math.max(900, chartData.length * 48), height: 420, overflow: 'visible' }}>
+                  <div role="img" aria-label="Stacked bar chart showing revenue collected and outstanding by district" style={{ width: Math.max(900, chartData.length * 48), height: 420, overflow: 'visible' }}>
                     <ResponsiveBar
                       data={chartData}
                       keys={['Collected', 'Outstanding']}
@@ -748,6 +751,8 @@ export default function RevenueScreen() {
 
       <AppDownloadCTA variant="cta-option-2" />
       <Footer variant="dark" />
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

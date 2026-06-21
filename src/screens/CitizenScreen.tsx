@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import AccessibilityBar from '../components/AccessibilityBar';
+import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
+import ScaleToFit from '../components/ScaleToFit';
 import SectionTopper from '../components/SectionTopper';
 import Card from '../components/Card';
 import AppDownloadCTA from '../components/AppDownloadCTA';
@@ -39,6 +41,7 @@ export default function CitizenScreen() {
   const canNext = moduleSlide + 3 < ALL_MODULES.length;
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col min-h-screen w-full bg-white">
       <AccessibilityBar />
       <Navbar version="home-page-identity" />
@@ -60,7 +63,7 @@ export default function CitizenScreen() {
       </div>
 
       {/* Sub-modules grid */}
-      <div className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
+      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
         <div className="grid grid-cols-3 gap-[24px] w-full">
           {SUB_MODULES.map(sub => (
             <div key={sub.key} className="flex-1 min-w-0">
@@ -121,7 +124,8 @@ export default function CitizenScreen() {
       </div>
 
       <AppDownloadCTA variant="cta-option-2" />
-      <Footer variant="dark" />
+      <Footer variant="dark" />      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

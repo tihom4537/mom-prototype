@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import AccessibilityBar from '../components/AccessibilityBar';
+import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
+import ScaleToFit from '../components/ScaleToFit';
 import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import Breadcrumb from '../components/Breadcrumb';
 import SectionTopper from '../components/SectionTopper';
@@ -41,6 +43,7 @@ export default function PanchamitraScreen() {
   [selectedZilla, selectedTaluk]);
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col min-h-screen w-full bg-white">
       <AccessibilityBar />
       <Navbar version="home-page-identity" />
@@ -64,7 +67,7 @@ export default function PanchamitraScreen() {
       </div>
 
       {/* ── Search panel ── */}
-      <div className="px-[200px] pt-[48px] pb-[80px] flex flex-col items-center gap-[32px]">
+      <div id="main-content" tabIndex={-1} className="px-[200px] pt-[48px] pb-[80px] flex flex-col items-center gap-[32px]">
 
         {/* Level radio */}
         <div className="flex items-center gap-[32px]">
@@ -118,7 +121,8 @@ export default function PanchamitraScreen() {
       </div>
 
       <AppDownloadCTA variant="cta-option-2" />
-      <Footer variant="dark" />
+      <Footer variant="dark" />      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

@@ -1,3 +1,4 @@
+import AccessibilityFab from '../components/AccessibilityFab';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -10,6 +11,7 @@ import {
   InfoBox,
   Button,
   EyebrowPill,
+  ScaleToFit,
 } from '../components';
 import SectionHeading from '../components/SectionHeading';
 import Table, { type TableColumn } from '../components/Table';
@@ -87,6 +89,7 @@ export default function ContactDirectoryScreen() {
   ];
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col w-full min-h-screen bg-white">
 
       <AccessibilityBar />
@@ -103,7 +106,7 @@ export default function ContactDirectoryScreen() {
         onLoginClick={() => {}}
       />
 
-      <main className="flex flex-col gap-[40px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+      <main id="main-content" tabIndex={-1} className="flex flex-col gap-[40px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">
@@ -214,7 +217,8 @@ export default function ContactDirectoryScreen() {
 
       <AppDownloadCTA />
       <Footer />
-
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

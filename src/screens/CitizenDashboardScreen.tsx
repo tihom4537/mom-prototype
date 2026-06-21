@@ -4,7 +4,9 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveBar } from '@nivo/bar';
 import AccessibilityBar from '../components/AccessibilityBar';
+import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
+import ScaleToFit from '../components/ScaleToFit';
 import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import Breadcrumb from '../components/Breadcrumb';
 import DashboardMetricCard from '../components/DashboardMetricCard';
@@ -355,6 +357,7 @@ export default function CitizenDashboardScreen() {
   ];
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col min-h-screen w-full bg-white">
       <AccessibilityBar />
       <Navbar version="home-page-identity" />
@@ -431,7 +434,7 @@ export default function CitizenDashboardScreen() {
 
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-[64px] px-[200px] pt-[32px] pb-[60px] w-full">
+      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[64px] px-[200px] pt-[32px] pb-[60px] w-full">
 
         {/* ── SECTION 1: Service-wise table ──────────────────────────────────── */}
         <div id="sec-services" className="bg-white border border-[#c6c6c6] rounded-[10px] w-full overflow-hidden">
@@ -497,7 +500,7 @@ export default function CitizenDashboardScreen() {
           </div>
           <div className="p-[24px]">
             {isBar ? (
-              <div style={{ width: '100%', height: 420 }}>
+              <div role="img" aria-label="Bar chart showing district-wise application volumes across Karnataka" style={{ width: '100%', height: 420 }}>
                 <ResponsiveBar
                   data={distDonutData.map(d => ({ id: d.name, value: d.value }))}
                   keys={['value']}
@@ -531,7 +534,7 @@ export default function CitizenDashboardScreen() {
               </div>
             ) : (
               <div className="flex gap-[50px] items-center justify-center">
-                <div className="shrink-0" style={{ width: 420, height: 420 }}>
+                <div role="img" aria-label="Donut chart showing district-wise share of total applications" className="shrink-0" style={{ width: 420, height: 420 }}>
                   <ResponsivePie
                     data={distDonutData.map((d, i) => ({ id: d.name, label: d.name, value: d.value, color: PALETTE[i % PALETTE.length] }))}
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
@@ -608,7 +611,7 @@ export default function CitizenDashboardScreen() {
           <div className="p-[24px]">
             {!isSvcBar ? (
               <div className="flex gap-[50px] items-center justify-center">
-                <div className="shrink-0" style={{ width: 420, height: 420 }}>
+                <div role="img" aria-label="Donut chart showing service-wise share of total applications" className="shrink-0" style={{ width: 420, height: 420 }}>
                   <ResponsivePie
                     data={svcDonutData.map((d, i) => ({ id: d.name, label: d.name, value: d.value, color: PALETTE[i % PALETTE.length] }))}
                     margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
@@ -641,7 +644,7 @@ export default function CitizenDashboardScreen() {
                 </div>
               </div>
             ) : (
-              <div style={{ width: '100%', height: 480 }}>
+              <div role="img" aria-label="Bar chart showing service-wise application volumes across Karnataka" style={{ width: '100%', height: 480 }}>
                 <ResponsiveBar
                   data={svcDonutData.map(d => ({ id: d.name, value: d.value }))}
                   keys={['value']}
@@ -697,6 +700,8 @@ export default function CitizenDashboardScreen() {
 
       <AppDownloadCTA variant="cta-option-2" />
       <Footer variant="dark" />
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

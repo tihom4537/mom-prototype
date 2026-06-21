@@ -1,3 +1,4 @@
+import AccessibilityFab from '../components/AccessibilityFab';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -8,6 +9,7 @@ import {
   AppDownloadCTA,
   Footer,
   EyebrowPill,
+  ScaleToFit,
 } from '../components';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
@@ -67,6 +69,7 @@ export default function HelplinesScreen() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col w-full min-h-screen bg-white">
 
       {/* Accessibility bar */}
@@ -87,7 +90,7 @@ export default function HelplinesScreen() {
       />
 
       {/* Main content */}
-      <main className="flex flex-col gap-[50px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+      <main id="main-content" tabIndex={-1} className="flex flex-col gap-[50px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">
@@ -131,7 +134,8 @@ export default function HelplinesScreen() {
 
       {/* Footer */}
       <Footer />
-
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

@@ -1,3 +1,4 @@
+import AccessibilityFab from '../components/AccessibilityFab';
 import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginModal from '../components/LoginModal';
@@ -25,6 +26,7 @@ import {
   DropdownField,
   VariantSwitcherPill,
   Reveal,
+  ScaleToFit,
 } from '../components';
 import MapLegend from '../components/MapLegend';
 import { DISTRICTS, KARNATAKA_HIERARCHY, YEAR_BOOK_DATA, MONTH_BOOK_DATA } from '../data/karnatakaData';
@@ -100,6 +102,40 @@ const METRIC_CARDS: Array<{ labelKey: string; trend: 'up' | 'down' | 'none'; ico
   { labelKey: 'metric_sbm',              trend: 'up',   icon: 'assignment_turned_in',primaryValue: '5,741',        changeValue: '+14.6%' },
   { labelKey: 'metric_planning',         trend: 'down', icon: 'analytics',           primaryValue: '3,284',        changeValue: '-4.2%'  },
 ];
+
+// ── Guidelines / Notifications / Initiatives / Events preview data ───────────
+// month/year used for the homepage's lightweight time filter; date strings are
+// kept as the existing card display format (DD/MM/YYYY or DD-Mon-YYYY).
+
+const GUIDELINES_PREVIEW = [
+  { date: '14/07/2025', month: 7,  year: 2025, title: 'Operational guidelines for the implementation of the 15th Finance Commission', description: 'Recommendations on rural local bodies grants during the period 2021–2026' },
+  { date: '02/09/2025', month: 9,  year: 2025, title: 'Guidelines on Swachh Bharat Mission (Gramin) Phase II',                          description: 'Revised norms for solid and liquid waste management at the GP level' },
+  { date: '18/03/2025', month: 3,  year: 2025, title: 'GP Annual Action Plan preparation guidelines 2025–26',                            description: 'Step-by-step process for drafting and submitting the GPDP' },
+  { date: '05/12/2024', month: 12, year: 2024, title: '15th Finance Commission grant utilisation circular',                              description: 'Mandatory reporting format for tied and untied grants' },
+];
+
+const NOTIFICATIONS_PREVIEW = [
+  { date: '14/07/2025', month: 7,  year: 2025, title: 'Panchatantra 2.0 Updates - 05.10.2025', description: 'New module rollout and bug fixes' },
+  { date: '22/08/2025', month: 8,  year: 2025, title: 'Scheduled maintenance window notice',    description: 'Portal will be unavailable for 2 hours' },
+  { date: '10/04/2025', month: 4,  year: 2025, title: 'New biometric attendance rule notice',    description: 'Effective from the next financial quarter' },
+  { date: '28/01/2025', month: 1,  year: 2025, title: 'Year-end data reconciliation notice',     description: 'All GPs to complete reconciliation by month end' },
+];
+
+const INITIATIVES_PREVIEW = [
+  { startDate: '30-Mar-2026', endDate: '30-Mar-2026', month: 3,  year: 2026, title: 'NCORD AWARENESS MEETING',        region: 'KOLALA (1525003023)',  posted: '1 Day ago' },
+  { startDate: '15-Feb-2026', endDate: '16-Feb-2026', month: 2,  year: 2026, title: 'SWACHH SURVEKSHAN PREPARATION',  region: 'HOSAKOTE (1525004011)', posted: '5 Days ago' },
+  { startDate: '20-Dec-2025', endDate: '20-Dec-2025', month: 12, year: 2025, title: 'GRAMA SABHA MOBILISATION DRIVE', region: 'KAKANUR (1501001003)',  posted: '2 Weeks ago' },
+  { startDate: '08-Oct-2025', endDate: '09-Oct-2025', month: 10, year: 2025, title: 'DIGITAL LITERACY CAMPAIGN',      region: 'ANEKAL (1525002007)',   posted: '1 Month ago' },
+];
+
+const EVENTS_PREVIEW = [
+  { startDate: '30-Mar-2026', endDate: '30-Mar-2026', month: 3,  year: 2026, title: 'NCORD AWARENESS MEETING',     totalAssignGp: '1',  posted: '1 Day ago' },
+  { startDate: '12-Jan-2026', endDate: '12-Jan-2026', month: 1,  year: 2026, title: 'REPUBLIC DAY PREPARATION',    totalAssignGp: '12', posted: '1 Week ago' },
+  { startDate: '25-Nov-2025', endDate: '26-Nov-2025', month: 11, year: 2025, title: 'CONSTITUTION DAY OBSERVANCE', totalAssignGp: '6',  posted: '3 Weeks ago' },
+  { startDate: '14-Sep-2025', endDate: '14-Sep-2025', month: 9,  year: 2025, title: 'HINDI DIWAS CELEBRATION',     totalAssignGp: '3',  posted: '2 Months ago' },
+];
+
+const MONTH_KEYS = ['calendar_month_jan','calendar_month_feb','calendar_month_mar','calendar_month_apr','calendar_month_may','calendar_month_jun','calendar_month_jul','calendar_month_aug','calendar_month_sep','calendar_month_oct','calendar_month_nov','calendar_month_dec'];
 
 // ── Ecosystem apps ────────────────────────────────────────────────────────────
 
@@ -192,6 +228,38 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
   const [activeZilla, setActiveZilla] = useState('');
   const modulesRef = useRef<HTMLElement>(null);
 
+  // Guidelines/Events preview filters — lightweight month+year, applies within each section
+  const [guidelinesMonth, setGuidelinesMonth] = useState('');
+  const [guidelinesYear, setGuidelinesYear] = useState('');
+  const [eventsMonth, setEventsMonth] = useState('');
+  const [eventsYear, setEventsYear] = useState('');
+
+  const monthOptions = useMemo(() => MONTH_KEYS.map(k => t(k)), [t]);
+  const guidelinesYearOptions = useMemo(() => Array.from(new Set([...GUIDELINES_PREVIEW, ...NOTIFICATIONS_PREVIEW].map(x => x.year))).sort((a, b) => b - a).map(String), []);
+  const eventsYearOptions = useMemo(() => Array.from(new Set([...INITIATIVES_PREVIEW, ...EVENTS_PREVIEW].map(x => x.year))).sort((a, b) => b - a).map(String), []);
+
+  function monthKeyToIndex(label: string) { return monthOptions.indexOf(label) + 1; }
+
+  const filteredGuidelines = useMemo(() => GUIDELINES_PREVIEW.filter(g =>
+    (!guidelinesMonth || g.month === monthKeyToIndex(guidelinesMonth)) &&
+    (!guidelinesYear || g.year === Number(guidelinesYear))
+  ), [guidelinesMonth, guidelinesYear, monthOptions]);
+
+  const filteredNotifications = useMemo(() => NOTIFICATIONS_PREVIEW.filter(n =>
+    (!guidelinesMonth || n.month === monthKeyToIndex(guidelinesMonth)) &&
+    (!guidelinesYear || n.year === Number(guidelinesYear))
+  ), [guidelinesMonth, guidelinesYear, monthOptions]);
+
+  const filteredInitiatives = useMemo(() => INITIATIVES_PREVIEW.filter(i =>
+    (!eventsMonth || i.month === monthKeyToIndex(eventsMonth)) &&
+    (!eventsYear || i.year === Number(eventsYear))
+  ), [eventsMonth, eventsYear, monthOptions]);
+
+  const filteredEvents = useMemo(() => EVENTS_PREVIEW.filter(e =>
+    (!eventsMonth || e.month === monthKeyToIndex(eventsMonth)) &&
+    (!eventsYear || e.year === Number(eventsYear))
+  ), [eventsMonth, eventsYear, monthOptions]);
+
   const orientationCards = useMemo(() => [
     {
       stakeholderName: 'Citizens & Residents',
@@ -232,6 +300,7 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
   }), [distMetrics]);
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col w-full min-h-screen bg-white">
 
       {/* Login modal */}
@@ -356,11 +425,8 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
       {/* ── Live Counter Strip ───────────────────────────────────────────── */}
       <LiveCounterStrip />
 
-      {/* ── Orientation Strip ────────────────────────────────────────────── */}
-      <OrientationStrip cards={orientationCards} />
-
       {/* ── All Modules Section ──────────────────────────────────────────── */}
-      <section ref={modulesRef} className={`relative overflow-hidden flex flex-col gap-[45px] items-center justify-center pb-[80px] pt-[80px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>
+      <section ref={modulesRef} id="main-content" tabIndex={-1} className={`relative overflow-hidden flex flex-col gap-[45px] items-center justify-center pb-[80px] pt-[80px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>
         <DotGrid position="top-left" opacity={0.08} />
         <DotGrid position="bottom-right" opacity={0.08} />
         <Reveal className="flex flex-col items-center gap-[12px] w-full">
@@ -408,6 +474,9 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
           )}
         </Reveal>
       </section>
+
+      {/* ── Orientation Strip ────────────────────────────────────────────── */}
+      <OrientationStrip cards={orientationCards} />
 
       {/* ── GP Lookup + Metrics Section ──────────────────────────────────── */}
       <section className={`relative overflow-hidden bg-[#6a3e31] flex flex-col gap-[55px] items-center pb-[80px] pt-[70px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>
@@ -487,15 +556,37 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
             align="center"
           />
         </Reveal>
+        <Reveal delay={1} className="flex gap-[15px] items-center justify-center w-full">
+          <DropdownField
+            value={guidelinesMonth}
+            onChange={setGuidelinesMonth}
+            options={monthOptions}
+            placeholder={t('homepage_filter_month')}
+            showAll
+            allLabel={t('homepage_filter_all_months')}
+            className="w-[180px]"
+          />
+          <DropdownField
+            value={guidelinesYear}
+            onChange={setGuidelinesYear}
+            options={guidelinesYearOptions}
+            placeholder={t('homepage_filter_year')}
+            showAll
+            allLabel={t('homepage_filter_all_years')}
+            className="w-[160px]"
+          />
+        </Reveal>
         <Reveal delay={1} className="flex gap-[30px] items-start w-full">
           <SectionHolder title={t('section_guidelines')} className="flex-1">
             <div className="flex flex-col gap-[20px] w-full px-[20px] pt-[20px] pb-[25px] max-h-[420px] overflow-y-auto">
-              {[1, 2, 3, 4].map(i => (
+              {filteredGuidelines.length === 0 ? (
+                <p className="text-[13px] text-[#727272] text-center py-[20px]" style={NS}>{t('homepage_filter_no_results')}</p>
+              ) : filteredGuidelines.map((g, i) => (
                 <GuidelinesCard
                   key={i}
-                  date="14/07/2021"
-                  title="Operational guidelines for the implementation of the 15th Finance Commission"
-                  description="Recommendations on rural local bodies grants during the period 2021–2026"
+                  date={g.date}
+                  title={g.title}
+                  description={g.description}
                   className="w-full"
                 />
               ))}
@@ -503,12 +594,14 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
           </SectionHolder>
           <SectionHolder title={t('section_notifications')} className="flex-1">
             <div className="flex flex-col gap-[20px] w-full px-[20px] pt-[20px] pb-[25px] max-h-[420px] overflow-y-auto">
-              {[1, 2, 3, 4].map(i => (
+              {filteredNotifications.length === 0 ? (
+                <p className="text-[13px] text-[#727272] text-center py-[20px]" style={NS}>{t('homepage_filter_no_results')}</p>
+              ) : filteredNotifications.map((n, i) => (
                 <NotificationsCard
                   key={i}
-                  date="14/07/2021"
-                  title="Panchatantra 2.0 Updates - 05.10.2023"
-                  description="Description content here"
+                  date={n.date}
+                  title={n.title}
+                  description={n.description}
                   className="w-full"
                 />
               ))}
@@ -530,18 +623,40 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
             align="center"
           />
         </Reveal>
+        <Reveal delay={1} className="flex gap-[15px] items-center justify-center w-full">
+          <DropdownField
+            value={eventsMonth}
+            onChange={setEventsMonth}
+            options={monthOptions}
+            placeholder={t('homepage_filter_month')}
+            showAll
+            allLabel={t('homepage_filter_all_months')}
+            className="w-[180px]"
+          />
+          <DropdownField
+            value={eventsYear}
+            onChange={setEventsYear}
+            options={eventsYearOptions}
+            placeholder={t('homepage_filter_year')}
+            showAll
+            allLabel={t('homepage_filter_all_years')}
+            className="w-[160px]"
+          />
+        </Reveal>
         <Reveal delay={1} className="flex gap-[30px] items-start w-full">
           <SectionHolder title={t('section_initiatives')} className="flex-1">
             <div className="flex flex-col gap-[20px] w-full px-[20px] pt-[20px] pb-[25px] max-h-[420px] overflow-y-auto">
-              {[1, 2, 3, 4].map(i => (
+              {filteredInitiatives.length === 0 ? (
+                <p className="text-[13px] text-[#727272] text-center py-[20px]" style={NS}>{t('homepage_filter_no_results')}</p>
+              ) : filteredInitiatives.map((init, i) => (
                 <InitiativesCard
                   key={i}
                   status="PUBLISHED"
-                  title="NCORD AWARENESS MEETING"
-                  startDate="30-Mar-2026"
-                  endDate="30-Mar-2026"
-                  region="KOLALA (1525003023)"
-                  posted="1 Day ago"
+                  title={init.title}
+                  startDate={init.startDate}
+                  endDate={init.endDate}
+                  region={init.region}
+                  posted={init.posted}
                   className="w-full"
                 />
               ))}
@@ -549,15 +664,17 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
           </SectionHolder>
           <SectionHolder title={t('section_events')} className="flex-1">
             <div className="flex flex-col gap-[20px] w-full px-[20px] pt-[20px] pb-[25px] max-h-[420px] overflow-y-auto">
-              {[1, 2, 3, 4].map(i => (
+              {filteredEvents.length === 0 ? (
+                <p className="text-[13px] text-[#727272] text-center py-[20px]" style={NS}>{t('homepage_filter_no_results')}</p>
+              ) : filteredEvents.map((ev, i) => (
                 <EventsCard
                   key={i}
                   status="PUBLISHED"
-                  title="NCORD AWARENESS MEETING"
-                  startDate="30-Mar-2026"
-                  endDate="30-Mar-2026"
-                  totalAssignGp="1"
-                  posted="1 Day ago"
+                  title={ev.title}
+                  startDate={ev.startDate}
+                  endDate={ev.endDate}
+                  totalAssignGp={ev.totalAssignGp}
+                  posted={ev.posted}
                   className="w-full"
                 />
               ))}
@@ -602,7 +719,8 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <Footer variant="dark" />
 
-      {showVariantSwitcher && <VariantSwitcherPill />}
+      {showVariantSwitcher && <VariantSwitcherPill />}      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

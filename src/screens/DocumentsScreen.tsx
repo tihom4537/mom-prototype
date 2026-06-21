@@ -1,3 +1,4 @@
+import AccessibilityFab from '../components/AccessibilityFab';
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -10,6 +11,7 @@ import {
   DropdownField,
   Button,
   EyebrowPill,
+  ScaleToFit,
 } from '../components';
 import TabOptions from '../components/TabOptions';
 import DatePicker from '../components/DatePicker';
@@ -123,6 +125,7 @@ export default function DocumentsScreen() {
   const rightCol = docs.slice(mid);
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col w-full min-h-screen bg-white">
 
       {/* Accessibility bar */}
@@ -143,7 +146,7 @@ export default function DocumentsScreen() {
       />
 
       {/* Main content */}
-      <main className="flex flex-col gap-[50px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+      <main id="main-content" tabIndex={-1} className="flex flex-col gap-[50px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">
@@ -335,7 +338,8 @@ export default function DocumentsScreen() {
 
       {/* Footer */}
       <Footer />
-
+      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }

@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ResponsiveBar } from '@nivo/bar';
 import AccessibilityBar from '../components/AccessibilityBar';
+import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
+import ScaleToFit from '../components/ScaleToFit';
 import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import Breadcrumb from '../components/Breadcrumb';
 import SectionTopper from '../components/SectionTopper';
@@ -348,6 +350,7 @@ export default function CitizenMeetingScreen() {
   const isChart = dataView === 'chart';
 
   return (
+    <ScaleToFit>
     <div className="flex flex-col min-h-screen w-full bg-white">
       <AccessibilityBar />
       <Navbar version="home-page-identity" />
@@ -371,7 +374,7 @@ export default function CitizenMeetingScreen() {
       </div>
 
       {/* ── Metric cards ── */}
-      <div className="px-[200px] pt-[24px]">
+      <div id="main-content" tabIndex={-1} className="px-[200px] pt-[24px]">
         <div className="flex gap-[20px]">
           <DashboardMetricCard
             icon="event"
@@ -626,7 +629,8 @@ export default function CitizenMeetingScreen() {
       </div>
 
       <AppDownloadCTA variant="cta-option-2" />
-      <Footer variant="dark" />
+      <Footer variant="dark" />      <AccessibilityFab />
     </div>
+    </ScaleToFit>
   );
 }
