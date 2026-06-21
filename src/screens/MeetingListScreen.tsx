@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   MeetingDetailsTag,
   SmallDetailsText,
   Button,
@@ -16,6 +13,7 @@ import {
 } from '../components';
 import type { NumberCircleType } from '../components';
 import type { MeetingData, MeetingTab } from '../context/MeetingsContext';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,10 +68,7 @@ export default function MeetingListScreen() {
   const navigate = useNavigate();
   const { meetings } = useMeetings();
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
   const [activeTab, setActiveTab]       = useState<MeetingTab>('today');
-
-  const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   const allTabs: Array<{ key: MeetingTab; labelKey: string }> = [
     { key: 'today',     labelKey: 'tab_today'     },
@@ -89,80 +84,60 @@ export default function MeetingListScreen() {
   const countFor = (tab: MeetingTab) => meetings.filter((m: MeetingData) => m.tab === tab).length;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* ── Navbar ── */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* ── Sidebar + main ── */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Fixed breadcrumb */}
-          <div className="shrink-0 px-6 pt-6 pb-5 bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_meeting_list')]}
+    <MeetingShellLayout
+      stepperActiveState={1}
+      showStepper={false}
+      showBack={false}
+      breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_meeting_list')]}
+    >
+      <SectionHolder
+        variant="with-description"
+        title={t('meeting_list_heading')}
+        subtitle={t('meeting_list_subtext')}
+        bodyClassName="px-[25px] pt-[20px] pb-[30px]"
+      >
+        {/* Tab bar */}
+        <div className="flex items-center gap-[20px]">
+          {allTabs.map(({ key, labelKey }) => (
+            <DashboardMenuBarItem
+              key={key}
+              text={t(labelKey)}
+              count={countFor(key)}
+              state={activeTab === key ? 'selected' : 'default'}
+              badgeVariant="neutral"
+              onClick={() => setActiveTab(key)}
             />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
-            <SectionHolder
-              variant="with-description"
-              title={t('meeting_list_heading')}
-              subtitle={t('meeting_list_subtext')}
-              bodyClassName="px-[25px] pt-[20px] pb-[30px]"
-            >
-              {/* Tab bar */}
-              <div className="flex items-center gap-[20px]">
-                {allTabs.map(({ key, labelKey }) => (
-                  <DashboardMenuBarItem
-                    key={key}
-                    text={t(labelKey)}
-                    count={countFor(key)}
-                    state={activeTab === key ? 'selected' : 'default'}
-                    badgeVariant="neutral"
-                    onClick={() => setActiveTab(key)}
-                  />
-                ))}
-              </div>
-
-              {/* Divider */}
-              <hr className="border-t border-[#e6e6e6] w-full mb-[30px] mt-0" />
-
-              {/* Cards — 3-col grid */}
-              {visible.length === 0 ? (
-                <p
-                  className="text-sm text-[#727272] py-8 text-center w-full"
-                  style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-                >
-                  {t('meeting_list_empty')}
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-[20px]">
-                  {visible.map((meeting: MeetingData) => (
-                    <MeetingCard
-                      key={meeting.id}
-                      meeting={meeting}
-                      stepKeys={stepKeys}
-                      createStepKeys={createStepKeys}
-                      t={t}
-                      onCta={() => meeting.tab === 'past' ? navigate(`/meetings/view/${meeting.id}`) : navigate('/meetings/attendance', { state: { meetingId: meeting.id } })}
-                      onDraftCta={() => navigate('/meetings/create')}
-                    />
-                  ))}
-                </div>
-              )}
-            </SectionHolder>
-          </div>
+          ))}
         </div>
-      </div>
-    </div>
+
+        {/* Divider */}
+        <hr className="border-t border-[#e6e6e6] w-full mb-[30px] mt-0" />
+
+        {/* Cards — 3-col grid */}
+        {visible.length === 0 ? (
+          <p
+            className="text-sm text-[#727272] py-8 text-center w-full"
+            style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+          >
+            {t('meeting_list_empty')}
+          </p>
+        ) : (
+          <div className="grid grid-cols-3 gap-[20px]">
+            {visible.map((meeting: MeetingData) => (
+              <MeetingCard
+                key={meeting.id}
+                meeting={meeting}
+                stepKeys={stepKeys}
+                createStepKeys={createStepKeys}
+                t={t}
+                onCta={() => meeting.tab === 'past' ? navigate(`/meetings/view/${meeting.id}`) : navigate('/meetings/attendance', { state: { meetingId: meeting.id } })}
+                onDraftCta={() => navigate('/meetings/create')}
+              />
+            ))}
+          </div>
+        )}
+      </SectionHolder>
+    </MeetingShellLayout>
   );
 }
 

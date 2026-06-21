@@ -1,20 +1,16 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
-import { useState } from 'react';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   MeetingDetailsCard,
   SectionHolder,
   Button,
-  Icon,
   QuorumBar,
   NumberCircle,
   Table,
 } from '../components';
 import type { TableColumn } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -337,9 +333,6 @@ export default function ViewMeetingScreen() {
   const { meetings } = useMeetings();
   const meeting = meetings.find(m => m.id === Number(id));
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
-
   const presentCount = MOCK_PARTICIPANTS.filter(p => p.status === 'present').length;
   const absentCount  = MOCK_PARTICIPANTS.filter(p => p.status === 'absent').length;
   const total        = MOCK_PARTICIPANTS.length;
@@ -348,31 +341,12 @@ export default function ViewMeetingScreen() {
   const meetingName = meeting?.nameKey ? t(meeting.nameKey) : (meeting?.name ?? t('mock_meeting_title'));
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* Navbar */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* Sidebar + main */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb */}
-          <div className="shrink-0 px-6 pt-6 pb-5 bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_view_meeting')]}
-            />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-6 pb-8">
-            <div className="flex flex-col gap-5">
-
+    <MeetingShellLayout
+      stepperActiveState={1}
+      showStepper={false}
+      showBack={false}
+      breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_view_meeting')]}
+    >
               {/* Meeting details */}
               <MeetingDetailsCard
                 variant="default"
@@ -424,11 +398,6 @@ export default function ViewMeetingScreen() {
                   onClick={() => navigate('/meetings/list')}
                 />
               </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </MeetingShellLayout>
   );
 }

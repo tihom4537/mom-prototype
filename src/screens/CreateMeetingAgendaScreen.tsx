@@ -2,9 +2,6 @@ import { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   Stepper,
   StepNavBar,
   Button,
@@ -14,6 +11,7 @@ import {
   InputField,
   InfoBox,
 } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -85,8 +83,6 @@ export default function CreateMeetingAgendaScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const meetingData = location.state ?? {};
-
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
 
   // ── Agenda items — first two pre-populated ────────────────────────────────
   const nextId = useRef(3);
@@ -377,7 +373,6 @@ export default function CreateMeetingAgendaScreen() {
     setTemplateDownloaded(true);
   }
 
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
   const sortedForTemplate = (items: AgendaItem[]) =>
     [...items].sort((a, b) => (a.id <= 2 ? -1 : 1) - (b.id <= 2 ? -1 : 1));
 
@@ -398,46 +393,22 @@ export default function CreateMeetingAgendaScreen() {
   const canSubmit = agendas.some(a => a.title.trim() && a.description.trim());
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* ── Navbar ── */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* ── Sidebar + main ── */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar
-          state={sidebarState}
-          onMenuClick={toggleSidebar}
-          className="shrink-0 h-full"
+    <MeetingShellLayout
+      showStepper={false}
+      backRoute="/meetings/create"
+      breadcrumbItems={[
+        t('breadcrumb_module'),
+        t('breadcrumb_meetings'),
+        t('breadcrumb_create_meeting'),
+      ]}
+    >
+      <div className="flex flex-col gap-[15px]">
+        <Stepper
+          activeState={2}
+          stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
         />
 
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb + Stepper — fixed header */}
-          <div className="shrink-0 flex flex-col gap-[15px] px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[
-                t('breadcrumb_module'),
-                t('breadcrumb_meetings'),
-                t('breadcrumb_create_meeting'),
-              ]}
-            />
-            <Stepper
-              activeState={2}
-              stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
-            />
-          </div>
-
-          <div className="shrink-0 px-6 pt-[10px]">
-            <StepNavBar onBack={() => navigate('/meetings/create')} backLabel={t('nav_previous_step')} />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[50px]">
-            <div className="flex flex-col gap-[25px]">
+        <div className="flex flex-col gap-[25px]">
 
               {/* ── Section 1: Agenda Details ── */}
               <div className="flex flex-col gap-[3px]">
@@ -607,8 +578,6 @@ export default function CreateMeetingAgendaScreen() {
                 />
               </div>
 
-            </div>
-          </div>
         </div>
       </div>
 
@@ -724,6 +693,6 @@ export default function CreateMeetingAgendaScreen() {
           </div>
         </div>
       )}
-    </div>
+    </MeetingShellLayout>
   );
 }

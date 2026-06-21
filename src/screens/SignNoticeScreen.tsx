@@ -3,14 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   Stepper,
-  StepNavBar,
   Button,
   Icon,
 } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -34,15 +31,11 @@ export default function SignNoticeScreen() {
   const { addMeeting, setMeetingAgendas } = useMeetings();
   const meetingData = location.state ?? {};
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signed,      setSigned]      = useState(false);
   const [signedAt,    setSignedAt]    = useState('');
 
   const noticeRef = useRef<HTMLDivElement>(null);
-
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
 
   // Derive display values from router state
   const meetingTitle   = meetingData.title        ?? 'GP General Body Meeting 2026';
@@ -156,133 +149,111 @@ export default function SignNoticeScreen() {
         />
       </div>
 
-      <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
+      <MeetingShellLayout
+        showStepper={false}
+        backRoute="/meetings/create/agenda"
+        breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_create_meeting')]}
+      >
+        <div className="flex flex-col gap-[15px]">
+          <Stepper
+            activeState={3}
+            stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
+          />
 
-        {/* ── Navbar ── */}
-        <div className="shrink-0 relative z-40">
-          <Navbar version="default-with-welcome" />
-        </div>
+          <div className="flex flex-col gap-[25px]">
 
-        {/* ── Sidebar + main ── */}
-        <div className="flex flex-1 min-h-0">
-          <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-          <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-            {/* Breadcrumb + Stepper — fixed header */}
-            <div className="shrink-0 flex flex-col gap-[15px] px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
-              <Breadcrumb
-                level={3}
-                items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_create_meeting')]}
-              />
-              <Stepper
-                activeState={3}
-                stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
-              />
-            </div>
-
-            <div className="shrink-0 px-6 pt-[10px]">
-              <StepNavBar onBack={() => navigate('/meetings/create/agenda')} backLabel={t('nav_previous_step')} />
-            </div>
-
-            {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[50px]">
-              <div className="flex flex-col gap-[25px]">
-
-                {/* Notice preview card */}
-                <div className="bg-white rounded-[20px] flex flex-col">
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-[25px] py-[20px] border-b border-[#c6c6c6]">
-                    <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
-                      {t('sign_notice_preview_heading')}
-                    </span>
-                    {signed && (
-                      <div className="flex items-center bg-[#e8f5e9] px-[12px] py-[6px] rounded-full">
-                        <span className="text-[13px] font-medium text-[#2e7d32]" style={NS}>{t('sign_success_label')}</span>
-                      </div>
-                    )}
+            {/* Notice preview card */}
+            <div className="bg-white rounded-[20px] flex flex-col">
+              {/* Header */}
+              <div className="flex items-center justify-between px-[25px] py-[20px] border-b border-[#c6c6c6]">
+                <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
+                  {t('sign_notice_preview_heading')}
+                </span>
+                {signed && (
+                  <div className="flex items-center bg-[#e8f5e9] px-[12px] py-[6px] rounded-full">
+                    <span className="text-[13px] font-medium text-[#2e7d32]" style={NS}>{t('sign_success_label')}</span>
                   </div>
-                  {/* Body */}
-                  <div className="px-[25px] pt-[20px] pb-[25px]">
-                    <div
-                      ref={noticeRef}
-                      className="max-w-[760px] mx-auto shadow-[0_2px_12px_rgba(0,0,0,0.10)] overflow-hidden"
-                    >
-                      <NoticeDocumentView
-                        meetingTitle={meetingTitle}
-                        meetingType={meetingType}
-                        meetingDate={meetingDate}
-                        meetingTime={meetingTime}
-                        meetingVenue={meetingVenue}
-                        chairperson={chairperson}
-                        agendas={agendas}
-                        participants={participants}
-                        printDate={printDate}
-                        signed={signed}
-                        signerName={signerName}
-                        signerDesig={signerDesig}
-                        signedAt={signedAt}
-                      />
-                    </div>
-                  </div>
+                )}
+              </div>
+              {/* Body */}
+              <div className="px-[25px] pt-[20px] pb-[25px]">
+                <div
+                  ref={noticeRef}
+                  className="max-w-[760px] mx-auto shadow-[0_2px_12px_rgba(0,0,0,0.10)] overflow-hidden"
+                >
+                  <NoticeDocumentView
+                    meetingTitle={meetingTitle}
+                    meetingType={meetingType}
+                    meetingDate={meetingDate}
+                    meetingTime={meetingTime}
+                    meetingVenue={meetingVenue}
+                    chairperson={chairperson}
+                    agendas={agendas}
+                    participants={participants}
+                    printDate={printDate}
+                    signed={signed}
+                    signerName={signerName}
+                    signerDesig={signerDesig}
+                    signedAt={signedAt}
+                  />
                 </div>
-
-                {/* Action buttons */}
-                <div className="flex items-center justify-center gap-[15px] pt-2">
-                  {!signed ? (
-                    <>
-                      <Button
-                        variant="outlined"
-                        iconPlacement="none"
-                        text={t('btn_exit_to_meetings')}
-                        onClick={handleExit}
-                      />
-                      <Button
-                        variant="filled"
-                        iconPlacement="left"
-                        iconName="draw"
-                        text={t('btn_sign_notice')}
-                        onClick={() => setConfirmOpen(true)}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="outlined"
-                        iconPlacement="none"
-                        text={t('btn_exit_to_meetings')}
-                        onClick={handleExit}
-                      />
-                      <Button
-                        variant="outlined"
-                        iconPlacement="left"
-                        iconName="download"
-                        text={t('btn_re_download')}
-                        onClick={handleReDownload}
-                      />
-                      <Button
-                        variant="filled"
-                        iconPlacement="left"
-                        iconName="mail"
-                        text={t('btn_share_email')}
-                        onClick={handleShareEmail}
-                      />
-                      <Button
-                        variant="filled"
-                        iconPlacement="left"
-                        iconName="share"
-                        text={t('btn_share_whatsapp')}
-                        onClick={handleShareWhatsApp}
-                      />
-                    </>
-                  )}
-                </div>
-
               </div>
             </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-center gap-[15px] pt-2">
+              {!signed ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    iconPlacement="none"
+                    text={t('btn_exit_to_meetings')}
+                    onClick={handleExit}
+                  />
+                  <Button
+                    variant="filled"
+                    iconPlacement="left"
+                    iconName="draw"
+                    text={t('btn_sign_notice')}
+                    onClick={() => setConfirmOpen(true)}
+                  />
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outlined"
+                    iconPlacement="none"
+                    text={t('btn_exit_to_meetings')}
+                    onClick={handleExit}
+                  />
+                  <Button
+                    variant="outlined"
+                    iconPlacement="left"
+                    iconName="download"
+                    text={t('btn_re_download')}
+                    onClick={handleReDownload}
+                  />
+                  <Button
+                    variant="filled"
+                    iconPlacement="left"
+                    iconName="mail"
+                    text={t('btn_share_email')}
+                    onClick={handleShareEmail}
+                  />
+                  <Button
+                    variant="filled"
+                    iconPlacement="left"
+                    iconName="share"
+                    text={t('btn_share_whatsapp')}
+                    onClick={handleShareWhatsApp}
+                  />
+                </>
+              )}
+            </div>
+
           </div>
         </div>
-      </div>
+      </MeetingShellLayout>
 
       {/* ── Confirm Sign Modal ── */}
       {confirmOpen && (

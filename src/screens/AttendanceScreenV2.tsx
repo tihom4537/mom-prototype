@@ -5,10 +5,6 @@ import { useMeetings } from '../context/MeetingsContext';
 import { useAgenda } from '../context/AgendaContext';
 import type { ClosureRow, BiometricStatus } from '../context/MeetingsContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
-  Stepper,
   MeetingDetailsCard,
   SectionHolder,
   SearchInput,
@@ -19,10 +15,10 @@ import {
   AttendancePill,
   Tooltip,
   InfoBox,
-  StepNavBar,
   CloseButton,
 } from '../components';
 import type { AttendanceStatus } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const QUORUM_PERCENT   = 51;
 const NO_BIOMETRIC_MAX = 2;
@@ -297,9 +293,6 @@ export default function AttendanceScreenV2() {
 
   const [biometricModalRow, setBiometricModalRow] = useState<ClosureRow | null>(null);
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
-
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [permissionFiles, setPermissionFiles] = useState<Record<number, File | null>>({});
@@ -414,13 +407,7 @@ export default function AttendanceScreenV2() {
   });
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* Navbar */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
+    <>
       {/* Biometric modal */}
       {biometricModalRow && (
         <BiometricModal
@@ -432,37 +419,11 @@ export default function AttendanceScreenV2() {
         />
       )}
 
-      {/* Sidebar + main */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Fixed: breadcrumb + stepper */}
-          <div className="shrink-0 flex flex-col gap-5 px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
-            <Breadcrumb level={3} items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_closure_attendance')]} />
-            <Stepper
-              variant="meeting-flow"
-              activeState={4}
-              stepLabels={[
-                t('meeting_flow_step_1'),
-                t('meeting_flow_step_2'),
-                t('meeting_flow_step_3'),
-                t('meeting_flow_step_4'),
-                t('meeting_flow_step_5'),
-              ]}
-              onStepClick={step => {
-                const routes: Record<number, string> = { 1: '/meetings/attendance', 2: '/agenda-list', 3: '/meetings/proceedings-review' };
-                if (routes[step]) navigate(routes[step]);
-              }}
-            />
-          </div>
-
-          {/* Scrollable */}
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-6">
-            <div className="flex flex-col gap-5">
-              <StepNavBar onBack={() => navigate('/meetings/proceedings-review', { state: { meetingId } })} backLabel={t('nav_previous_step')} />
-
+      <MeetingShellLayout
+        stepperActiveState={4}
+        backRoute="/meetings/proceedings-review"
+        breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_closure_attendance')]}
+      >
               <MeetingDetailsCard
                 variant="default-shortened"
                 meetingTitle={t('mock_meeting_title')}
@@ -640,12 +601,48 @@ export default function AttendanceScreenV2() {
                                   )}
                                 </>
                               ) : (
-                                <DropdownField
-                                  value={row.reason === 'with_permission' ? t('attendance_absent_with_permission') : row.reason === 'without_permission' ? t('attendance_absent_without_permission') : ''}
-                                  onChange={val => update(row.id, { reason: val === t('attendance_absent_with_permission') ? 'with_permission' : val === t('attendance_absent_without_permission') ? 'without_permission' : '' })}
-                                  options={[t('attendance_absent_with_permission'), t('attendance_absent_without_permission')]}
-                                  placeholder={t('attendance_absent_select')}
-                                />
+                                <>
+                                  <DropdownField
+                                    value={
+                                      row.reason === 'device_failure' ? t('no_bio_reason_device_failure') :
+                                      row.reason === 'technical_issue' ? t('no_bio_reason_technical_issue') :
+                                      row.reason === 'member_exempt' ? t('no_bio_reason_member_exempt') :
+                                      row.reason === 'other' ? t('no_bio_reason_other') : ''
+                                    }
+                                    onChange={val => update(row.id, {
+                                      reason:
+                                        val === t('no_bio_reason_device_failure') ? 'device_failure' :
+                                        val === t('no_bio_reason_technical_issue') ? 'technical_issue' :
+                                        val === t('no_bio_reason_member_exempt') ? 'member_exempt' :
+                                        val === t('no_bio_reason_other') ? 'other' : ''
+                                    })}
+                                    options={[t('no_bio_reason_device_failure'), t('no_bio_reason_technical_issue'), t('no_bio_reason_member_exempt'), t('no_bio_reason_other')]}
+                                    placeholder={t('attendance_reason_no_biometric')}
+                                  />
+                                  {row.reason !== '' && (
+                                    <div className="flex items-center gap-[6px]">
+                                      <input
+                                        type="file"
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        className="hidden"
+                                        ref={el => { permFileRefs.current[row.id] = el; }}
+                                        onChange={e => {
+                                          const file = e.target.files?.[0] ?? null;
+                                          setPermissionFiles(prev => ({ ...prev, [row.id]: file }));
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => permFileRefs.current[row.id]?.click()}
+                                        className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors"
+                                        style={NS}
+                                      >
+                                        <Icon name="upload" size="small" color="#6a3e31" />
+                                        {permissionFiles[row.id] ? permissionFiles[row.id]!.name : t('attendance_upload_biometric_proof')}
+                                      </button>
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           ) : (
@@ -682,11 +679,7 @@ export default function AttendanceScreenV2() {
                   onClick={canProceed ? () => navigate(isClosureRoute ? '/meetings/send-to-president' : '/agenda-list', { state: { meetingId } }) : undefined}
                 />
               </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      </MeetingShellLayout>
+    </>
   );
 }

@@ -2,14 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   Button,
   Icon,
   StatusBadge,
   AgendaNoLabel,
 } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -83,10 +81,6 @@ export default function MeetingCalendarScreen() {
     { day: TODAY.day, month: TODAY.month, year: TODAY.year }
   );
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
-
   const MONTH_KEYS = [
     'calendar_month_jan', 'calendar_month_feb', 'calendar_month_mar',
     'calendar_month_apr', 'calendar_month_may', 'calendar_month_jun',
@@ -141,35 +135,16 @@ export default function MeetingCalendarScreen() {
     : '';
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* ── Navbar ── */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* ── Sidebar + main ── */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb */}
-          <div className="shrink-0 px-6 pt-6 pb-5 bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[
-                t('breadcrumb_module'),
-                t('breadcrumb_meetings'),
-                t('breadcrumb_calendar'),
-              ]}
-            />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 pb-[50px]">
-            <div className="flex flex-col gap-[20px]">
-
+    <MeetingShellLayout
+      stepperActiveState={1}
+      showStepper={false}
+      showBack={false}
+      breadcrumbItems={[
+        t('breadcrumb_module'),
+        t('breadcrumb_meetings'),
+        t('breadcrumb_calendar'),
+      ]}
+    >
               {/* ── Calendar Section ── */}
               <div className="flex flex-col gap-[3px]">
 
@@ -457,11 +432,6 @@ export default function MeetingCalendarScreen() {
                   onClick={() => navigate('/meetings/list')}
                 />
               </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </MeetingShellLayout>
   );
 }

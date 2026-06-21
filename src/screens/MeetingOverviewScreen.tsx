@@ -3,9 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   UrgencyBanner,
   QuickActionCard,
   UpcomingMeetingRow,
@@ -14,6 +11,7 @@ import {
   DashboardMenuBarItem,
   AgendaNoLabel,
 } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -68,7 +66,6 @@ export default function MeetingOverviewScreen() {
   const { meetings } = useMeetings();
   const draftMeetings = meetings.filter(m => m.tab === 'drafts');
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
   const [activeTab,    setActiveTab]    = useState<MandatoryTab>('all');
   const [actionTab,    setActionTab]    = useState<ActionTab>('pending');
   const [actionItems,  setActionItems]  = useState(ACTION_ITEMS_DATA);
@@ -83,8 +80,6 @@ export default function MeetingOverviewScreen() {
   const MONTHLY_CARDS    = MONTHLY_CARDS_DATA.map(c => ({ ...c, type: t(c.typeKey), nextDue: t(c.nextDueKey) }));
   const SEMI_ANNUAL_CARDS = SEMI_ANNUAL_CARDS_DATA.map(c => ({ ...c, type: t(c.typeKey), nextDue: t(c.nextDueKey) }));
   const FIXED_DATE_CARDS  = FIXED_DATE_CARDS_DATA.map(c => ({ ...c, type: t(c.typeKey), nextDue: t(c.nextDueKey) }));
-
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
 
   function markDone(id: string) {
     setActionItems(prev => prev.map(a => a.id === id ? { ...a, status: 'done' as const } : a));
@@ -107,37 +102,16 @@ export default function MeetingOverviewScreen() {
   const openTaskCount = actionItems.filter(a => a.status !== 'done').length;
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* ── Navbar ── */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* ── Sidebar + main ── */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar
-          state={sidebarState}
-          onMenuClick={toggleSidebar}
-          className="shrink-0 h-full"
-        />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb */}
-          <div className="shrink-0 px-6 pt-6 pb-5 bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[
-                t('breadcrumb_module'),
-                t('breadcrumb_meetings'),
-                t('overview_breadcrumb'),
-              ]}
-            />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 pb-[50px]">
+    <MeetingShellLayout
+      stepperActiveState={1}
+      showStepper={false}
+      showBack={false}
+      breadcrumbItems={[
+        t('breadcrumb_module'),
+        t('breadcrumb_meetings'),
+        t('overview_breadcrumb'),
+      ]}
+    >
             <div className="flex flex-col gap-[20px]">
 
               {/* ── Welcome heading ── */}
@@ -433,9 +407,6 @@ export default function MeetingOverviewScreen() {
               </div>
 
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    </MeetingShellLayout>
   );
 }

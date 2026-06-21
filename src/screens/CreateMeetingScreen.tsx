@@ -5,9 +5,6 @@ import { useMeetings } from '../context/MeetingsContext';
 import { WebSocketSTTClient } from '../utils/websocketSttClient';
 import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
   SectionHolder,
   Stepper,
   StepNavBar,
@@ -24,6 +21,7 @@ import {
   Pagination,
 } from '../components';
 import type { TableColumn } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const MODAL_PAGE_SIZE_OPTIONS = [8, 15, 25, 50];
 
@@ -83,8 +81,6 @@ export default function CreateMeetingScreen() {
     'Elected Member Ward 4': 'desig_elected_ward4',
     'Elected Member Ward 5': 'desig_elected_ward5',
   };
-
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
 
   // ── Section 1: Meeting details ──
   const [meetingType,  setMeetingType]  = useState('');
@@ -284,8 +280,6 @@ export default function CreateMeetingScreen() {
   // ── Validation ──
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const toggleSidebar = () => setSidebarState(s => s === 'full' ? 'shortened' : 'full');
-
   const meetingTypeOptions = [
     t('meeting_type_gp_general_body'),
     t('meeting_type_gram_sabha_ordinary'),
@@ -388,46 +382,22 @@ export default function CreateMeetingScreen() {
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
-      {/* ── Navbar ── */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* ── Sidebar + main ── */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar
-          state={sidebarState}
-          onMenuClick={toggleSidebar}
-          className="shrink-0 h-full"
+    <MeetingShellLayout
+      showStepper={false}
+      showBack={false}
+      breadcrumbItems={[
+        t('breadcrumb_module'),
+        t('breadcrumb_meetings'),
+        t('breadcrumb_create_meeting'),
+      ]}
+    >
+      <div className="flex flex-col gap-[15px]">
+        <Stepper
+          activeState={1}
+          stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
         />
 
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb + Stepper — fixed header */}
-          <div className="shrink-0 flex flex-col gap-[15px] px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
-            <Breadcrumb
-              level={3}
-              items={[
-                t('breadcrumb_module'),
-                t('breadcrumb_meetings'),
-                t('breadcrumb_create_meeting'),
-              ]}
-            />
-            <Stepper
-              activeState={1}
-              stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
-            />
-          </div>
-
-          <div className="shrink-0 px-6 pt-[10px]">
-            <StepNavBar showBack={false} />
-          </div>
-
-          {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 pt-4 pb-[50px]">
-            <div className="flex flex-col gap-[25px]">
+        <div className="flex flex-col gap-[25px]">
 
               {/* ── Section 1: Meeting Details ── */}
               <SectionHolder variant="mandatory" title={t('section_meeting_details')}>
@@ -683,8 +653,6 @@ export default function CreateMeetingScreen() {
                 />
               </div>
 
-            </div>
-          </div>
         </div>
       </div>
 
@@ -707,7 +675,7 @@ export default function CreateMeetingScreen() {
           onPageSizeChange={(sz) => { setModalPageSize(sz); setModalPage(1); }}
         />
       )}
-    </div>
+    </MeetingShellLayout>
   );
 }
 

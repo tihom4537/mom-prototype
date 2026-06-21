@@ -4,10 +4,6 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import { useAgenda } from '../context/AgendaContext';
 import {
-  Navbar,
-  Sidebar,
-  Breadcrumb,
-  Stepper,
   MeetingDetailsCard,
   SectionHolder,
   Button,
@@ -18,8 +14,8 @@ import {
   DatePicker,
   TimePicker,
   DescriptionField,
-  StepNavBar,
 } from '../components';
+import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -508,9 +504,6 @@ export default function SendToPresidentScreen() {
     : agendaItems;
   const meetingTypeOptions = MEETING_TYPE_KEYS.map(k => t(k));
 
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
-  const toggleSidebar = () => setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
-
   const [summary, setSummary] = useState(MOCK_SUMMARY);
   const [tasks,   setTasks]   = useState<TaskItem[]>(() =>
     MOCK_TASK_KEYS.map(k => ({ id: k.id, text: t(k.textKey), assignee: t(k.assigneeKey), deadline: t(k.deadlineKey) }))
@@ -585,8 +578,7 @@ export default function SendToPresidentScreen() {
   }
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
-
+    <>
       {/* Task modal */}
       {taskModal !== null && (
         <TaskModal
@@ -643,42 +635,11 @@ export default function SendToPresidentScreen() {
         </div>
       )}
 
-      {/* Navbar */}
-      <div className="shrink-0 relative z-40">
-        <Navbar version="default-with-welcome" />
-      </div>
-
-      {/* Sidebar + main */}
-      <div className="flex flex-1 min-h-0">
-        <Sidebar state={sidebarState} onMenuClick={toggleSidebar} className="shrink-0 h-full" />
-
-        <div className="flex flex-col flex-1 min-h-0 min-w-0">
-
-          {/* Breadcrumb + stepper */}
-          <div className="shrink-0 flex flex-col gap-5 px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
-            <Breadcrumb level={3} items={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_send_president')]} />
-            <Stepper
-              variant="meeting-flow"
-              activeState={5}
-              stepLabels={[
-                t('meeting_flow_step_1'),
-                t('meeting_flow_step_2'),
-                t('meeting_flow_step_3'),
-                t('meeting_flow_step_4'),
-                t('meeting_flow_step_5'),
-              ]}
-              onStepClick={step => {
-                const routes: Record<number, string> = { 1: '/meetings/attendance', 2: '/agenda-list', 3: '/meetings/proceedings-review', 4: '/meetings/closure-attendance' };
-                if (routes[step]) navigate(routes[step]);
-              }}
-            />
-          </div>
-
-          {/* Scrollable */}
-          <div className="flex-1 overflow-y-auto px-6 pt-4 pb-8">
-            <div className="flex flex-col gap-5">
-              <StepNavBar onBack={() => navigate('/meetings/closure-attendance', { state: { meetingId } })} backLabel={t('nav_previous_step')} />
-
+      <MeetingShellLayout
+        stepperActiveState={5}
+        backRoute="/meetings/closure-attendance"
+        breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_send_president')]}
+      >
               <MeetingDetailsCard
                 variant="default-shortened"
                 meetingTitle={t('mock_meeting_title')}
@@ -851,12 +812,7 @@ export default function SendToPresidentScreen() {
                   onClick={() => pdoSigned && setShowModal(true)}
                 />
               </div>
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
+      </MeetingShellLayout>
+    </>
   );
 }
