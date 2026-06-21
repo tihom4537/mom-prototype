@@ -162,3 +162,5 @@ export type { AboutStakeholdersCardProps } from './AboutStakeholdersCard';
 export { default as ModuleCardV3 } from './ModuleCardV3';
 export type { ModuleCardV3Props } from './ModuleCardV3';
 export { default as Reveal } from './Reveal';
+export { default as ScaleToFit, usePageScale } from './ScaleToFit';
+export { default as ScaleToFitHeight } from './ScaleToFitHeight';

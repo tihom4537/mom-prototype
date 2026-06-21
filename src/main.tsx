@@ -6,17 +6,20 @@ import App from './App.tsx'
 import { LanguageProvider } from './i18n/LanguageContext'
 import { AgendaProvider } from './context/AgendaContext'
 import { MeetingsProvider } from './context/MeetingsContext'
+import { AccessibilityProvider } from './context/AccessibilityContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      <LanguageProvider>
-        <MeetingsProvider>
-          <AgendaProvider>
-            <App />
-          </AgendaProvider>
-        </MeetingsProvider>
-      </LanguageProvider>
+      <AccessibilityProvider>
+        <LanguageProvider>
+          <MeetingsProvider>
+            <AgendaProvider>
+              <App />
+            </AgendaProvider>
+          </MeetingsProvider>
+        </LanguageProvider>
+      </AccessibilityProvider>
     </BrowserRouter>
   </StrictMode>,
 )

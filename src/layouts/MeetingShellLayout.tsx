@@ -11,6 +11,7 @@ import {
   StepNavBar,
 } from '../components';
 import type { StepperActiveState } from '../components';
+import ScaleToFitHeight from '../components/ScaleToFitHeight';
 
 const STEP_ROUTES: Record<number, string> = {
   1: '/meetings/attendance',
@@ -29,6 +30,10 @@ interface MeetingShellLayoutProps {
   showBack?: boolean;
   /** Fill viewport height — no scroll; children must manage their own overflow */
   fillHeight?: boolean;
+  /** Override the 3-item breadcrumb trail — defaults to module / meetings / start-meeting */
+  breadcrumbItems?: string[];
+  /** Set false to hide the Stepper row (e.g. screens outside the 5-step flow) */
+  showStepper?: boolean;
 }
 
 export default function MeetingShellLayout({
@@ -37,13 +42,15 @@ export default function MeetingShellLayout({
   backRoute,
   showBack = true,
   fillHeight = false,
+  breadcrumbItems,
+  showStepper = true,
 }: MeetingShellLayoutProps) {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
   const resolvedBackRoute = backRoute ?? STEP_ROUTES[stepperActiveState - 1];
-  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('full');
+  const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('shortened');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -51,7 +58,8 @@ export default function MeetingShellLayout({
     setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
+    <ScaleToFitHeight>
+    <div className="h-full overflow-hidden flex flex-col bg-[#f1f2f2]">
 
       {/* ── Row 1: Navbar (fixed) ── */}
       <div className="shrink-0 relative z-40">
@@ -123,24 +131,26 @@ export default function MeetingShellLayout({
           <div className="shrink-0 flex flex-col gap-5 px-6 pt-5 pb-[10px] bg-[#f1f2f2]">
             <Breadcrumb
               level={3}
-              items={[
+              items={breadcrumbItems ?? [
                 t('breadcrumb_module'),
                 t('breadcrumb_meetings'),
                 t('breadcrumb_start_meeting'),
               ]}
             />
-            <Stepper
-              variant="meeting-flow"
-              activeState={stepperActiveState}
-              stepLabels={[
-                t('meeting_flow_step_1'),
-                t('meeting_flow_step_2'),
-                t('meeting_flow_step_3'),
-                t('meeting_flow_step_4'),
-                t('meeting_flow_step_5'),
-              ]}
-              onStepClick={step => { if (STEP_ROUTES[step]) navigate(STEP_ROUTES[step], { state: { meetingId } }); }}
-            />
+            {showStepper && (
+              <Stepper
+                variant="meeting-flow"
+                activeState={stepperActiveState}
+                stepLabels={[
+                  t('meeting_flow_step_1'),
+                  t('meeting_flow_step_2'),
+                  t('meeting_flow_step_3'),
+                  t('meeting_flow_step_4'),
+                  t('meeting_flow_step_5'),
+                ]}
+                onStepClick={step => { if (STEP_ROUTES[step]) navigate(STEP_ROUTES[step], { state: { meetingId } }); }}
+              />
+            )}
           </div>
 
           {/* Lower section */}
@@ -154,5 +164,6 @@ export default function MeetingShellLayout({
         </div>
       </div>
     </div>
+    </ScaleToFitHeight>
   );
 }

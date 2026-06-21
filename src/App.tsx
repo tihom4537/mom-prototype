@@ -14,6 +14,7 @@ import MeetingListScreen from './screens/MeetingListScreen';
 import MeetingOverviewScreen from './screens/MeetingOverviewScreen';
 import AgendaListScreen from './screens/AgendaListScreen';
 import MoMEntryDefaultScreen from './screens/MoMEntryDefaultScreen';
+import MoMEntryDefaultScreenLegacy from './screens/MoMEntryDefaultScreenLegacy';
 import MoMEntryPostRecordingScreen from './screens/MoMEntryPostRecordingScreen';
 import MoMEntryFeedbackScreen from './screens/MoMEntryFeedbackScreen';
 import CreateMeetingScreen from './screens/CreateMeetingScreen';
@@ -74,6 +75,7 @@ export default function App() {
       <Route path="/meetings/view/:id"           element={<ViewMeetingScreen />} />
       <Route path="/agenda-list"              element={<AgendaListScreen />} />
       <Route path="/mom-entry"                element={<MoMEntryDefaultScreen />} />
+      <Route path="/mom-entry/legacy"         element={<MoMEntryDefaultScreenLegacy />} />
       <Route path="/mom-entry/post-recording" element={<MoMEntryPostRecordingScreen />} />
       <Route path="/mom-entry/feedback"       element={<MoMEntryFeedbackScreen />} />
     </Routes>

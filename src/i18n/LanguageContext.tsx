@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { translations } from './translations.js';
 
 type Lang = 'en' | 'kn';
@@ -12,8 +12,14 @@ interface LanguageContextValue {
 
 export const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+const HTML_LANG: Record<Lang, string> = { en: 'en', kn: 'kn' };
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Lang>('en');
+
+  useEffect(() => {
+    document.documentElement.lang = HTML_LANG[lang];
+  }, [lang]);
 
   function t(key: string): string {
     const dict = translations as Record<string, Record<string, string>>;

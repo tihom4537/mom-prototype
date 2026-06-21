@@ -22,6 +22,15 @@
   background: transparent !important;
 }
 
+/* High contrast mode — WCAG 1.4.3 / 1.4.6 */
+.a11y-high-contrast {
+  filter: contrast(1.35) saturate(1.1);
+}
+.a11y-high-contrast img,
+.a11y-high-contrast video {
+  filter: contrast(1.1);
+}
+
 :root {
   /* ── Base color tokens ── */
   --primary-50: #f7f0ee;
@@ -209,4 +218,88 @@ body {
 /* Smooth hover expand on recharts pie slices */
 .recharts-pie-sector path {
   transition: d 0.2s ease, transform 0.2s ease;
+}
+
+/* ── UX4G Accessibility widget CSS classes ──────────────────────────────── */
+
+/* Open-Dyslexic font (UX4G CDN) */
+@font-face {
+  font-family: 'Open-Dyslexic';
+  src: url('https://cdn.ux4g.gov.in/fonts/open-dyslexic.woff') format('woff');
+}
+
+/* Dyslexia friendly — exclude Material Icons spans so icons don't render as text */
+.dyslexia-mode *:not(.a11y-skip *):not(.a11y-skip):not(.material-icons):not(.material-icons-outlined):not(.material-icons-round):not(.material-icons-sharp) {
+  font-family: 'Open-Dyslexic', sans-serif !important;
+}
+
+/* Highlight links — UX4G spec: dark olive bg, yellow text */
+.highlight-links a:not(.a11y-skip a),
+.highlight-links button:not(.a11y-skip button) {
+  background: #444701 !important;
+  color: yellow !important;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+.highlight-links a span:not(.a11y-skip a span) {
+  color: yellow !important;
+}
+
+/* Hide images */
+.hide-images img:not(.a11y-skip img) {
+  visibility: hidden !important;
+}
+.hide-images *:not(.a11y-skip *):not(.a11y-skip) {
+  background-image: none !important;
+}
+
+/* Invert colors — applied to <html> */
+html.invert-colors {
+  filter: invert(1) !important;
+  background: #fff !important;
+}
+/* Re-invert images so photos look normal */
+html.invert-colors img:not(.a11y-skip img),
+html.invert-colors video {
+  filter: invert(1);
+}
+
+/* Dark mode — UX4G spec */
+body.dark-mode {
+  color: #fff !important;
+  background-color: #161519 !important;
+}
+body.dark-mode *:not(.a11y-skip *):not(.a11y-skip):not(img):not(video) {
+  background-color: inherit;
+  color: inherit;
+}
+body.dark-mode a:not(.a11y-skip a),
+body.dark-mode a *:not(.a11y-skip a *) {
+  color: rgb(255, 255, 0) !important;
+}
+
+/* Screen reader mode: show "Read this section" buttons */
+body:not(.screen-reader-active) .sr-read-btn {
+  display: none !important;
+}
+body.screen-reader-active .sr-read-btn {
+  display: inline-flex !important;
+}
+
+/* ADHD Bionic Reading bold spans */
+b.a11y-adhd-bold {
+  font-weight: 700 !important;
+}
+
+/* ADHD mode: kill distracting animations/transitions */
+body.adhd-friendly *:not(.a11y-adhd-skip *) {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ADHD mode: stronger focus ring so reading position is clear */
+body.adhd-friendly *:focus-visible {
+  outline: 3px solid #6a3e31 !important;
+  outline-offset: 2px !important;
 }
