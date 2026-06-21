@@ -201,8 +201,8 @@ export default function MoMEntryDefaultScreen() {
           'Mention the name of the KUWSDB official contacted regarding water supply disruptions in [ward number].',
           'Include the resolution number and date for the decision on caste and income certificate delays.',
         ],
-        spans: [null, null, null],
-        modes: ['APPEND', 'APPEND', 'APPEND'],
+        spans: ['Swachh Saturday village cleanliness activities', 'Onagalu Day observance', 'COVID-19 JN.1 precautionary measures'],
+        modes: ['APPEND', 'APPEND', 'REPHRASE'],
         flag_message: null,
       };
       setIsFetchingFeedback(false);
@@ -334,7 +334,13 @@ export default function MoMEntryDefaultScreen() {
                 </p>
               )}
 
-              <div className="w-full flex flex-col rounded-[12px] border border-[rgba(106,62,49,0.24)] overflow-hidden">
+              {(() => {
+                const activeRecField = fields.find(f => (fieldRecState[f] ?? 'idle') === 'recording');
+                const outerBorder = activeRecField
+                  ? 'border-[#ff7468] shadow-[0_0_0_1px_#ff7468]'
+                  : 'border-[rgba(106,62,49,0.24)]';
+                return (
+              <div className={`w-full flex flex-col rounded-[12px] border transition-colors overflow-hidden ${outerBorder}`}>
                 {fields.map((field, idx) => {
                   const isActive = activeField === field;
                   const recState = fieldRecState[field] ?? 'idle';
@@ -345,18 +351,18 @@ export default function MoMEntryDefaultScreen() {
                   return (
                     <div
                       key={field}
-                      className={`flex min-h-[80px] transition-colors ${idx < fields.length - 1 ? 'border-b border-[rgba(106,62,49,0.18)]' : ''} bg-white`}
+                      className={`flex transition-colors ${idx < fields.length - 1 ? 'border-b border-[rgba(106,62,49,0.18)]' : ''} bg-white`}
                       onClick={() => setActiveField(field)}
                     >
                       {/* Left label column */}
-                      <div className={`w-[180px] shrink-0 flex items-start px-[16px] py-[14px] border-r transition-colors ${isActive ? 'border-[#6a3e31] bg-[#faf7f6]' : 'border-[rgba(106,62,49,0.18)] bg-[#faf7f6]'}`}>
+                      <div className="w-[180px] shrink-0 flex items-start px-[16px] py-[14px] border-r border-[rgba(106,62,49,0.18)] bg-[#faf7f6]">
                         <span className="text-[14px] font-semibold leading-[20px] text-[#6a3e31]" style={NS}>
                           {field}
                         </span>
                       </div>
 
-                      {/* Right entry column */}
-                      <div className={`flex-1 flex flex-col min-w-0 transition-colors ${isActive ? 'border-l-2 border-[#6a3e31]' : ''}`}>
+                      {/* Right entry column — active: brown left accent line */}
+                      <div className={`flex-1 flex flex-col min-w-0 ${isActive ? 'border-l-2 border-[#6a3e31]' : ''}`}>
                         {isProcessing ? (
                           <div className="flex items-center gap-[8px] px-[14px] py-[14px] flex-1">
                             <svg className="animate-spin shrink-0" width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -368,12 +374,20 @@ export default function MoMEntryDefaultScreen() {
                         ) : (
                           <textarea
                             value={fieldValues[field] ?? ''}
-                            onChange={e => updateField(field, e.target.value)}
+                            onChange={e => {
+                              updateField(field, e.target.value);
+                              const el = e.target;
+                              el.style.height = 'auto';
+                              el.style.height = `${el.scrollHeight}px`;
+                            }}
                             onFocus={() => setActiveField(field)}
+                            ref={el => {
+                              if (el) { el.style.height = 'auto'; el.style.height = `${el.scrollHeight}px`; }
+                            }}
                             placeholder={`Enter ${field.toLowerCase()}…`}
-                            rows={2}
-                            className="flex-1 w-full resize-none bg-transparent border-none outline-none px-[14px] py-[14px] text-[13px] text-[#212121] leading-[20px] placeholder:text-[#bdbdbd]"
-                            style={NS}
+                            rows={1}
+                            className="w-full resize-none bg-transparent border-none outline-none px-[14px] py-[14px] text-[14px] text-[#212121] leading-[20px] placeholder:text-[#bdbdbd] overflow-hidden"
+                            style={{ ...NS, minHeight: '52px' }}
                           />
                         )}
 
@@ -451,6 +465,8 @@ export default function MoMEntryDefaultScreen() {
                   );
                 })}
               </div>
+                );
+              })()}
             </div>
 
             {/* Footer buttons */}
