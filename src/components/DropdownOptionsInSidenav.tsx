@@ -28,9 +28,11 @@ export default function DropdownOptionsInSidenav({
       : '';
 
   return (
-    <div
-      className={`${className ?? 'flex gap-[5px] items-center w-[166px]'} cursor-pointer`}
+    <button
+      type="button"
       onClick={onClick}
+      aria-current={state === 'selected' ? 'true' : undefined}
+      className={`${className ?? 'flex gap-[5px] items-center w-[166px]'} cursor-pointer bg-transparent border-none text-left p-0`}
     >
       {/* Left vertical bar */}
       <div className={`self-stretch shrink-0 w-[1.667px] ${barColor}`} />
@@ -48,6 +50,6 @@ export default function DropdownOptionsInSidenav({
           </span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

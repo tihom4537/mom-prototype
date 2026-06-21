@@ -1,28 +1,21 @@
 import Icon from './Icon';
+import { useAccessibility } from '../context/AccessibilityContext';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
 interface AccessibilityBarProps {
-  onFontDecrease?: () => void;
-  onFontDefault?: () => void;
-  onFontIncrease?: () => void;
-  onColourToggle?: () => void;
-  onSkipToContent?: () => void;
   onGovernmentOfIndia?: () => void;
   onMore?: () => void;
   className?: string;
 }
 
+
 export default function AccessibilityBar({
-  onFontDecrease,
-  onFontDefault,
-  onFontIncrease,
-  onColourToggle,
-  onSkipToContent,
   onGovernmentOfIndia,
   onMore,
   className,
 }: AccessibilityBarProps) {
+  const { fontStep, highContrast, increaseFont, decreaseFont, resetFont, toggleContrast, skipToContent, openPanel } = useAccessibility();
   return (
     <div className={`bg-[#6a3e31] flex items-center justify-between px-[80px] h-[41px] w-full shrink-0 ${className ?? ''}`}>
 
@@ -57,7 +50,7 @@ export default function AccessibilityBar({
           type="button"
           className="font-medium text-[14px] text-white tracking-[0.1px] leading-[20px] whitespace-nowrap bg-transparent border-none cursor-pointer p-0"
           style={NS}
-          onClick={onSkipToContent}
+          onClick={skipToContent}
         >
           Skip to Main Content
         </button>
@@ -65,27 +58,30 @@ export default function AccessibilityBar({
         <div className="w-px h-[20px] bg-white opacity-30" />
 
         {/* Font size controls — A (small), A (medium), A (large) */}
-        <div className="flex items-center gap-[8px]">
+        <div className="flex items-center gap-[8px]" role="group" aria-label="Text size">
           <button
             type="button"
-            className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] bg-transparent border-none cursor-pointer hover:bg-white/10 transition-colors opacity-60 hover:opacity-100"
-            onClick={onFontDecrease}
+            className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] bg-transparent border-none cursor-pointer hover:bg-white/10 transition-colors opacity-60 hover:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            onClick={decreaseFont}
+            disabled={fontStep === 0}
             aria-label="Decrease font size"
           >
             <span className="text-white font-medium select-none" style={{ fontSize: 11, lineHeight: 1, ...NS }}>A</span>
           </button>
           <button
             type="button"
-            className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] bg-transparent border-none cursor-pointer hover:bg-white/10 transition-colors"
-            onClick={onFontDefault}
+            className={`flex items-center justify-center w-[28px] h-[28px] rounded-[4px] border-none cursor-pointer hover:bg-white/10 transition-colors ${fontStep === 0 ? 'bg-white/10' : 'bg-transparent'}`}
+            onClick={resetFont}
             aria-label="Default font size"
+            aria-pressed={fontStep === 0}
           >
             <span className="text-white font-medium select-none" style={{ fontSize: 14, lineHeight: 1, ...NS }}>A</span>
           </button>
           <button
             type="button"
-            className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] bg-white/10 border-none cursor-pointer hover:bg-white/20 transition-colors"
-            onClick={onFontIncrease}
+            className={`flex items-center justify-center w-[28px] h-[28px] rounded-[4px] border-none cursor-pointer hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${fontStep > 0 ? 'bg-white/20' : 'bg-white/10'}`}
+            onClick={increaseFont}
+            disabled={fontStep === 2}
             aria-label="Increase font size"
           >
             <span className="text-white font-medium select-none" style={{ fontSize: 17, lineHeight: 1, ...NS }}>A</span>
@@ -97,9 +93,10 @@ export default function AccessibilityBar({
         {/* Colour/contrast toggle */}
         <button
           type="button"
-          className="flex items-center justify-center w-[28px] h-[28px] rounded-[4px] bg-transparent border-none cursor-pointer hover:bg-white/10 transition-colors"
-          onClick={onColourToggle}
-          aria-label="Toggle colour theme"
+          className={`flex items-center justify-center w-[28px] h-[28px] rounded-[4px] border-none cursor-pointer hover:bg-white/10 transition-colors ${highContrast ? 'bg-white/20' : 'bg-transparent'}`}
+          onClick={toggleContrast}
+          aria-label="Toggle high contrast mode"
+          aria-pressed={highContrast}
         >
           <Icon name="contrast" size="small" color="white" />
         </button>
@@ -110,7 +107,8 @@ export default function AccessibilityBar({
         <button
           type="button"
           className="flex items-center gap-[6px] bg-transparent border-none cursor-pointer p-0 hover:opacity-100 opacity-90"
-          onClick={onMore}
+          onClick={() => { openPanel(); onMore?.(); }}
+          aria-label="Open accessibility options panel"
         >
           <Icon name="accessibility" size="small" color="white" />
           <span className="font-medium text-[12px] text-white leading-normal whitespace-nowrap" style={NS}>

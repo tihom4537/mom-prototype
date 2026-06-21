@@ -123,11 +123,11 @@ export default function LiveCounterStrip({
                 <AnimatedNumber value={stat.value} play={play} />
               </p>
               <div className="flex gap-[4px] items-center overflow-clip">
-                <span className="font-medium text-[12px] text-[#ED8243]" style={NS}>{stat.label}</span>
+                <span className="font-medium text-[12px] text-[#8b400e]" style={NS}>{stat.label}</span>
                 {stat.suffix && (
                   <>
-                    <span className="font-normal text-[11px] text-[#ED8243]" style={NS}> · </span>
-                    <span className="font-normal text-[12px] text-[#ED8243]" style={NS}>{stat.suffix}</span>
+                    <span className="font-normal text-[11px] text-[#8b400e]" style={NS}> · </span>
+                    <span className="font-normal text-[12px] text-[#8b400e]" style={NS}>{stat.suffix}</span>
                   </>
                 )}
               </div>

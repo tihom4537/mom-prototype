@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
 
 interface DropdownFieldProps {
@@ -33,17 +34,105 @@ export default function DropdownField({
   allLabel = 'All',
 }: DropdownFieldProps) {
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const [listPos, setListPos] = useState<{ top: number; left: number; width: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+
+  const allOptions = showAll ? ['', ...options] : options;
+  const optionLabel = (opt: string) => (opt === '' ? allLabel : opt);
+
+  function calcPos() {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    if (opensUp) {
+      setListPos({ top: r.top + window.scrollY - 4, left: r.left + window.scrollX, width: r.width });
+    } else {
+      setListPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width });
+    }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    calcPos();
+    const update = () => calcPos();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        ref.current && !ref.current.contains(target) &&
+        listRef.current && !listRef.current.contains(target)
+      ) {
         setOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  function openList() {
+    if (disabled) return;
+    const currentIndex = Math.max(0, allOptions.indexOf(value));
+    setHighlightedIndex(currentIndex);
+    setOpen(true);
+  }
+
+  function closeList() {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }
+
+  function commitHighlighted() {
+    const opt = allOptions[highlightedIndex];
+    if (opt !== undefined) onChange(opt);
+    closeList();
+  }
+
+  function handleTriggerKeyDown(e: React.KeyboardEvent<HTMLButtonElement>) {
+    if (disabled) return;
+    switch (e.key) {
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (!open) openList();
+        else commitHighlighted();
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (!open) {
+          openList();
+        } else {
+          setHighlightedIndex(i => Math.min(i + 1, allOptions.length - 1));
+        }
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        if (!open) {
+          openList();
+        } else {
+          setHighlightedIndex(i => Math.max(i - 1, 0));
+        }
+        break;
+      case 'Escape':
+        if (open) {
+          e.preventDefault();
+          setOpen(false);
+        }
+        break;
+      default:
+        break;
+    }
+  }
 
   const borderColor = hasError
     ? 'border-[#d32f2f]'
@@ -52,6 +141,45 @@ export default function DropdownField({
     : 'border-[#cccccc]';
 
   const ring = open && !hasError ? 'shadow-[0px_0px_0px_4px_rgba(106,62,49,0.32)]' : '';
+
+  const listbox = open && listPos
+    ? createPortal(
+        <div
+          id={listId}
+          ref={listRef}
+          role="listbox"
+          style={{
+            position: 'absolute',
+            top: opensUp ? undefined : listPos.top,
+            bottom: opensUp ? window.innerHeight - listPos.top + 4 : undefined,
+            left: listPos.left,
+            width: listPos.width,
+            zIndex: 9999,
+          }}
+          className="bg-white border border-[#e0e0e0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.12)] overflow-hidden"
+        >
+          {allOptions.map((option, index) => (
+            <button
+              key={option || '__all__'}
+              id={`${listId}-option-${index}`}
+              type="button"
+              role="option"
+              aria-selected={value === option}
+              onMouseEnter={() => setHighlightedIndex(index)}
+              onClick={() => { onChange(option); closeList(); }}
+              className={`w-full text-left px-4 py-[10px] text-sm transition-colors
+                ${option === '' && showAll ? 'border-b border-[#f0f0f0]' : ''}
+                ${index === highlightedIndex ? 'bg-[#f5f5f5]' : 'hover:bg-[#f5f5f5]'}
+                ${value === option ? 'bg-[#f0ece9] text-[#6a3e31] font-medium' : option === '' ? 'text-[#525c66] italic' : 'text-[#212121]'}`}
+              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+            >
+              {optionLabel(option)}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )
+    : null;
 
   return (
     <div className={`flex flex-col gap-[6px] ${className ?? ''}`} ref={ref}>
@@ -67,9 +195,16 @@ export default function DropdownField({
 
       <div className="relative">
         <button
+          ref={triggerRef}
           type="button"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-activedescendant={open ? `${listId}-option-${highlightedIndex}` : undefined}
           disabled={disabled}
-          onClick={() => !disabled && setOpen(o => !o)}
+          onClick={() => !disabled && (open ? closeList() : openList())}
+          onKeyDown={handleTriggerKeyDown}
           className={`flex items-center w-full bg-white rounded-lg border ${borderColor} ${ring} py-[10px] pl-3 pr-3 transition-all duration-150 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
         >
           <span
@@ -81,33 +216,7 @@ export default function DropdownField({
           <Icon name={open ? 'arrow_drop_up' : 'arrow_drop_down'} size="small" color="#727272" />
         </button>
 
-        {open && (
-          <div className={`absolute left-0 right-0 bg-white border border-[#e0e0e0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.12)] z-50 overflow-hidden ${opensUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
-            {showAll && (
-              <button
-                type="button"
-                onClick={() => { onChange(''); setOpen(false); }}
-                className={`w-full text-left px-4 py-[10px] text-sm hover:bg-[#f5f5f5] transition-colors border-b border-[#f0f0f0]
-                  ${value === '' ? 'bg-[#f0ece9] text-[#6a3e31] font-medium' : 'text-[#525c66] italic'}`}
-                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-              >
-                {allLabel}
-              </button>
-            )}
-            {options.map(option => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => { onChange(option); setOpen(false); }}
-                className={`w-full text-left px-4 py-[10px] text-sm hover:bg-[#f5f5f5] transition-colors
-                  ${value === option ? 'bg-[#f0ece9] text-[#6a3e31] font-medium' : 'text-[#212121]'}`}
-                style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        )}
+        {listbox}
       </div>
 
       {hasError && errorText && (

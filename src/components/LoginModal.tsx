@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { usePageScale } from './ScaleToFit';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -15,6 +18,12 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = 'login-modal-title';
+  const pageScale = usePageScale();
+
+  useFocusTrap(dialogRef, true, closeButtonRef);
 
   // Close on Escape
   useEffect(() => {
@@ -29,18 +38,25 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
     return () => { document.body.style.overflow = ''; };
   }, []);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.45)]"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-transparent flex flex-col gap-[3px] w-[510px] max-h-[90vh] overflow-y-auto rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.18)]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-transparent flex flex-col gap-[3px] w-[510px] max-h-[90vh] overflow-y-auto rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.18)]"
+        style={pageScale < 1 ? { transform: `scale(${pageScale})` } : undefined}
+      >
 
         {/* Header */}
         <div className="bg-white flex gap-[15px] items-center pb-[15px] pt-[20px] px-[25px] rounded-tl-[20px] rounded-tr-[20px]">
           <div className="flex flex-1 min-w-0 flex-col gap-[2px]">
             <div className="flex items-center gap-[5px]">
-              <p className="font-semibold text-[17px] text-[#6a3e31] whitespace-nowrap" style={NS}>
+              <p id={titleId} className="font-semibold text-[17px] text-[#6a3e31] whitespace-nowrap" style={NS}>
                 {t('login_modal_title')}
               </p>
               <span className="font-medium text-[14px] text-[#b7131a]" style={NS}>*</span>
@@ -50,8 +66,10 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
             </p>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
+            aria-label={t('btn_close')}
             className="flex items-center justify-center w-[32px] h-[32px] rounded-[8px] hover:bg-[#f7f0ee] cursor-pointer bg-transparent border-none shrink-0 transition-colors"
           >
             <Icon name="close" size="medium" color="#212121" />
@@ -212,6 +230,7 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

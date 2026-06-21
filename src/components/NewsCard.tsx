@@ -31,7 +31,7 @@ function DateRange({ startDate, endDate }: { startDate: string; endDate: string 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex gap-[4px] items-center overflow-clip shrink-0">
-      <span className="font-normal text-[11px] text-[rgba(75,75,75,0.7)] whitespace-nowrap" style={NS}>{label}</span>
+      <span className="font-normal text-[11px] text-[#727272] whitespace-nowrap" style={NS}>{label}</span>
       <span className="font-medium text-[12px] text-[#212121] whitespace-nowrap" style={NS}>{value}</span>
     </div>
   );
@@ -40,7 +40,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 function DatePill({ date }: { date: string }) {
   return (
     <div className="bg-[#fae1d1] flex gap-[4px] items-center overflow-clip px-[5px] py-[2px] rounded-[8px] shrink-0 whitespace-nowrap">
-      <span className="font-normal text-[11px] text-[rgba(75,75,75,0.7)]" style={NS}>Date:</span>
+      <span className="font-normal text-[11px] text-[#727272]" style={NS}>Date:</span>
       <span className="font-medium text-[12px] text-[#212121]" style={NS}>{date}</span>
     </div>
   );

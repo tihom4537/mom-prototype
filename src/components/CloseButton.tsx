@@ -1,4 +1,6 @@
+import { forwardRef } from 'react';
 import Icon from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export type CloseButtonVariant = 'default' | 'outlined' | 'tonal';
 export type CloseButtonSize = 'small' | 'default' | 'large';
@@ -11,13 +13,14 @@ interface CloseButtonProps {
   className?: string;
 }
 
-export default function CloseButton({
+const CloseButton = forwardRef<HTMLButtonElement, CloseButtonProps>(function CloseButton({
   onClick,
   variant = 'default',
   size = 'default',
   disabled = false,
   className,
-}: CloseButtonProps) {
+}, ref) {
+  const { t } = useLanguage();
   const sizeClass = size === 'small' ? 'w-6 h-6 rounded-[4px]' : size === 'large' ? 'w-10 h-10 rounded-[8px]' : 'w-8 h-8 rounded-[6px]';
 
   const variantClass =
@@ -29,12 +32,16 @@ export default function CloseButton({
 
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       disabled={disabled}
+      aria-label={t('btn_close')}
       className={`flex items-center justify-center ${sizeClass} ${variantClass} transition-colors shrink-0 ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className ?? ''}`}
     >
       <Icon name="close" size="small" color="#6a3e31" />
     </button>
   );
-}
+});
+
+export default CloseButton;

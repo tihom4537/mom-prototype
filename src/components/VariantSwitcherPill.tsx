@@ -13,7 +13,7 @@ export default function VariantSwitcherPill() {
   const { pathname } = useLocation();
 
   return (
-    <div className="fixed bottom-[24px] right-[24px] z-50 flex items-center gap-[2px] bg-[#212121] rounded-full px-[4px] py-[4px] shadow-[0_4px_16px_rgba(0,0,0,0.24)]">
+    <div className="fixed bottom-[24px] left-[24px] z-50 flex items-center gap-[2px] bg-[#212121] rounded-full px-[4px] py-[4px] shadow-[0_4px_16px_rgba(0,0,0,0.24)]">
       {VARIANTS.map(v => {
         const active = pathname === v.route;
         return (

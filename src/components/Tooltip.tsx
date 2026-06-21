@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { usePageScale } from './ScaleToFit';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -15,6 +16,7 @@ interface TooltipProps {
 export default function Tooltip({ text, direction = 'top', autoWidth = false, children }: TooltipProps) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
+  const pageScale = usePageScale();
 
   const show = useCallback(() => {
     if (!anchorRef.current) return;
@@ -44,10 +46,11 @@ export default function Tooltip({ text, direction = 'top', autoWidth = false, ch
   const tooltipStyle = (): React.CSSProperties => {
     if (!pos) return { display: 'none' };
     const base: React.CSSProperties = { position: 'fixed', zIndex: 9999, pointerEvents: 'none', display: 'flex' };
-    if (direction === 'top')    return { ...base, flexDirection: 'column', alignItems: 'center', left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' };
-    if (direction === 'bottom') return { ...base, flexDirection: 'column', alignItems: 'center', left: pos.x, top: pos.y, transform: 'translateX(-50%)' };
-    if (direction === 'left')   return { ...base, flexDirection: 'row',    alignItems: 'center', left: pos.x, top: pos.y, transform: 'translate(-100%, -50%)' };
-    return                             { ...base, flexDirection: 'row',    alignItems: 'center', left: pos.x, top: pos.y, transform: 'translateY(-50%)' };
+    const s = pageScale;
+    if (direction === 'top')    return { ...base, flexDirection: 'column', alignItems: 'center', left: pos.x, top: pos.y, transform: `translate(-50%, -100%) scale(${s})`, transformOrigin: 'bottom center' };
+    if (direction === 'bottom') return { ...base, flexDirection: 'column', alignItems: 'center', left: pos.x, top: pos.y, transform: `translateX(-50%) scale(${s})`, transformOrigin: 'top center' };
+    if (direction === 'left')   return { ...base, flexDirection: 'row',    alignItems: 'center', left: pos.x, top: pos.y, transform: `translate(-100%, -50%) scale(${s})`, transformOrigin: 'right center' };
+    return                             { ...base, flexDirection: 'row',    alignItems: 'center', left: pos.x, top: pos.y, transform: `translateY(-50%) scale(${s})`, transformOrigin: 'left center' };
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import Icon from './Icon';
 
 interface DropdownBoxOfIconProps {
@@ -23,6 +23,51 @@ export default function DropdownBoxOfIcon({
   const [open, setOpen] = useState(isOpen ?? false);
   const toggle = onToggle ?? (() => setOpen(o => !o));
   const isExpanded = onToggle !== undefined ? isOpen : open;
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
+
+  // Move focus into the list when it opens.
+  useEffect(() => {
+    if (isExpanded) {
+      setHighlightedIndex(0);
+      const firstItem = listRef.current?.querySelector<HTMLElement>('[role="option"]');
+      firstItem?.focus();
+    }
+  }, [isExpanded]);
+
+  function handleListKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setHighlightedIndex(i => {
+          const next = Math.min(i + 1, items.length - 1);
+          listRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[next]?.focus();
+          return next;
+        });
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setHighlightedIndex(i => {
+          const prev = Math.max(i - 1, 0);
+          listRef.current?.querySelectorAll<HTMLElement>('[role="option"]')[prev]?.focus();
+          return prev;
+        });
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        onItemClick?.(items[highlightedIndex]);
+        onToggle?.();
+        break;
+      case 'Escape':
+        e.preventDefault();
+        onToggle?.();
+        break;
+      default:
+        break;
+    }
+  }
 
   return (
     <div className={`flex flex-col items-start relative ${className ?? ''}`}>
@@ -32,6 +77,8 @@ export default function DropdownBoxOfIcon({
           className="flex items-center justify-center size-[38px] cursor-pointer"
           onClick={toggle}
           aria-label="Open dropdown"
+          aria-haspopup="listbox"
+          aria-expanded={false}
         >
           {triggerIcon ?? <Icon type="arrow_drop_down" className="relative overflow-clip size-6" />}
         </button>
@@ -39,7 +86,7 @@ export default function DropdownBoxOfIcon({
 
       {/* Open state: header (optional) + items */}
       {isExpanded && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden w-[260px]">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden w-[260px]" onKeyDown={handleListKeyDown}>
           {/* Header — only when menuLabel provided */}
           {menuLabel && (
             <button
@@ -55,12 +102,16 @@ export default function DropdownBoxOfIcon({
             </button>
           )}
           {/* Items */}
-          <div className="bg-white flex flex-col rounded-lg overflow-hidden">
+          <div id={listId} role="listbox" ref={listRef} className="bg-white flex flex-col rounded-lg overflow-hidden">
             {items.map((item, i) => (
               <button
                 key={i}
-                className="bg-white flex items-center px-6 py-[11px] w-full hover:bg-[#f7f0ee] transition-colors text-sm text-left"
+                role="option"
+                aria-selected={i === highlightedIndex}
+                tabIndex={i === highlightedIndex ? 0 : -1}
+                className={`bg-white flex items-center px-6 py-[11px] w-full hover:bg-[#f7f0ee] transition-colors text-sm text-left ${i === highlightedIndex ? 'bg-[#f7f0ee]' : ''}`}
                 onClick={() => { onItemClick?.(item); onToggle?.(); }}
+                onFocus={() => setHighlightedIndex(i)}
               >
                 <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
                   {item}

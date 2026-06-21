@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -108,6 +108,8 @@ export default function Navbar({
   const [langOpen, setLangOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const profileTriggerRef = useRef<HTMLButtonElement>(null);
+  const settingsTriggerRef = useRef<HTMLButtonElement>(null);
 
   const currentOption = LANG_OPTIONS.find(o => o.code === lang)!;
 
@@ -323,8 +325,12 @@ export default function Navbar({
         {/* Profile pill — click to toggle dropdown */}
         <div className="relative shrink-0 w-[293px]">
           <button
+            ref={profileTriggerRef}
             onClick={() => { setProfileOpen(o => !o); setSettingsOpen(false); }}
+            onKeyDown={e => { if (e.key === 'Escape' && profileOpen) { e.preventDefault(); setProfileOpen(false); } }}
             className="bg-[#f7f0ee] flex gap-[11px] items-center p-[10px] rounded-xl w-full cursor-pointer border-none text-left"
+            aria-haspopup="listbox"
+            aria-expanded={profileOpen}
           >
             <div className="flex items-center justify-center shrink-0 size-[38px]">
               <Icon name="account_circle" size="large" color="#6a3e31" />
@@ -339,10 +345,14 @@ export default function Navbar({
             </div>
           </button>
           {profileOpen && (
-            <div className="absolute right-0 top-full mt-1 shadow-lg z-50" onMouseLeave={() => setProfileOpen(false)}>
+            <div
+              className="absolute right-0 top-full mt-1 shadow-lg z-50"
+              onMouseLeave={() => setProfileOpen(false)}
+              onKeyDown={e => { if (e.key === 'Escape') { setProfileOpen(false); profileTriggerRef.current?.focus(); } }}
+            >
               <DropdownBoxOfProfile
                 isOpen
-                onToggle={() => setProfileOpen(false)}
+                onToggle={() => { setProfileOpen(false); profileTriggerRef.current?.focus(); }}
                 menuLabel="Switch Profile"
                 items={['PDO — kakanur GP', 'Secretary — Hosakote GP', 'Log out']}
                 onItemClick={item => { setProfileOpen(false); if (item === 'Log out') navigate('/homepage'); }}
@@ -358,17 +368,25 @@ export default function Navbar({
         {/* Settings icon + dropdown */}
         <div className="relative shrink-0">
           <button
+            ref={settingsTriggerRef}
             onClick={() => { setSettingsOpen(o => !o); setProfileOpen(false); }}
+            onKeyDown={e => { if (e.key === 'Escape' && settingsOpen) { e.preventDefault(); setSettingsOpen(false); } }}
             className="flex items-center justify-center cursor-pointer bg-transparent border-none p-0"
             aria-label="Settings"
+            aria-haspopup="listbox"
+            aria-expanded={settingsOpen}
           >
             <Icon name="settings" size="medium" color="#6a3e31" />
           </button>
           {settingsOpen && (
-            <div className="absolute right-0 top-full mt-1 shadow-lg z-50" onMouseLeave={() => setSettingsOpen(false)}>
+            <div
+              className="absolute right-0 top-full mt-1 shadow-lg z-50"
+              onMouseLeave={() => setSettingsOpen(false)}
+              onKeyDown={e => { if (e.key === 'Escape') { setSettingsOpen(false); settingsTriggerRef.current?.focus(); } }}
+            >
               <DropdownBoxOfIcon
                 isOpen
-                onToggle={() => setSettingsOpen(false)}
+                onToggle={() => { setSettingsOpen(false); settingsTriggerRef.current?.focus(); }}
                 items={['Help & Support', 'Log out']}
                 onItemClick={item => { setSettingsOpen(false); if (item === 'Log out') navigate('/homepage'); }}
               />

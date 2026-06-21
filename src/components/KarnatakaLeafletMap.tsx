@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { usePageScale } from './ScaleToFit';
 import { MapContainer, GeoJSON as LeafletGeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GeoJsonObject, Feature, FeatureCollection, GeoJsonProperties } from 'geojson';
@@ -288,6 +289,7 @@ export default function KarnatakaLeafletMap({
   const [tooltip, setTooltip] = useState<Omit<Tooltip, 'x' | 'y'>>({ visible: false, label: '', value: 0, valueLabel: '' });
   const tooltipElRef = useRef<HTMLDivElement | null>(null);
   const [drillDistrictId, setDrillDistrictId] = useState<number | null>(null);
+  const pageScale = usePageScale();
 
   // Refs so event handlers never go stale
   const gpDataRef                 = useRef(gpData);
@@ -494,7 +496,7 @@ export default function KarnatakaLeafletMap({
         <div
           ref={tooltipElRef}
           className="pointer-events-none bg-[#2d1f1a] text-white rounded-[10px] px-[16px] py-[12px] shadow-lg flex flex-col gap-[6px]"
-          style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, visibility: tooltip.visible ? 'visible' : 'hidden' }}
+          style={{ position: 'fixed', left: 0, top: 0, zIndex: 9999, visibility: tooltip.visible ? 'visible' : 'hidden', transform: `scale(${pageScale})`, transformOrigin: 'top left' }}
         >
           <div className="flex flex-col gap-[1px]">
             <span className="font-normal text-[10px] text-[rgba(255,255,255,0.5)] leading-normal tracking-[0.4px] uppercase" style={NS}>
