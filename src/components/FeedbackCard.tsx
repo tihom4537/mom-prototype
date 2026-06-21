@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import FeedbackCardTags, { FeedbackTagType } from './FeedbackCardTags';
 import Button from './Button';
 import Icon from './Icon';
+import Tooltip from './Tooltip';
 import { useLanguage } from '../i18n/LanguageContext';
 
 export type FeedbackCardType = 'fill-blanks' | 'rephrase';
@@ -15,6 +16,8 @@ const typeToTagType: Record<FeedbackCardType, FeedbackTagType> = {
   rephrase:      'rephrase',
 };
 
+const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
+
 export interface FeedbackCardProps {
   type?: FeedbackCardType;
   segments?: Segment[];
@@ -27,16 +30,15 @@ export interface FeedbackCardProps {
   onHoverEnter?: () => void;
   onHoverLeave?: () => void;
   onClick?: () => void;
-  className?: string;
-  // Recording props (for fill-blanks cards)
-  inputText?: string;
-  onInputChange?: (text: string) => void;
-  recordingState?: 'idle' | 'recording' | 'processing';
+  // Card mic props (fill-blanks only)
+  isMicRecording?: boolean;
+  isMicProcessing?: boolean;
   onMicClick?: () => void;
-  onCancelRecording?: () => void;
-  onConfirmRecording?: () => void;
+  onMicCancel?: () => void;
+  onMicConfirm?: () => void;
   micAnalyserNode?: AnalyserNode;
   micError?: string | null;
+  className?: string;
 }
 
 export default function FeedbackCard({
@@ -51,53 +53,44 @@ export default function FeedbackCard({
   onHoverEnter,
   onHoverLeave,
   onClick,
-  className,
-  inputText = '',
-  onInputChange,
-  recordingState = 'idle',
+  isMicRecording = false,
+  isMicProcessing = false,
   onMicClick,
-  onCancelRecording,
-  onConfirmRecording,
+  onMicCancel,
+  onMicConfirm,
   micAnalyserNode,
   micError,
+  className,
 }: FeedbackCardProps) {
   const { t } = useLanguage();
   const isFillBlanks = type === 'fill-blanks';
-  const isRecording = recordingState === 'recording';
-  const isProcessing = recordingState === 'processing';
+
+  // Waveform canvas
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animFrameRef = useRef<number>(0);
 
-  // Waveform animation for recording state
   useEffect(() => {
-    if (!isRecording || !canvasRef.current || !micAnalyserNode) return;
-
     const canvas = canvasRef.current;
+    if (!canvas || !micAnalyserNode || !isMicRecording) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    const dataArray = new Uint8Array(micAnalyserNode.frequencyBinCount);
-    let animationId: number;
-
-    const animate = () => {
-      animationId = requestAnimationFrame(animate);
-      micAnalyserNode.getByteFrequencyData(dataArray);
-
-      ctx.fillStyle = '#f1f2f2';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.fillStyle = '#ff7468';
-      const barWidth = canvas.width / dataArray.length;
-      const barHeight = canvas.height / 256;
-
-      for (let i = 0; i < dataArray.length; i++) {
-        const height = dataArray[i] * barHeight;
-        ctx.fillRect(i * barWidth, canvas.height - height, barWidth - 1, height);
+    const buf = new Uint8Array(micAnalyserNode.frequencyBinCount);
+    const draw = () => {
+      animFrameRef.current = requestAnimationFrame(draw);
+      micAnalyserNode.getByteFrequencyData(buf);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const barW = canvas.width / buf.length * 2.5;
+      let x = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const h = (buf[i] / 255) * canvas.height;
+        ctx.fillStyle = '#ff7468';
+        ctx.fillRect(x, canvas.height - h, barW - 1, h);
+        x += barW;
       }
     };
-
-    animate();
-    return () => cancelAnimationFrame(animationId);
-  }, [isRecording, micAnalyserNode]);
+    draw();
+    return () => cancelAnimationFrame(animFrameRef.current);
+  }, [micAnalyserNode, isMicRecording]);
 
   const activeStyle = isActive
     ? {
@@ -126,101 +119,90 @@ export default function FeedbackCard({
         className="bg-white flex flex-col pt-1 px-4 pb-4 shrink-0 w-full gap-3"
         onClick={isActive ? e => e.stopPropagation() : undefined}
       >
-        {/* Fill-blanks: sentence template (not editable, for reference) */}
+        {/* Fill-blanks: inline sentence with editable blanks */}
         {isFillBlanks && (
-          <div className="border border-[#ddd] flex items-start rounded-[5px] w-full p-[10px]">
-            <p
-              className="flex-1 font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] min-h-px min-w-px"
-              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-            >
-              {originalText}
+          <div className={`border border-[#ddd] rounded-[5px] w-full p-[10px] ${isActive ? 'relative pb-[28px]' : ''}`}>
+            <p className="text-sm text-[#212121] leading-8 w-full" style={NS}>
+              {segments.map((seg, i) => {
+                if (seg.kind === 'text') return <span key={i}>{seg.content}</span>;
+                if (!isActive) {
+                  return (
+                    <span
+                      key={i}
+                      className="border-b border-[#bbb] text-[#727272] text-xs italic"
+                      style={{ minWidth: '3em', display: 'inline-block', paddingBottom: '1px' }}
+                    >
+                      {seg.hint}
+                    </span>
+                  );
+                }
+                return (
+                  <input
+                    key={i}
+                    type="text"
+                    className="border-0 border-b-2 border-[#ff7468] bg-transparent outline-none text-sm text-[#212121] placeholder-[#bbb] align-baseline"
+                    style={{
+                      fontFamily: 'Noto Sans',
+                      fontVariationSettings: "'CTGR' 0, 'wdth' 100",
+                      width: `${Math.max(3, seg.hint.length * 0.65 + 0.5)}em`,
+                      minWidth: '3em',
+                    }}
+                    value={seg.value}
+                    onChange={e => onSegmentChange?.(i, e.target.value)}
+                    placeholder={seg.hint}
+                    onClick={e => e.stopPropagation()}
+                  />
+                );
+              })}
             </p>
-          </div>
-        )}
 
-        {/* Fill-blanks: user input (typing or transcribed) */}
-        {isFillBlanks && isActive && (
-          <div className="w-full flex flex-col gap-[8px]">
-            {/* Input or recording canvas */}
-            {isRecording ? (
-              <canvas
-                ref={canvasRef}
-                width={300}
-                height={60}
-                className="w-full rounded-[5px] bg-[#f1f2f2] border border-[#ddd]"
-                style={{ minHeight: '60px' }}
-              />
-            ) : isProcessing ? (
-              <div className="flex items-center justify-center py-[15px] bg-[#f1f2f2] rounded-[5px] border border-[#ddd]">
-                <span className="text-[12px] text-[#727272]" style={{ fontFamily: 'Noto Sans' }}>
-                  Transcribing…
-                </span>
-              </div>
-            ) : (
-              <textarea
-                value={inputText}
-                onChange={e => onInputChange?.(e.target.value)}
-                placeholder="Type or record details..."
-                className="w-full border border-[#ddd] rounded-[5px] px-[12px] py-[10px] text-sm text-[#212121] placeholder-[#bbb] outline-none focus:border-[#ff7468] focus:ring-1 focus:ring-[#ff7468] resize-none"
-                style={{ fontFamily: 'Noto Sans', minHeight: '60px' }}
+            {/* ── Card mic — anchored to bottom-center of container ── */}
+            {isActive && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 z-10"
                 onClick={e => e.stopPropagation()}
-              />
-            )}
-
-            {/* Mic button */}
-            {!isProcessing && (
-              <div className="flex gap-[8px] items-center">
-                <button
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    onMicClick?.();
-                  }}
-                  className={`flex items-center justify-center w-[36px] h-[36px] rounded-full transition-colors ${
-                    isRecording
-                      ? 'bg-[#ff7468] hover:bg-[#ff6a5d]'
-                      : 'bg-[#ff7468] hover:bg-[#ff6a5d]'
-                  }`}
-                  title="Record"
-                >
-                  <Icon name="mic" color="white" size="medium" />
-                </button>
-
-                {/* Recording controls */}
-                {isRecording && (
-                  <>
+              >
+                {micError && (
+                  <p className="text-[11px] text-[#b7131a] text-center mb-1" style={NS}>{micError}</p>
+                )}
+                {isMicProcessing ? (
+                  <div className="flex items-center gap-[6px] bg-white rounded-full px-3 py-1 shadow-md">
+                    <svg className="animate-spin shrink-0" width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
+                      <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    <span className="text-[11px] text-[#6a3e31] whitespace-nowrap" style={NS}>Transcribing…</span>
+                  </div>
+                ) : isMicRecording ? (
+                  <div className="flex items-center gap-[8px] bg-white rounded-full px-3 py-1 shadow-md">
+                    <canvas ref={canvasRef} width={80} height={24} className="rounded" />
                     <button
                       type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onCancelRecording?.();
-                      }}
-                      className="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[#b7131a] hover:bg-[#a00000] transition-colors"
-                      title="Cancel"
+                      onClick={onMicCancel}
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-[#ffeeee] border-none cursor-pointer hover:opacity-80"
                     >
-                      <Icon name="close" color="white" size="medium" />
+                      <Icon name="close" size="small" color="#b7131a" />
                     </button>
                     <button
                       type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        onConfirmRecording?.();
-                      }}
-                      className="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[#2e7d32] hover:bg-[#237d2c] transition-colors"
-                      title="Confirm"
+                      onClick={onMicConfirm}
+                      className="flex items-center justify-center w-6 h-6 rounded-full bg-[#e8f5e9] border-none cursor-pointer hover:opacity-80"
                     >
-                      <Icon name="check" color="white" size="medium" />
+                      <Icon name="check" size="small" color="#2e7d32" />
                     </button>
-                  </>
+                  </div>
+                ) : (
+                  <Tooltip text={t('feedback_card_mic_tooltip')} direction="top" autoWidth>
+                    <button
+                      type="button"
+                      onClick={onMicClick}
+                      className="flex items-center justify-center w-8 h-8 rounded-full bg-[#ff7468] border-none cursor-pointer hover:opacity-80 transition-opacity shadow-md"
+                    >
+                      <Icon name="mic" size="small" color="#fff" />
+                    </button>
+                  </Tooltip>
                 )}
               </div>
-            )}
-
-            {/* Error message */}
-            {micError && (
-              <p className="text-[12px] text-[#b7131a]" style={{ fontFamily: 'Noto Sans' }}>
-                {micError}
-              </p>
             )}
           </div>
         )}
@@ -228,17 +210,14 @@ export default function FeedbackCard({
         {/* Rephrase: static improved sentence in a box */}
         {!isFillBlanks && (
           <div className="border border-[#ddd] flex items-start rounded-[5px] w-full p-[10px]">
-            <p
-              className="flex-1 font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] min-h-px min-w-px"
-              style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
-            >
+            <p className="flex-1 font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] min-h-px min-w-px" style={NS}>
               {originalText}
             </p>
           </div>
         )}
 
         {/* ── Footer buttons ── */}
-        <div className="flex gap-2 justify-end" onClick={e => e.stopPropagation()}>
+        <div className={`flex gap-2 justify-end ${isFillBlanks && isActive ? 'mt-[20px]' : ''}`} onClick={e => e.stopPropagation()}>
           <Button
             variant="outlined"
             size="small"
@@ -249,10 +228,9 @@ export default function FeedbackCard({
           <button
             type="button"
             onClick={() => (isFillBlanks ? onPushText?.() : onAccept?.())}
-            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[16px] py-[8px] border-none cursor-pointer hover:opacity-80 transition-opacity disabled:opacity-50"
-            disabled={isFillBlanks && !inputText?.trim()}
+            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[16px] py-[8px] border-none cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+            <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>
               {t('btn_accept')}
             </span>
           </button>

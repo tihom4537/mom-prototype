@@ -12,12 +12,12 @@ export interface HighlightSpan {
   isActive: boolean;
 }
 
-interface Segment {
+export interface Segment {
   text: string;
   highlight?: HighlightSpan;
 }
 
-function buildSegments(value: string, highlights: HighlightSpan[]): Segment[] {
+export function buildSegments(value: string, highlights: HighlightSpan[]): Segment[] {
   const ranges: Array<{ start: number; end: number; highlight: HighlightSpan }> = [];
   for (const h of highlights) {
     if (!h.text) continue;
