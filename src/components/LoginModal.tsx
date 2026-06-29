@@ -1,9 +1,62 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Icon from './Icon';
+import InputField from './InputField';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { usePageScale } from './ScaleToFit';
+
+function generateCaptchaText() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+function CaptchaCanvas({ text }: { text: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const W = canvas.width, H = canvas.height;
+    // Background
+    ctx.fillStyle = '#f0ece8';
+    ctx.fillRect(0, 0, W, H);
+    // Noise lines
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * W, Math.random() * H);
+      ctx.lineTo(Math.random() * W, Math.random() * H);
+      ctx.strokeStyle = `rgba(${Math.random()*100|0},${Math.random()*60|0},${Math.random()*40|0},0.25)`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    // Dots
+    for (let i = 0; i < 40; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.random() * W, Math.random() * H, 1, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${Math.random()*120|0},${Math.random()*80|0},${Math.random()*60|0},0.3)`;
+      ctx.fill();
+    }
+    // Characters
+    const fonts = ['serif', 'sans-serif', 'cursive'];
+    const charW = W / text.length;
+    text.split('').forEach((ch, i) => {
+      ctx.save();
+      const x = charW * i + charW / 2;
+      const y = H / 2 + 6;
+      ctx.translate(x, y);
+      ctx.rotate((Math.random() - 0.5) * 0.5);
+      ctx.font = `bold ${18 + Math.random() * 6}px ${fonts[i % fonts.length]}`;
+      ctx.fillStyle = `hsl(${10 + Math.random()*20},${50+Math.random()*30}%,${25+Math.random()*20}%)`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(ch, 0, 0);
+      ctx.restore();
+    });
+  }, [text]);
+  return <canvas ref={canvasRef} width={120} height={43} className="rounded-[8px]" style={{ display: 'block' }} />;
+}
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -18,6 +71,8 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
   const [password, setPassword] = useState('');
   const [captcha, setCaptcha] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaText, setCaptchaText] = useState(() => generateCaptchaText());
+  const refreshCaptcha = useCallback(() => { setCaptchaText(generateCaptchaText()); setCaptcha(''); }, []);
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = 'login-modal-title';
@@ -107,75 +162,44 @@ export default function LoginModal({ onClose, onLogin }: LoginModalProps) {
             {/* Fields */}
             <div className="flex flex-col gap-[20px] w-full">
 
-              {/* Username */}
-              <div className="flex flex-col gap-[4px] w-full">
-                <label className="font-medium text-[14px] text-[#212121] tracking-[0.1px]" style={NS}>
-                  {t('login_username_label')}
-                </label>
-                <div className="bg-white border border-[#c6c6c6] rounded-[8px] flex items-center px-[12px] h-[43px]">
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={e => setUsername(e.target.value)}
-                    placeholder={t('login_username_placeholder')}
-                    className="flex-1 min-w-0 font-normal text-[14px] text-[#212121] placeholder-[#868686] bg-transparent border-none outline-none tracking-[0.25px]"
-                    style={NS}
-                  />
-                </div>
-              </div>
+              <InputField
+                label={t('login_username_label')}
+                placeholder={t('login_username_placeholder')}
+                value={username}
+                onChange={setUsername}
+                className="w-full"
+              />
 
-              {/* Password */}
-              <div className="flex flex-col gap-[4px] w-full">
-                <label className="font-medium text-[14px] text-[#212121] tracking-[0.1px]" style={NS}>
-                  {t('login_password_label')}
-                </label>
-                <div className="bg-white border border-[#c6c6c6] rounded-[8px] flex items-center px-[12px] h-[43px] gap-[8px]">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder={t('login_password_placeholder')}
-                    className="flex-1 min-w-0 font-normal text-[14px] text-[#212121] placeholder-[#868686] bg-transparent border-none outline-none tracking-[0.25px]"
-                    style={NS}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(v => !v)}
-                    className="shrink-0 bg-transparent border-none cursor-pointer p-0 flex items-center"
-                  >
-                    <Icon name={showPassword ? 'visibility' : 'visibility_off'} size="small" color="#727272" />
-                  </button>
-                </div>
-              </div>
+              <InputField
+                label={t('login_password_label')}
+                placeholder={t('login_password_placeholder')}
+                value={password}
+                onChange={setPassword}
+                type={showPassword ? 'text' : 'password'}
+                className="w-full"
+              />
 
               {/* Captcha row */}
-              <div className="flex gap-[10px] items-end w-full">
-                <div className="flex flex-col gap-[4px] flex-1 min-w-0">
-                  <label className="font-medium text-[14px] text-[#212121] tracking-[0.1px]" style={NS}>
-                    {t('login_captcha_label')}
-                  </label>
-                  <div className="bg-white border border-[#c6c6c6] rounded-[8px] flex items-center px-[12px] h-[43px]">
-                    <input
-                      type="text"
-                      value={captcha}
-                      onChange={e => setCaptcha(e.target.value)}
-                      placeholder={t('login_captcha_placeholder')}
-                      className="flex-1 min-w-0 font-normal text-[14px] text-[#212121] placeholder-[#868686] bg-transparent border-none outline-none tracking-[0.25px]"
-                      style={NS}
-                    />
-                  </div>
+              <div className="flex flex-col gap-[4px] w-full">
+                <label className="text-sm font-medium text-[#3b3b3b] leading-5 tracking-[0.1px]" style={NS}>
+                  {t('login_captcha_label')}
+                </label>
+                <div className="flex gap-[10px] items-center">
+                  <InputField
+                    placeholder={t('login_captcha_placeholder')}
+                    value={captcha}
+                    onChange={setCaptcha}
+                    className="flex-1 min-w-0"
+                  />
+                  <CaptchaCanvas text={captchaText} />
+                  <button
+                    type="button"
+                    onClick={refreshCaptcha}
+                    className="bg-[#f7f0ee] flex items-center justify-center px-[10px] h-[43px] rounded-[8px] shrink-0 cursor-pointer border-none hover:bg-[#efe0dc] transition-colors"
+                  >
+                    <Icon name="refresh" size="small" color="#6a3e31" />
+                  </button>
                 </div>
-                {/* Captcha image placeholder */}
-                <div className="bg-[#f3f3f3] border border-[rgba(176,176,176,0.6)] h-[43px] w-[130px] rounded-[8px] shrink-0 flex items-center justify-center">
-                  <span className="text-[11px] text-[#b0b0b0] font-mono select-none tracking-widest">A3k9Xm</span>
-                </div>
-                {/* Refresh captcha */}
-                <button
-                  type="button"
-                  className="bg-[#f7f0ee] flex items-center justify-center px-[10px] h-[43px] rounded-[8px] shrink-0 cursor-pointer border-none hover:bg-[#efe0dc] transition-colors"
-                >
-                  <Icon name="refresh" size="small" color="#6a3e31" />
-                </button>
               </div>
             </div>
 

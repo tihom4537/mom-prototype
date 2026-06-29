@@ -341,7 +341,8 @@ export default function HomepageScreenV3() {
       <LiveCounterStrip />
 
       {/* ── All Modules Section ──────────────────────────────────────────── */}
-      <section ref={modulesRef} id="main-content" tabIndex={-1} className="relative overflow-hidden flex flex-col gap-[60px] items-center justify-center pb-[80px] pt-[80px] px-[100px] w-full">
+      <section ref={modulesRef} id="main-content" role="main" tabIndex={-1} className="relative overflow-hidden flex flex-col gap-[60px] items-center justify-center pb-[80px] pt-[80px] px-[100px] w-full">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[180px] z-0" style={{ background: 'linear-gradient(to bottom, rgba(237,130,67,0.1) 0%, rgba(237,130,67,0) 100%)' }} />
         <DotGrid position="top-left" opacity={0.08} />
         <DotGrid position="bottom-right" opacity={0.08} />
         <Reveal className="flex flex-col items-center gap-[12px] w-full">

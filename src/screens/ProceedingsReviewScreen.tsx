@@ -339,6 +339,7 @@ export default function ProceedingsReviewScreen() {
                         <div
                           key={p.id}
                           className={`group flex items-center ${idx < workingParticipants.length - 1 ? 'border-b border-[#e8e8e8]' : ''}`}
+                          style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: p.vote === 'agree' ? '#2e7d32' : p.vote === 'disagree' ? '#FFAC9A' : 'transparent' }}
                         >
                           <div className="w-[50px] shrink-0 flex items-center px-[12px] h-[50px] border-r border-[#e8e8e8] group-hover:bg-[#eeeeee]">
                             <span className="text-[12px] text-[#4b4b4b]" style={NS}>{p.id}</span>

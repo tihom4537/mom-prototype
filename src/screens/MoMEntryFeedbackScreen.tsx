@@ -783,7 +783,7 @@ export default function MoMEntryFeedbackScreen() {
                               <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
                               <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
                             </svg>
-                            <span className="text-[12px] text-[#6a3e31] font-medium" style={NS}>Transcribing…</span>
+                            <span className="text-[12px] text-[#6a3e31] font-medium" style={NS}>{t('mic_transcribing')}</span>
                           </div>
                         ) : highlightsByField[field]?.length > 0 ? (
                           <div className="relative flex-1 min-h-[52px]">

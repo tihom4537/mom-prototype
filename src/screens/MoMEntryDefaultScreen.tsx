@@ -195,14 +195,15 @@ export default function MoMEntryDefaultScreen() {
     if (flatText.trim() === MOCK_TEXT || Object.values(fieldValues).join(' ').includes('Swachh Saturday')) {
       const feedbackResult: FeedbackResult = {
         category: 'Information / Intimation',
-        category_reason: 'The agenda shares updates on sanitation, observances, and health.',
+        category_reason: 'The agenda item shares updates on sanitation activities, a civic observance, and a health precautionary measure.',
         feedback: [
-          'Specify the exact number of beneficiaries identified under PM Awas Yojana — provide [count] and [ward name].',
-          'Mention the name of the KUWSDB official contacted regarding water supply disruptions in [ward number].',
-          'Include the resolution number and date for the decision on caste and income certificate delays.',
+          'Information was provided regarding the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward], involving [number of participants] participants.',
+          'Information was provided regarding the Onagalu Day observance held on [date], including the activities conducted and [number of participants] who participated.',
+          'Information was provided regarding COVID-19 JN.1 precautionary measures, including the source of the advisory — [name of authority/circular] — and the specific measures communicated.',
+          'The secretary informed members about Swachh Saturday cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.',
         ],
-        spans: ['Swachh Saturday village cleanliness activities', 'Onagalu Day observance', 'COVID-19 JN.1 precautionary measures'],
-        modes: ['APPEND', 'APPEND', 'REPHRASE'],
+        spans: ['Swachh Saturday village cleanliness activities', 'Onagalu Day observance', 'COVID-19 JN.1 precautionary measures', 'Information was provided regarding'],
+        modes: ['APPEND', 'APPEND', 'APPEND', 'REPHRASE'],
         flag_message: null,
       };
       setIsFetchingFeedback(false);
@@ -369,7 +370,7 @@ export default function MoMEntryDefaultScreen() {
                               <circle cx="8" cy="8" r="6" stroke="#ffa199" strokeWidth="2" strokeOpacity="0.3" />
                               <path d="M8 2a6 6 0 0 1 6 6" stroke="#ff7468" strokeWidth="2" strokeLinecap="round" />
                             </svg>
-                            <span className="text-[12px] text-[#6a3e31] font-medium" style={NS}>Transcribing…</span>
+                            <span className="text-[12px] text-[#6a3e31] font-medium" style={NS}>{t('mic_transcribing')}</span>
                           </div>
                         ) : (
                           <textarea

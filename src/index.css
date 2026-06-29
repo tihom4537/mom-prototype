@@ -209,6 +209,31 @@
   box-sizing: border-box;
 }
 
+/* Global focus-visible ring — applies to every interactive element.
+   Uses :focus-visible so mouse clicks don't trigger the ring, only keyboard. */
+:focus-visible {
+  outline: 3px solid #6a3e31 !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
+
+/* Suppress the default browser outline everywhere — we provide our own above */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* InputField: suppress global focus-visible ring — component provides its own ring */
+.input-field-wrapper:focus-visible,
+.input-field-wrapper:has(input:focus-visible),
+.input-field-wrapper input:focus-visible {
+  outline: none !important;
+}
+
+/* MoM table textareas and TextAreaContainer: suppress global outline — row border-l accent is the focus indicator */
+textarea:focus-visible {
+  outline: none !important;
+}
+
 body {
   font-family: 'Noto Sans', sans-serif;
   background-color: #f5f5f5;

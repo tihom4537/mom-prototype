@@ -63,7 +63,8 @@ export default function CitizenScreen() {
       </div>
 
       {/* Sub-modules grid */}
-      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
+      <div id="main-content" role="main" tabIndex={-1} className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
+        <h1 className="sr-only">Citizen Services</h1>
         <div className="grid grid-cols-3 gap-[24px] w-full">
           {SUB_MODULES.map(sub => (
             <div key={sub.key} className="flex-1 min-w-0">

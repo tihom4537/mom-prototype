@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ResponsiveBar } from '@nivo/bar';
+import { PatternDefsLayer, makeBarColors } from '../components/ChartPatterns';
 import AccessibilityBar from '../components/AccessibilityBar';
 import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
@@ -21,6 +22,8 @@ import InfoBox from '../components/InfoBox';
 import AppDownloadCTA from '../components/AppDownloadCTA';
 import Footer from '../components/Footer';
 import { DISTRICTS, KARNATAKA_HIERARCHY } from '../data/karnatakaData';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildMeetingNarrative } from '../utils/narratives';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -346,6 +349,29 @@ export default function CitizenMeetingScreen() {
   [baseRows]);
 
   const barWidth = Math.max(900, barData.length * 80);
+
+  // ── Live narrator registration ───────────────────────────────────────────────
+  useEffect(() => {
+    const totalMeetings = MEETING_DATA.reduce((s, r) => s + r.scheduled, 0);
+    const conducted = MEETING_DATA.reduce((s, r) => s + r.conducted, 0);
+    const notConducted = totalMeetings - conducted;
+    const byCount = [...MEETING_DATA].sort((a, b) => b.conducted - a.conducted);
+    const top = byCount[0];
+    const bot = byCount[byCount.length - 1];
+    registerPageNarrator('/citizen/meetings', () =>
+      buildMeetingNarrative({
+        totalMeetings,
+        conducted,
+        notConducted,
+        topDistrict: top?.meetingType ?? '—',
+        topDistrictCount: top?.conducted ?? 0,
+        bottomDistrict: bot?.meetingType ?? '—',
+        bottomDistrictCount: bot?.conducted ?? 0,
+      })
+    );
+    return () => unregisterPageNarrator('/citizen/meetings');
+  }, []);
+
   const [dataView, setDataView] = useState<'chart' | 'table'>('table');
   const isChart = dataView === 'chart';
 
@@ -374,7 +400,8 @@ export default function CitizenMeetingScreen() {
       </div>
 
       {/* ── Metric cards ── */}
-      <div id="main-content" tabIndex={-1} className="px-[200px] pt-[24px]">
+      <div id="main-content" role="main" tabIndex={-1} className="px-[200px] pt-[24px]">
+        <h1 className="sr-only">Meeting Records</h1>
         <div className="flex gap-[20px]">
           <DashboardMetricCard
             icon="event"
@@ -546,14 +573,15 @@ export default function CitizenMeetingScreen() {
                 </div>
               </div>
               <div style={{ overflowX: 'auto', overflowY: 'visible' }}>
-                <div style={{ width: barWidth, height: 460, overflow: 'visible', position: 'relative', zIndex: 10 }}>
+                <div role="img" aria-label="Bar chart showing meeting counts by district" style={{ width: barWidth, height: 460, overflow: 'visible', position: 'relative', zIndex: 10 }}>
                   <ResponsiveBar
                     data={barData}
                     keys={['conducted', 'notConducted']}
                     indexBy="id"
                     margin={{ top: 80, right: 20, bottom: 140, left: 80 }}
                     padding={0.3}
-                    colors={({ id }) => id === 'conducted' ? BAR_CONDUCTED_COLOR : BAR_NOT_CONDUCTED_COLOR}
+                    colors={makeBarColors({ conducted: BAR_CONDUCTED_COLOR, notConducted: BAR_NOT_CONDUCTED_COLOR })}
+                    layers={[PatternDefsLayer, 'grid', 'axes', 'bars', 'markers', 'legends', 'annotations']}
                     borderRadius={2}
                     axisBottom={{ tickRotation: -40, tickSize: 0, tickPadding: 8 }}
                     axisLeft={{ tickSize: 0, tickPadding: 8 }}

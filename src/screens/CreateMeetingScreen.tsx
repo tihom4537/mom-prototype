@@ -22,6 +22,10 @@ import {
 } from '../components';
 import type { TableColumn } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+import { getNoticePeriod, getEarliestDate } from '../utils/meetingNoticePeriods';
+import { useAccessibility } from '../context/AccessibilityContext';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildCreateMeetingNarrative } from '../utils/narratives';
 
 const MODAL_PAGE_SIZE_OPTIONS = [8, 15, 25, 50];
 
@@ -54,14 +58,8 @@ const GP_STAFF: StaffMember[] = [
 ];
 
 // ─── Date blocking logic ───────────────────────────────────────────────────────
-// Dates before today and within next 15 days are blocked.
-// Only dates 15+ days from today are selectable.
-function getMinSelectableDate(): Date {
-  const d = new Date();
-  d.setDate(d.getDate() + 15);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+// minDate is computed dynamically from the selected meeting type's notice period.
+// Default fallback: 14 days (standard notice).
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -69,6 +67,7 @@ export default function CreateMeetingScreen() {
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const { meetings } = useMeetings();
+  const { screenReaderMode, speak } = useAccessibility();
 
   const desigKeyMapMain: Record<string, string> = {
     'Panchayat Development Officer': 'desig_pdo_full',
@@ -317,7 +316,15 @@ export default function CreateMeetingScreen() {
     setTitle(`${ordinal(count + 1)} ${val} ${year}`);
   }
 
-  const minDate = getMinSelectableDate();
+  const noticePeriod = getNoticePeriod(meetingType);
+  const minDate = getEarliestDate(noticePeriod.days);
+
+  useEffect(() => {
+    registerPageNarrator('/meetings/create', () =>
+      buildCreateMeetingNarrative(meetingType, noticePeriod.days)
+    );
+    return () => unregisterPageNarrator('/meetings/create');
+  }, [meetingType, noticePeriod.days]);
 
   // ── Participants modal ──
   function openModal() {
@@ -391,7 +398,8 @@ export default function CreateMeetingScreen() {
         t('breadcrumb_create_meeting'),
       ]}
     >
-      <div className="flex flex-col gap-[15px]">
+      <div role="main" className="flex flex-col gap-[15px]">
+        <h1 className="sr-only">Create Meeting</h1>
         <Stepper
           activeState={1}
           stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
@@ -427,6 +435,9 @@ export default function CreateMeetingScreen() {
                         hasError={!!errors.date}
                         errorText={errors.date}
                         minDate={minDate}
+                        meetingType={meetingType}
+                        noticeDays={noticePeriod.days}
+                        onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
                       />
                     </div>
                     <div className="flex-1 min-w-0">

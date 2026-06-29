@@ -495,15 +495,6 @@ export default function AttendanceScreenV2() {
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <div className="flex items-center gap-[8px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal shrink-0" style={NS}>{t('attendance_col_attendance')}</span>
-                          <button
-                            type="button"
-                            onClick={allMarked ? unmarkAll : markAllPresent}
-                            className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] active:bg-[#c8e6c9] transition-colors whitespace-nowrap shrink-0"
-                            style={NS}
-                          >
-                            <Icon name="check" size="small" color="#388e3c" />
-                            {allMarked ? t('attendance_unmark_all') : t('attendance_mark_all_present')}
-                          </button>
                         </div>
                       </th>
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">

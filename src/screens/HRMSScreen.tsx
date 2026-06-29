@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildHRMSNarrative } from '../utils/narratives';
 import AccessibilityBar from '../components/AccessibilityBar';
 import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
@@ -99,6 +101,11 @@ export default function HRMSScreen() {
   const { t } = useLanguage();
   const [moduleSlide, setModuleSlide] = useState(0);
 
+  useEffect(() => {
+    registerPageNarrator('/hrms', buildHRMSNarrative);
+    return () => unregisterPageNarrator('/hrms');
+  }, []);
+
   const visibleModules = ALL_MODULES.slice(moduleSlide, moduleSlide + 3);
   const canPrev = moduleSlide > 0;
   const canNext = moduleSlide + 3 < ALL_MODULES.length;
@@ -131,7 +138,8 @@ export default function HRMSScreen() {
       </div>
 
       {/* Sub-modules grid */}
-      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
+      <div id="main-content" role="main" tabIndex={-1} className="flex flex-col gap-[32px] px-[200px] pt-[48px] pb-[60px] w-full">
+        <h1 className="sr-only">Human Resource Management</h1>
         <div className="grid grid-cols-3 gap-[24px] w-full">
           {SUB_MODULES.map(sub => (
             <div key={sub.titleKey} className="flex-1 min-w-0">

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAccessibility } from '../context/AccessibilityContext';
+import { getNoticePeriod, getEarliestDate } from '../utils/meetingNoticePeriods';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
@@ -497,6 +499,7 @@ export default function SendToPresidentScreen() {
   const { meetings, addMeeting, updateMeeting, meetingAgendas } = useMeetings();
   const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : meetings.find(m => m.id === CURRENT_MEETING_ID);
   const { agendaItems } = useAgenda();
+  const { screenReaderMode, speak } = useAccessibility();
 
   const userAgendas = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;
   const effectiveAgendaItems = userAgendas
@@ -515,6 +518,8 @@ export default function SendToPresidentScreen() {
   const [nextMeetingType, setNextMeetingType] = useState('');
   const [nextMeetingDate, setNextMeetingDate] = useState('');
   const [nextMeetingTime, setNextMeetingTime] = useState('');
+  const nextNoticePeriod = getNoticePeriod(nextMeetingType);
+  const nextMinDate = nextMeetingType ? getEarliestDate(nextNoticePeriod.days) : undefined;
 
   const [showModal,   setShowModal]   = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -746,6 +751,10 @@ export default function SendToPresidentScreen() {
                       onChange={setNextMeetingDate}
                       placeholder={t('send_president_next_date_placeholder')}
                       opensUp
+                      minDate={nextMinDate}
+                      meetingType={nextMeetingType}
+                      noticeDays={nextNoticePeriod.days}
+                      onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
                     />
                   </div>
                   <div className="flex-1 min-w-0">

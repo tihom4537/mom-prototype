@@ -348,7 +348,18 @@ export default function Navbar({
             <div
               className="absolute right-0 top-full mt-1 shadow-lg z-50"
               onMouseLeave={() => setProfileOpen(false)}
-              onKeyDown={e => { if (e.key === 'Escape') { setProfileOpen(false); profileTriggerRef.current?.focus(); } }}
+              onKeyDown={e => {
+                if (e.key === 'Escape') { setProfileOpen(false); profileTriggerRef.current?.focus(); return; }
+                if (e.key === 'Tab') {
+                  const el = e.currentTarget;
+                  const focusable = Array.from(el.querySelectorAll<HTMLElement>('button,a,[tabindex]:not([tabindex="-1"])'));
+                  if (!focusable.length) return;
+                  const first = focusable[0];
+                  const last = focusable[focusable.length - 1];
+                  if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+                  else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+                }
+              }}
             >
               <DropdownBoxOfProfile
                 isOpen
@@ -382,7 +393,18 @@ export default function Navbar({
             <div
               className="absolute right-0 top-full mt-1 shadow-lg z-50"
               onMouseLeave={() => setSettingsOpen(false)}
-              onKeyDown={e => { if (e.key === 'Escape') { setSettingsOpen(false); settingsTriggerRef.current?.focus(); } }}
+              onKeyDown={e => {
+                if (e.key === 'Escape') { setSettingsOpen(false); settingsTriggerRef.current?.focus(); return; }
+                if (e.key === 'Tab') {
+                  const el = e.currentTarget;
+                  const focusable = Array.from(el.querySelectorAll<HTMLElement>('button,a,[tabindex]:not([tabindex="-1"])'));
+                  if (!focusable.length) return;
+                  const first = focusable[0];
+                  const last = focusable[focusable.length - 1];
+                  if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
+                  else { if (document.activeElement === last) { e.preventDefault(); first.focus(); } }
+                }
+              }}
             >
               <DropdownBoxOfIcon
                 isOpen

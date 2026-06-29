@@ -107,6 +107,7 @@ export default function ContactDirectoryScreen() {
       />
 
       <main id="main-content" tabIndex={-1} className="flex flex-col gap-[40px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+        <h1 className="sr-only">Contact Directory</h1>
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">

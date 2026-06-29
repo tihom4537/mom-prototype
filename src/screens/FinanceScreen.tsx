@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { PatternDefsLayer, makeBarColors } from '../components/ChartPatterns';
 import { useNavigate } from 'react-router-dom';
 import { ResponsiveBar } from '@nivo/bar';
 import AccessibilityBar from '../components/AccessibilityBar';
@@ -23,6 +24,8 @@ import Icon from '../components/Icon';
 import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import Breadcrumb from '../components/Breadcrumb';
 import { YEAR_BOOK_DATA, MONTH_BOOK_DATA, DISTRICTS, KARNATAKA_HIERARCHY } from '../data/karnatakaData';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildFinanceNarrative } from '../utils/narratives';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -269,10 +272,13 @@ function TalukGrid({ district, selectedTaluk, selectedGp, districtRow, hierarchy
           const isSelectedTaluk = talukName === selectedTaluk;
 
           return (
-            <div
+            <button
+              type="button"
               key={talukName}
               onClick={() => onTalukClick(talukName)}
-              className={`flex flex-col gap-[8px] rounded-[10px] p-[14px] border cursor-pointer transition-all
+              aria-pressed={isSelectedTaluk}
+              aria-label={`${talukName} taluk, ${talukPct}% completed`}
+              className={`flex flex-col gap-[8px] rounded-[10px] p-[14px] border cursor-pointer transition-all text-left w-full
                 ${isSelectedTaluk
                   ? 'border-[#6a3e31] bg-[rgba(106,62,49,0.06)] shadow-[0_0_0_2px_rgba(106,62,49,0.15)]'
                   : 'border-[#c6c6c6] bg-white hover:border-[#c99080] hover:bg-[rgba(106,62,49,0.03)]'
@@ -308,10 +314,13 @@ function TalukGrid({ district, selectedTaluk, selectedGp, districtRow, hierarchy
                   {gpList.map(g => {
                     const isSelectedGp = g === selectedGp;
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={g}
                         onClick={e => { e.stopPropagation(); onGpClick(talukName, g); }}
-                        className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[6px] cursor-pointer text-[11px] transition-colors
+                        aria-pressed={isSelectedGp}
+                        aria-label={`${g} gram panchayat`}
+                        className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[6px] cursor-pointer text-[11px] transition-colors w-full text-left
                           ${isSelectedGp
                             ? 'bg-[#6a3e31] text-white font-medium'
                             : 'text-[#525c66] hover:bg-[rgba(106,62,49,0.08)]'
@@ -330,12 +339,12 @@ function TalukGrid({ district, selectedTaluk, selectedGp, districtRow, hierarchy
                             {t('tag_completed').toLowerCase()}
                           </span>
                         )}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
@@ -390,6 +399,28 @@ export default function FinanceScreen() {
   const chartData = useMemo(() => generateChartData(filteredData as { district: string; totalGPs: number; completed?: number }[]), [filteredData]);
   const mapData = useMemo(() => generateMapData(filteredData as { district: string; totalGPs: number; completed: number }[], zilla), [filteredData, zilla]);
   const districtTooltipData = useMemo(() => generateDistrictTooltipData(), []);
+
+  // ── Live narrator registration ───────────────────────────────────────────────
+  useEffect(() => {
+    const allRows = YEAR_BOOK_DATA;
+    const totalGPs = allRows.reduce((s, r) => s + r.totalGPs, 0);
+    const completedGPs = allRows.reduce((s, r) => s + r.completed, 0);
+    const byPct = allRows.map(r => ({ name: r.district, pct: r.totalGPs > 0 ? (r.completed / r.totalGPs) * 100 : 0 }));
+    const sorted = [...byPct].sort((a, b) => b.pct - a.pct);
+    const top = sorted[0];
+    const bot = sorted[sorted.length - 1];
+    registerPageNarrator('/finance', () =>
+      buildFinanceNarrative({
+        totalGPs,
+        completedGPs,
+        topTaluk: top?.name ?? '—',
+        topTalukPct: top?.pct ?? 0,
+        bottomTaluk: bot?.name ?? '—',
+        bottomTalukPct: bot?.pct ?? 0,
+      })
+    );
+    return () => unregisterPageNarrator('/finance');
+  }, []);
 
   // Dropdown options derived from hierarchy
   const talukOptions = zilla ? Object.keys(KARNATAKA_HIERARCHY[zilla] ?? {}) : [];
@@ -461,7 +492,8 @@ export default function FinanceScreen() {
       </div>
 
       {/* Main content */}
-      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[24px] px-[200px] pt-[40px] pb-[50px] w-full">
+      <div id="main-content" role="main" tabIndex={-1} className="flex flex-col gap-[24px] px-[200px] pt-[40px] pb-[50px] w-full">
+        <h1 className="sr-only">Finance and Accounting</h1>
 
         {/* Filter row 1: Zilla / Taluk / GP */}
         <div className="flex gap-[20px] items-end w-full">
@@ -628,7 +660,8 @@ export default function FinanceScreen() {
                       groupMode="stacked"
                       margin={{ top: 24, right: 20, bottom: 100, left: 60 }}
                       padding={0.35}
-                      colors={({ id }) => id === 'Completed' ? '#6a3e31' : '#efe0dc'}
+                      colors={makeBarColors({ Completed: '#6a3e31', Pending: '#efe0dc' })}
+                      layers={[PatternDefsLayer, 'grid', 'axes', 'bars', 'markers', 'legends', 'annotations']}
                       borderRadius={2}
                       axisBottom={{ tickRotation: -30, tickSize: 0, tickPadding: 8 }}
                       axisLeft={{ tickSize: 0, tickPadding: 8 }}
@@ -658,7 +691,7 @@ export default function FinanceScreen() {
             )}
 
             {view === 'map' && !zilla && (
-              <div className="flex flex-col items-center gap-[12px] w-full">
+              <div role="img" aria-label="Choropleth map of Karnataka showing district-wise finance transaction density" className="flex flex-col items-center gap-[12px] w-full">
                 <KarnatakaLeafletMap
                   gpData={mapData}
                   districtTooltipData={districtTooltipData}
@@ -699,7 +732,7 @@ export default function FinanceScreen() {
                 {/* Map + cards row */}
                 <div className="flex gap-[32px] w-full items-start">
                   {/* Isolated district shape */}
-                  <div className="flex flex-col items-center gap-[4px] shrink-0">
+                  <div role="img" aria-label="Map highlighting selected district in Karnataka" className="flex flex-col items-center gap-[4px] shrink-0">
                     <DistrictShape
                       districtGeoName={Object.entries(GEO_TO_DISTRICT).find(([, v]) => v === zilla)?.[0] ?? zilla}
                       width={340}

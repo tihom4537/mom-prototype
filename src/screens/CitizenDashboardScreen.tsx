@@ -1,8 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveBar } from '@nivo/bar';
+import { PatternDefsLayer, makeIndexedBarColors } from '../components/ChartPatterns';
+import { useHighContrast } from '../hooks/useHighContrast';
 import AccessibilityBar from '../components/AccessibilityBar';
 import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
@@ -22,6 +24,8 @@ import Icon from '../components/Icon';
 import KarnatakaLeafletMap from '../components/KarnatakaLeafletMap';
 import MapLegend from '../components/MapLegend';
 import { DISTRICTS } from '../data/karnatakaData';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildCitizenDashboardNarrative } from '../utils/narratives';
 
 type SortFilter = 'top10' | 'bottom10' | null;
 
@@ -225,9 +229,23 @@ const TOOLTIP_STYLE = {
 };
 
 
+// Nivo pie pattern defs — hatch/dot patterns for high-contrast mode
+const PIE_HATCH_IDS = ['lines-a', 'dots-a', 'lines-b', 'dots-b', 'lines-c', 'dots-c', 'lines-d', 'dots-d'];
+const PIE_HATCH_DEFS = [
+  { id: 'lines-a', type: 'patternLines' as const, rotation: -45, lineWidth: 4, spacing: 8,  background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'dots-a',  type: 'patternDots'  as const, size: 4,       padding: 4,  stagger: true, background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'lines-b', type: 'patternLines' as const, rotation: 45,  lineWidth: 4, spacing: 8,  background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'dots-b',  type: 'patternDots'  as const, size: 3,       padding: 6,  stagger: false,background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'lines-c', type: 'patternLines' as const, rotation: 0,   lineWidth: 4, spacing: 8,  background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'dots-c',  type: 'patternDots'  as const, size: 5,       padding: 3,  stagger: true, background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'lines-d', type: 'patternLines' as const, rotation: 90,  lineWidth: 4, spacing: 8,  background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+  { id: 'dots-d',  type: 'patternDots'  as const, size: 2,       padding: 5,  stagger: false,background: 'inherit', color: 'rgba(255,255,255,0.5)' },
+];
+
 export default function CitizenDashboardScreen() {
   const navigate = useNavigate();
   const { t } = useLanguage();
+  const highContrast = useHighContrast();
   const [selectedService, setSelectedService] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [selectedTimeframe, setSelectedTimeframe] = useState('');
@@ -335,6 +353,22 @@ export default function CitizenDashboardScreen() {
   const svcSumRows       = filteredServices.map(r => ({ slNo: r.slNo, service: r.service, total: r.total }));
   const pagedSvcSum      = svcSumRows.slice((svcSumPage - 1) * svcSumPerPage, svcSumPage * svcSumPerPage);
 
+  // ── Live narrator registration ───────────────────────────────────────────────
+  useEffect(() => {
+    const snap = {
+      totalReceived:       3381021,
+      totalDelivered:      3330333,
+      inProcessDept:       11630,
+      inProcessApplicant:  2998,
+      rejected:            36060,
+      pendingSLA:          SLA_TOTAL,
+    };
+    registerPageNarrator('/citizen/dashboard', () =>
+      buildCitizenDashboardNarrative(distDonutData, svcDonutData, snap)
+    );
+    return () => unregisterPageNarrator('/citizen/dashboard');
+  }, [distDonutData, svcDonutData]);
+
   // ── table columns ────────────────────────────────────────────────────────────
   const SERVICE_COLS = [
     { key: 'slNo',              label: 'Sr.',             width: 'w-[50px] shrink-0' },
@@ -434,7 +468,8 @@ export default function CitizenDashboardScreen() {
 
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <div id="main-content" tabIndex={-1} className="flex flex-col gap-[64px] px-[200px] pt-[32px] pb-[60px] w-full">
+      <div id="main-content" role="main" tabIndex={-1} className="flex flex-col gap-[64px] px-[200px] pt-[32px] pb-[60px] w-full">
+        <h1 className="sr-only">Service Applications Overview</h1>
 
         {/* ── SECTION 1: Service-wise table ──────────────────────────────────── */}
         <div id="sec-services" className="bg-white border border-[#c6c6c6] rounded-[10px] w-full overflow-hidden">
@@ -507,7 +542,9 @@ export default function CitizenDashboardScreen() {
                   indexBy="id"
                   margin={{ top: 16, right: 20, bottom: 120, left: 80 }}
                   padding={0.3}
-                  colors={({ index }: { index: number }) => PALETTE[index % PALETTE.length]}
+                  colors={makeIndexedBarColors(PALETTE)}
+                  layers={[PatternDefsLayer, 'grid', 'axes', 'bars', 'markers', 'legends', 'annotations']}
+
                   borderRadius={4}
                   axisBottom={{ tickRotation: -35, tickSize: 0, tickPadding: 8 }}
                   axisLeft={{ tickSize: 0, tickPadding: 8 }}
@@ -527,7 +564,7 @@ export default function CitizenDashboardScreen() {
                 />
               </div>
             ) : isMap ? (
-              <div className="flex flex-col items-center gap-[12px]">
+              <div role="img" aria-label="Choropleth map of Karnataka showing district-wise application density" className="flex flex-col items-center gap-[12px]">
                 <KarnatakaLeafletMap gpData={distMapData} width={700} height={580} valueLabel="Total Applications" showTalukCount={false} />
                 <MapLegend lowLabel={t('citizen_dash_map_low')} highLabel={t('citizen_dash_map_high')} />
                 <p className="text-[12px] text-[#727272] text-center" style={NS}>{t('citizen_dash_map_hint')}</p>
@@ -543,6 +580,8 @@ export default function CitizenDashboardScreen() {
                     cornerRadius={3}
                     activeOuterRadiusOffset={14}
                     colors={{ datum: 'data.color' }}
+                    defs={PIE_HATCH_DEFS}
+                    fill={highContrast ? distDonutData.map((d, i) => ({ match: { id: d.name }, id: PIE_HATCH_IDS[i % PIE_HATCH_IDS.length] })) : []}
                     enableArcLabels={false}
                     enableArcLinkLabels={false}
                     tooltip={({ datum }) => (
@@ -620,6 +659,8 @@ export default function CitizenDashboardScreen() {
                     cornerRadius={3}
                     activeOuterRadiusOffset={14}
                     colors={{ datum: 'data.color' }}
+                    defs={PIE_HATCH_DEFS}
+                    fill={highContrast ? svcDonutData.map((d, i) => ({ match: { id: d.name }, id: PIE_HATCH_IDS[i % PIE_HATCH_IDS.length] })) : []}
                     enableArcLabels={false}
                     enableArcLinkLabels={false}
                     tooltip={({ datum }) => (
@@ -651,7 +692,8 @@ export default function CitizenDashboardScreen() {
                   indexBy="id"
                   margin={{ top: 16, right: 20, bottom: 160, left: 80 }}
                   padding={0.3}
-                  colors={({ index }: { index: number }) => PALETTE[index % PALETTE.length]}
+                  colors={makeIndexedBarColors(PALETTE)}
+                  layers={[PatternDefsLayer, 'grid', 'axes', 'bars', 'markers', 'legends', 'annotations']}
                   borderRadius={4}
                   axisBottom={{ tickRotation: -40, tickSize: 0, tickPadding: 8 }}
                   axisLeft={{ tickSize: 0, tickPadding: 8 }}

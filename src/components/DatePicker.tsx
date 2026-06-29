@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useId } from 'react';
 import Icon from './Icon';
+import { buildDayAriaLabel, buildDatePickerNarration } from '../utils/meetingNoticePeriods';
 
 interface DatePickerProps {
   value: string; // DD/MM/YYYY or ''
@@ -12,6 +13,12 @@ interface DatePickerProps {
   minDate?: Date;
   className?: string;
   opensUp?: boolean;
+  /** Meeting type label — used to build screen-reader narration about notice period */
+  meetingType?: string;
+  /** Notice period days — used for blocked-day aria-labels */
+  noticeDays?: number;
+  /** Called when picker opens, if screen reader mode is active */
+  onOpenNarrate?: (text: string) => void;
 }
 
 type CalendarView = 'day' | 'month' | 'decade';
@@ -35,10 +42,12 @@ function fmt(y: number, m: number, d: number) {
 export default function DatePicker({
   value, onChange, label, required = false,
   placeholder = 'Select Date', hasError = false, errorText, minDate, className, opensUp = false,
+  meetingType, noticeDays, onOpenNarrate,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalendarView>('day');
   const ref = useRef<HTMLDivElement>(null);
+  const descId = useId();
 
   const today = new Date(2026, 4, 9); // mock today: May 9 2026
   const parsed = parseDate(value);
@@ -64,12 +73,14 @@ export default function DatePicker({
 
   function handleOpen() {
     if (!open) {
-      // Jump to the month that contains the first selectable date
       if (minDate && !value) {
         setViewYear(minDate.getFullYear());
         setViewMonth(minDate.getMonth());
       }
       setView('day');
+      if (onOpenNarrate && meetingType) {
+        onOpenNarrate(buildDatePickerNarration(meetingType, today));
+      }
     }
     setOpen(o => !o);
   }
@@ -109,9 +120,18 @@ export default function DatePicker({
       )}
 
       <div className="relative w-full">
+        {/* Screen reader description — visually hidden */}
+        {meetingType && (
+          <span id={descId} className="sr-only">
+            {buildDatePickerNarration(meetingType, today)}
+          </span>
+        )}
         <button
           type="button"
           onClick={handleOpen}
+          aria-describedby={meetingType ? descId : undefined}
+          aria-expanded={open}
+          aria-haspopup="dialog"
           className={`flex items-center w-full bg-white rounded-lg border ${border} py-[10px] pl-3 pr-3 transition-all duration-150 cursor-pointer`}
         >
           <span className={`flex-1 text-sm text-left ${value ? 'text-[#212121]' : 'text-[#727272]'}`} style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
@@ -164,6 +184,10 @@ export default function DatePicker({
                         key={i}
                         type="button"
                         onClick={() => !isBlocked && selectDay(cell.y, cell.m, cell.d)}
+                        aria-label={buildDayAriaLabel(cell.y, cell.m, cell.d, isBlocked, !!isSel, isToday, noticeDays ?? 14)}
+                        aria-disabled={isBlocked}
+                        aria-pressed={!!isSel}
+                        tabIndex={isBlocked ? -1 : 0}
                         className={`flex items-center justify-center size-6 mx-auto rounded-[4px] text-sm font-medium transition-colors
                           ${isSel ? 'bg-[#6a3e31] text-white border border-[#6a3e31] cursor-pointer' :
                             isBlocked ? 'text-[#c6c6c6] cursor-default bg-transparent border-none' :

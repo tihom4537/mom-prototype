@@ -15,13 +15,7 @@ export const CATEGORY_FIELDS: Record<AgendaCategory, string[]> = {
   'Other':                       ['Subject / topic', 'Discussion / information / action', 'Decision / approval / resolution', 'Issues / concerns raised', 'Follow-up / timeline / responsible person'],
 };
 
-export function classifyAgenda(title: string, description: string): AgendaCategory {
-  const text = `${title} ${description}`.toLowerCase();
-  if (/grievance|complaint|application|petition|redress|dispute|objection/.test(text)) return 'Issue / Grievance';
-  if (/review|status|progress|update|inspection|audit|compliance|pending|completion/.test(text)) return 'Review / Status';
-  if (/plan|prepar|propos|schedul|upcoming|organis|arrang|coordinat|tender|estimate/.test(text)) return 'Planning / Preparatory';
-  if (/circular|notification|intimat|inform|communic|read out|government order|instruction/.test(text)) return 'Information / Intimation';
-  if (/various|miscellaneous|other|general|multiple|several|agenda items/.test(text)) return 'Multi-Topic / Miscellaneous';
+export function classifyAgenda(_title: string, _description: string): AgendaCategory {
   return 'Other';
 }
 

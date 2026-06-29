@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildMeetingListNarrative } from '../utils/narratives';
 import {
   MeetingDetailsTag,
   SmallDetailsText,
@@ -83,6 +85,21 @@ export default function MeetingListScreen() {
   const visible = meetings.filter((m: MeetingData) => m.tab === activeTab);
   const countFor = (tab: MeetingTab) => meetings.filter((m: MeetingData) => m.tab === tab).length;
 
+  useEffect(() => {
+    registerPageNarrator('/meetings/list', () =>
+      buildMeetingListNarrative({
+        todayCount:     countFor('today'),
+        upcomingCount:  countFor('upcoming'),
+        pastCount:      countFor('past'),
+        draftCount:     countFor('drafts'),
+        cancelledCount: countFor('cancelled'),
+        activeTab,
+        activeTabCount: visible.length,
+      })
+    );
+    return () => unregisterPageNarrator('/meetings/list');
+  }, [activeTab, meetings]);
+
   return (
     <MeetingShellLayout
       stepperActiveState={1}
@@ -90,6 +107,8 @@ export default function MeetingListScreen() {
       showBack={false}
       breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_meeting_list')]}
     >
+      <div role="main">
+      <h1 className="sr-only">Meeting List</h1>
       <SectionHolder
         variant="with-description"
         title={t('meeting_list_heading')}
@@ -137,6 +156,7 @@ export default function MeetingListScreen() {
           </div>
         )}
       </SectionHolder>
+      </div>
     </MeetingShellLayout>
   );
 }

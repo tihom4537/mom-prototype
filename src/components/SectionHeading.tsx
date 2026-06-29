@@ -5,6 +5,7 @@ interface SectionHeadingProps {
   variant?: SectionHeadingVariant;
   className?: string;
   fullWidth?: boolean;
+  as?: 'h2' | 'h3' | 'p';
 }
 
 export default function SectionHeading({
@@ -12,14 +13,15 @@ export default function SectionHeading({
   variant = 'default',
   className,
   fullWidth = false,
+  as: Tag = 'h2',
 }: SectionHeadingProps) {
   const label = (
-    <p
+    <Tag
       className="font-semibold leading-6 text-[#6a3e31] text-xl whitespace-nowrap shrink-0"
       style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
     >
       {text}
-    </p>
+    </Tag>
   );
 
   if (variant === 'with-box') {

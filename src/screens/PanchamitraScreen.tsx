@@ -1,6 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildPanchamitraNarrative } from '../utils/narratives';
 import AccessibilityBar from '../components/AccessibilityBar';
 import AccessibilityFab from '../components/AccessibilityFab';
 import Navbar from '../components/Navbar';
@@ -27,6 +29,11 @@ export default function PanchamitraScreen() {
   const [selectedZilla, setSelectedZilla] = useState('');
   const [selectedTaluk, setSelectedTaluk] = useState('');
   const [selectedGP, setSelectedGP] = useState('');
+
+  useEffect(() => {
+    registerPageNarrator('/panchamitra', buildPanchamitraNarrative);
+    return () => unregisterPageNarrator('/panchamitra');
+  }, []);
 
   const zillaOptions = DISTRICTS;
 
@@ -67,7 +74,8 @@ export default function PanchamitraScreen() {
       </div>
 
       {/* ── Search panel ── */}
-      <div id="main-content" tabIndex={-1} className="px-[200px] pt-[48px] pb-[80px] flex flex-col items-center gap-[32px]">
+      <div id="main-content" role="main" tabIndex={-1} className="px-[200px] pt-[48px] pb-[80px] flex flex-col items-center gap-[32px]">
+        <h1 className="sr-only">Panchamitra</h1>
 
         {/* Level radio */}
         <div className="flex items-center gap-[32px]">

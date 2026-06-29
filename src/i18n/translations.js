@@ -666,10 +666,17 @@ export const translations = {
     conclusion_attendance_title: "Members who attended",
     conclusion_message_line1: "Change begins when people show up.",
     conclusion_message_line2: "You did today.",
-    conclusion_thank_you: "We are grateful for your time, your participation, and your commitment to this community.",
+    conclusion_thank_you: "We are grateful for your time, your participation, and your commitment to your panchayat.",
     conclusion_cta: "Back to List of Meetings",
     conclusion_total_attended: "Total Attended",
     conclusion_donut_title: "Attendance Breakdown",
+    conclusion_next_meeting: "Next Meeting",
+    conclusion_quorum_status: "Quorum Status",
+    conclusion_quorum_total: "Total:",
+    conclusion_quorum_present: "Present:",
+    conclusion_quorum_absent: "Absent:",
+    conclusion_quorum_target: "Target (51%)",
+    conclusion_absentees: "Absentees",
 
     // --- Meeting List — status badge labels ---
     meeting_badge_scheduled: "Meeting Scheduled",
@@ -738,6 +745,12 @@ export const translations = {
     calendar_view_list: "View Meeting List",
     mic_stop: "Stop",
     mic_tooltip: "Tap to record your voice",
+    mic_error_https: "Microphone is not available. This feature requires a secure (HTTPS) connection.",
+    mic_error_denied: "Microphone access was denied. Please allow microphone access in your browser settings and try again.",
+    mic_error_generic: "Could not access the microphone. Please check your browser permissions and try again.",
+    mic_error_init: "Failed to initialize audio recorder. Please check microphone access.",
+    mic_error_no_audio: "No audio data captured",
+    mic_transcribing: "Transcribing…",
 
     // --- Homepage Hero ---
     homepage_hero_heading: "Every panchayat in Karnataka.\nOpen to everyone.",
@@ -1784,6 +1797,13 @@ export const translations = {
     conclusion_cta: "ಸಭೆಗಳ ಪಟ್ಟಿಗೆ ಹಿಂತಿರುಗಿ",
     conclusion_total_attended: "ಒಟ್ಟು ಹಾಜರಾತಿ",
     conclusion_donut_title: "ಹಾಜರಾತಿ ವಿವರ",
+    conclusion_next_meeting: "ಮುಂದಿನ ಸಭೆ",
+    conclusion_quorum_status: "ಕೋರಂ ಸ್ಥಿತಿ",
+    conclusion_quorum_total: "ಒಟ್ಟು:",
+    conclusion_quorum_present: "ಹಾಜರು:",
+    conclusion_quorum_absent: "ಗೈರು:",
+    conclusion_quorum_target: "ಗುರಿ (51%)",
+    conclusion_absentees: "ಗೈರುಹಾಜರಾದವರು",
 
     // --- Meeting List — status badge labels ---
     meeting_badge_scheduled: "ಸಭೆ ನಿಗದಿಯಾಗಿದೆ",
@@ -1852,6 +1872,12 @@ export const translations = {
     calendar_view_list: "ಸಭೆ ಪಟ್ಟಿ ವೀಕ್ಷಿಸಿ",
     mic_stop: "ನಿಲ್ಲಿಸಿ",
     mic_tooltip: "ಧ್ವನಿ ರೆಕಾರ್ಡ್ ಮಾಡಲು ಟ್ಯಾಪ್ ಮಾಡಿ",
+    mic_error_https: "ಮೈಕ್ರೋಫೋನ್ ಲಭ್ಯವಿಲ್ಲ. ಈ ವೈಶಿಷ್ಟ್ಯಕ್ಕೆ ಸುರಕ್ಷಿತ (HTTPS) ಸಂಪರ್ಕ ಅಗತ್ಯ.",
+    mic_error_denied: "ಮೈಕ್ರೋಫೋನ್ ಪ್ರವೇಶ ನಿರಾಕರಿಸಲಾಗಿದೆ. ದಯವಿಟ್ಟು ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅನುಮತಿ ನೀಡಿ.",
+    mic_error_generic: "ಮೈಕ್ರೋಫೋನ್ ಪ್ರವೇಶಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಬ್ರೌಸರ್ ಅನುಮತಿ ಪರಿಶೀಲಿಸಿ.",
+    mic_error_init: "ಆಡಿಯೋ ರೆಕಾರ್ಡರ್ ಪ್ರಾರಂಭಿಸಲು ವಿಫಲವಾಯಿತು. ಮೈಕ್ರೋಫೋನ್ ಪ್ರವೇಶ ಪರಿಶೀಲಿಸಿ.",
+    mic_error_no_audio: "ಯಾವುದೇ ಆಡಿಯೋ ಡೇಟಾ ಸಂಗ್ರಹಿಸಲಾಗಿಲ್ಲ",
+    mic_transcribing: "ಲಿಪ್ಯಂತರಿಸಲಾಗುತ್ತಿದೆ…",
 
     // --- Homepage Hero ---
     homepage_hero_heading: "ಕರ್ನಾಟಕದ ಪ್ರತಿ ಪಂಚಾಯತ್.\nಎಲ್ಲರಿಗೂ ಮುಕ್ತ.",

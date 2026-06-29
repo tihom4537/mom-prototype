@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildMeetingOverviewNarrative } from '../utils/narratives';
 import {
   UrgencyBanner,
   QuickActionCard,
@@ -67,6 +69,14 @@ export default function MeetingOverviewScreen() {
   const draftMeetings = meetings.filter(m => m.tab === 'drafts');
 
   const [activeTab,    setActiveTab]    = useState<MandatoryTab>('all');
+
+  useEffect(() => {
+    const upcomingCount = 3; // UPCOMING_MEETINGS is a static mock of 3
+    registerPageNarrator('/meetings/overview', () =>
+      buildMeetingOverviewNarrative(draftMeetings.length, upcomingCount)
+    );
+    return () => unregisterPageNarrator('/meetings/overview');
+  }, [draftMeetings.length]);
   const [actionTab,    setActionTab]    = useState<ActionTab>('pending');
   const [actionItems,  setActionItems]  = useState(ACTION_ITEMS_DATA);
 
@@ -112,7 +122,8 @@ export default function MeetingOverviewScreen() {
         t('overview_breadcrumb'),
       ]}
     >
-            <div className="flex flex-col gap-[20px]">
+            <div role="main" className="flex flex-col gap-[20px]">
+              <h1 className="sr-only">Meeting Overview</h1>
 
               {/* ── Welcome heading ── */}
               <div className="flex flex-col gap-[5px] px-[10px] mt-[10px]">
@@ -351,60 +362,29 @@ export default function MeetingOverviewScreen() {
                 </div>
               </div>
 
-              {/* ── Section 5: Action Items ── */}
+              {/* ── Section 5: Action Items — temporarily hidden ──
               <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
-                {/* Header */}
                 <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
                   <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                     {t('section_action_items')}
                   </span>
                   {openTaskCount > 0 && (
-                    <AgendaNoLabel
-                      type="default"
-                      text={`${openTaskCount} ${t('action_items_tag')}`}
-                    />
+                    <AgendaNoLabel type="default" text={`${openTaskCount} ${t('action_items_tag')}`} />
                   )}
                 </div>
-                {/* Body */}
                 <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[30px] flex flex-col gap-[16px]">
-                  {/* Tab bar */}
                   <div className="flex items-center gap-[20px] border-b border-[rgba(106,62,49,0.12)] pb-[2px]">
-                    <DashboardMenuBarItem
-                      text={t('action_tab_pending')}
-                      count={actionItems.filter(a => a.status !== 'done').length}
-                      state={actionTab === 'pending' ? 'selected' : 'default'}
-                      badgeVariant="neutral"
-                      onClick={() => setActionTab('pending')}
-                    />
-                    <DashboardMenuBarItem
-                      text={t('action_tab_completed')}
-                      count={actionItems.filter(a => a.status === 'done').length}
-                      state={actionTab === 'completed' ? 'selected' : 'default'}
-                      badgeVariant="neutral"
-                      onClick={() => setActionTab('completed')}
-                    />
+                    <DashboardMenuBarItem text={t('action_tab_pending')} count={actionItems.filter(a => a.status !== 'done').length} state={actionTab === 'pending' ? 'selected' : 'default'} badgeVariant="neutral" onClick={() => setActionTab('pending')} />
+                    <DashboardMenuBarItem text={t('action_tab_completed')} count={actionItems.filter(a => a.status === 'done').length} state={actionTab === 'completed' ? 'selected' : 'default'} badgeVariant="neutral" onClick={() => setActionTab('completed')} />
                   </div>
-                  {/* List */}
                   <div className="flex flex-col gap-[12px]">
-                    {actionItems
-                      .filter(a => actionTab === 'pending' ? a.status !== 'done' : a.status === 'done')
-                      .map(item => (
-                        <ActionItemCard
-                          key={item.id}
-                          taskDescription={t(item.taskKey)}
-                          sourceMeeting={t(item.sourceKey)}
-                          daysSinceAssigned={t('days_ago').replace('{n}', String(item.daysSinceAssigned))}
-                          status={item.status}
-                          statusOpenLabel={t('status_open')}
-                          statusInProgressLabel={t('status_in_progress')}
-                          statusDoneLabel={t('status_done')}
-                          markDoneLabel={t('action_item_mark_done')}
-                          onMarkDone={() => markDone(item.id)}
-                        />
-                      ))}
+                    {actionItems.filter(a => actionTab === 'pending' ? a.status !== 'done' : a.status === 'done').map(item => (
+                      <ActionItemCard key={item.id} taskDescription={t(item.taskKey)} sourceMeeting={t(item.sourceKey)} daysSinceAssigned={t('days_ago').replace('{n}', String(item.daysSinceAssigned))} status={item.status} statusOpenLabel={t('status_open')} statusInProgressLabel={t('status_in_progress')} statusDoneLabel={t('status_done')} markDoneLabel={t('action_item_mark_done')} onMarkDone={() => markDone(item.id)} />
+                    ))}
                   </div>
                 </div>
               </div>
+              ── end Section 5 ── */}
 
             </div>
     </MeetingShellLayout>

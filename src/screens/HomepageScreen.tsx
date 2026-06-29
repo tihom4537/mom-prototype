@@ -416,7 +416,9 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
           </div>
           {/* Right col — Karnataka interactive map */}
           <Reveal threshold={0} delay={2} className="shrink-0 flex flex-col items-center gap-[16px] pr-[80px]">
-            <KarnatakaLeafletMap width={330} height={435} talukData={MAP_TALUK_DATA} static />
+            <div role="img" aria-label="Interactive map of Karnataka gram panchayat locations">
+              <KarnatakaLeafletMap width={330} height={435} talukData={MAP_TALUK_DATA} static />
+            </div>
           </Reveal>
           {/* Variant toggle */}
         </section>
@@ -425,8 +427,10 @@ export default function HomepageScreen({ heroVariant = 'centered', showVariantSw
       {/* ── Live Counter Strip ───────────────────────────────────────────── */}
       <LiveCounterStrip />
 
+      {/* ── Orientation Strip ────────────────────────────────────────────── */}
       {/* ── All Modules Section ──────────────────────────────────────────── */}
       <section ref={modulesRef} id="main-content" tabIndex={-1} className={`relative overflow-hidden flex flex-col gap-[45px] items-center justify-center pb-[80px] pt-[80px] ${heroVariant === 'map' ? 'px-[200px]' : 'px-[250px]'} w-full`}>
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[180px] z-0" style={{ background: 'linear-gradient(to bottom, rgba(237,130,67,0.1) 0%, rgba(237,130,67,0) 100%)' }} />
         <DotGrid position="top-left" opacity={0.08} />
         <DotGrid position="bottom-right" opacity={0.08} />
         <Reveal className="flex flex-col items-center gap-[12px] w-full">

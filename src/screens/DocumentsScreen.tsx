@@ -1,5 +1,7 @@
 import AccessibilityFab from '../components/AccessibilityFab';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummaries';
+import { buildDocumentsNarrative } from '../utils/narratives';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import {
@@ -115,6 +117,12 @@ export default function DocumentsScreen() {
   const [locGp, setLocGp]         = useState('');
 
   const docs = DOCUMENTS[activeTab];
+
+  useEffect(() => {
+    registerPageNarrator('/documents', () => buildDocumentsNarrative(activeTab, docs.length));
+    return () => unregisterPageNarrator('/documents');
+  }, [activeTab, docs.length]);
+
   const countLabel = docs.length === 1
     ? `1 ${t('docs_count_singular')}`
     : `${docs.length} ${t('docs_count_plural')}`;
@@ -147,6 +155,7 @@ export default function DocumentsScreen() {
 
       {/* Main content */}
       <main id="main-content" tabIndex={-1} className="flex flex-col gap-[50px] items-start pb-[80px] pt-[60px] px-[200px] w-full">
+        <h1 className="sr-only">Public Documents</h1>
 
         {/* Section heading */}
         <div className="flex flex-col gap-[8px] items-center w-full">

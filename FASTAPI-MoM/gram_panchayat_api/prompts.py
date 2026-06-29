@@ -134,7 +134,7 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
         identify what details are genuinely absent or unclear in the minutes text.
         Re-read the full text before flagging any gap — do not flag something already
         answered elsewhere in the text, even if mentioned briefly.
-        Maximum 6–7 feedback items total. Prioritise the most critical missing details first.
+        Maximum 5 feedback items total. Prioritise the most critical missing details first.
         This cap is overridden only when the BATCH COMPLAINTS RULE applies and items are
         individually listed — in that case, address all listed items regardless of count.
 
@@ -224,7 +224,7 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
         directly without commentary like "This appears to be a batch of complaints."
 
         BATCH COMPLAINTS RULE:
-        - Items individually listed (any count): address each listed item; override 6–7 cap.
+        - Items individually listed (any count): address each listed item; override 5 cap.
         - Items not listed individually, 1–9: ask for each to be named individually.
         - Items not listed individually, 10+: ask for 3–4 broader themes.
 
