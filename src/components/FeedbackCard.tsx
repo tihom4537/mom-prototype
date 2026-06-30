@@ -20,6 +20,7 @@ const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 1
 
 export interface FeedbackCardProps {
   type?: FeedbackCardType;
+  tagOverride?: import('./FeedbackCardTags').FeedbackTagType;
   segments?: Segment[];
   onSegmentChange?: (index: number, value: string) => void;
   originalText?: string;
@@ -39,10 +40,13 @@ export interface FeedbackCardProps {
   micAnalyserNode?: AnalyserNode;
   micError?: string | null;
   className?: string;
+  hideFooter?: boolean;
+  confirmedMessage?: string;
 }
 
 export default function FeedbackCard({
   type = 'fill-blanks',
+  tagOverride,
   segments = [],
   onSegmentChange,
   originalText = '',
@@ -61,6 +65,8 @@ export default function FeedbackCard({
   micAnalyserNode,
   micError,
   className,
+  hideFooter = false,
+  confirmedMessage,
 }: FeedbackCardProps) {
   const { t } = useLanguage();
   const isFillBlanks = type === 'fill-blanks';
@@ -92,7 +98,8 @@ export default function FeedbackCard({
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [micAnalyserNode, isMicRecording]);
 
-  const activeStyle = isActive
+  const isSuggestedRewrite = tagOverride === 'suggested-rewrite';
+  const activeStyle = isActive && !isSuggestedRewrite
     ? {
         borderColor: isFillBlanks ? '#ff7468' : '#613af5',
         boxShadow:   isFillBlanks
@@ -110,8 +117,8 @@ export default function FeedbackCard({
       onClick={onClick}
     >
       {/* ── Header ── */}
-      <div className="bg-white flex items-center pb-[10px] pt-3 px-4 rounded-tl-lg rounded-tr-lg shrink-0 w-full">
-        <FeedbackCardTags type={typeToTagType[type]} />
+      <div className="bg-white flex items-center pb-[10px] pt-[14px] px-4 rounded-tl-lg rounded-tr-lg shrink-0 w-full">
+        <FeedbackCardTags type={tagOverride ?? typeToTagType[type]} />
       </div>
 
       {/* ── Body ── */}
@@ -207,34 +214,41 @@ export default function FeedbackCard({
           </div>
         )}
 
-        {/* Rephrase: static improved sentence in a box */}
+        {/* Rephrase: static improved sentence */}
         {!isFillBlanks && (
-          <div className="border border-[#ddd] flex items-start rounded-[5px] w-full p-[10px]">
-            <p className="flex-1 font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] min-h-px min-w-px" style={NS}>
-              {originalText}
-            </p>
-          </div>
+          <p className="font-normal text-sm text-[#212121] leading-5 tracking-[0.25px] w-full" style={NS}>
+            {originalText}
+          </p>
         )}
 
-        {/* ── Footer buttons ── */}
-        <div className={`flex gap-2 justify-end ${isFillBlanks && isActive ? 'mt-[20px]' : ''}`} onClick={e => e.stopPropagation()}>
-          <Button
-            variant="outlined"
-            size="small"
-            iconPlacement="none"
-            text={t('btn_reject')}
-            onClick={() => onReject?.()}
-          />
-          <button
-            type="button"
-            onClick={() => (isFillBlanks ? onPushText?.() : onAccept?.())}
-            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[16px] py-[8px] border-none cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>
-              {t('btn_accept')}
-            </span>
-          </button>
-        </div>
+        {/* ── Footer ── */}
+        {hideFooter ? (
+          confirmedMessage ? (
+            <div className="flex items-center gap-[6px] pt-[10px]">
+              <span className="material-icons text-[16px] text-[#2e7d32]">check_circle</span>
+              <span className="text-[12px] text-[#2e7d32] font-medium" style={NS}>{confirmedMessage}</span>
+            </div>
+          ) : null
+        ) : (
+          <div className={`flex gap-2 justify-end pt-[10px] ${isFillBlanks && isActive ? 'mt-[20px]' : ''}`} onClick={e => e.stopPropagation()}>
+            <Button
+              variant="outlined"
+              size="small"
+              iconPlacement="none"
+              text={t('btn_reject')}
+              onClick={() => onReject?.()}
+            />
+            <button
+              type="button"
+              onClick={() => (isFillBlanks ? onPushText?.() : onAccept?.())}
+              className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[16px] py-[8px] border-none cursor-pointer hover:opacity-80 transition-opacity"
+            >
+              <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>
+                {t('btn_accept')}
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

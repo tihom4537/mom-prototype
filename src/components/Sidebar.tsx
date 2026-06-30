@@ -24,7 +24,7 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
     // Overview is the module home — no nav item selected
     if (['/meetings/overview', '/meetings', '/'].includes(location.pathname)) return null;
     if (location.pathname.startsWith('/meetings')) return 'meetings';
-    if (['/agenda-list', '/mom-entry', '/mom-entry/post-recording', '/mom-entry/feedback'].includes(location.pathname)) return 'meetings';
+    if (location.pathname === '/agenda-list' || location.pathname.startsWith('/mom-entry')) return 'meetings';
     return null;
   };
 

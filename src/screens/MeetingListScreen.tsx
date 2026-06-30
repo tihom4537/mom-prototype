@@ -12,6 +12,9 @@ import {
   SectionHolder,
   DashboardMenuBarItem,
   StatusBadge,
+  SearchInput,
+  DropdownField,
+  DatePicker,
 } from '../components';
 import type { NumberCircleType } from '../components';
 import type { MeetingData, MeetingTab } from '../context/MeetingsContext';
@@ -70,7 +73,30 @@ export default function MeetingListScreen() {
   const navigate = useNavigate();
   const { meetings } = useMeetings();
 
-  const [activeTab, setActiveTab]       = useState<MeetingTab>('today');
+  const [activeTab,      setActiveTab]      = useState<MeetingTab>('today');
+  const [searchQuery,    setSearchQuery]    = useState('');
+  const [searchInput,    setSearchInput]    = useState('');
+  const [filterType,     setFilterType]     = useState('');
+  const [filterStatus,   setFilterStatus]   = useState('');
+  const [filterDateFrom, setFilterDateFrom] = useState('');
+  const [filterDateTo,   setFilterDateTo]   = useState('');
+
+  // Derive display status from stepsCompleted (used for filter matching)
+  const deriveStatus = (m: MeetingData): string => {
+    if (m.tab === 'cancelled') return t('meeting_status_cancelled');
+    if (m.stepsCompleted >= 5)  return t('meeting_status_completed');
+    if (m.stepsCompleted >= 4)  return t('meeting_status_president_sign');
+    if (m.stepsCompleted >= 1)  return t('meeting_status_in_progress');
+    return t('meeting_status_scheduled');
+  };
+
+  const STATUS_OPTIONS = [
+    t('meeting_status_scheduled'),
+    t('meeting_status_in_progress'),
+    t('meeting_status_president_sign'),
+    t('meeting_status_completed'),
+    t('meeting_status_cancelled'),
+  ];
 
   const allTabs: Array<{ key: MeetingTab; labelKey: string }> = [
     { key: 'today',     labelKey: 'tab_today'     },
@@ -82,8 +108,27 @@ export default function MeetingListScreen() {
 
   const stepKeys       = ['meeting_step_1', 'meeting_step_2', 'meeting_step_3', 'meeting_step_4', 'meeting_step_5'];
   const createStepKeys = ['stepper_step1', 'stepper_step2', 'stepper_step3'];
-  const visible = meetings.filter((m: MeetingData) => m.tab === activeTab);
   const countFor = (tab: MeetingTab) => meetings.filter((m: MeetingData) => m.tab === tab).length;
+
+  // Convert DD/MM/YYYY → YYYY-MM-DD for comparison
+  const toISO = (dmy: string) => { const [d, mo, y] = dmy.split('/'); return `${y}-${mo}-${d}`; };
+
+  const visible = meetings.filter((m: MeetingData) => {
+    if (m.tab !== activeTab) return false;
+    if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (filterType && m.meetingType !== filterType) return false;
+    if (filterStatus && deriveStatus(m) !== filterStatus) return false;
+    if (filterDateFrom) { try { if (m.date < toISO(filterDateFrom)) return false; } catch {} }
+    if (filterDateTo)   { try { if (m.date > toISO(filterDateTo))   return false; } catch {} }
+    return true;
+  });
+
+  const hasActiveFilters = searchInput || searchQuery || filterType || filterStatus || filterDateFrom || filterDateTo;
+
+  // Unique meeting types for filter dropdown
+  const meetingTypeOptions = Array.from(
+    new Set(meetings.map((m: MeetingData) => m.meetingType).filter(Boolean))
+  ) as string[];
 
   useEffect(() => {
     registerPageNarrator('/meetings/list', () =>
@@ -130,7 +175,79 @@ export default function MeetingListScreen() {
         </div>
 
         {/* Divider */}
-        <hr className="border-t border-[#e6e6e6] w-full mb-[30px] mt-0" />
+        <hr className="border-t border-[#e6e6e6] w-full mb-[28px] mt-0" />
+
+        {/* Filter bar */}
+        <div className="flex gap-[12px] items-end mb-[32px] justify-between">
+          {/* Left: filter dropdowns + dates */}
+          <div className="flex gap-[12px] items-end flex-wrap">
+            <div className="w-[220px] shrink-0">
+              <DropdownField
+                label={t('meeting_list_filter_type_label')}
+                placeholder={t('meeting_list_filter_type')}
+                value={filterType}
+                onChange={setFilterType}
+                options={meetingTypeOptions}
+              />
+            </div>
+            <div className="w-[200px] shrink-0">
+              <DropdownField
+                label={t('meeting_list_filter_status_label')}
+                placeholder={t('meeting_list_filter_status')}
+                value={filterStatus}
+                onChange={setFilterStatus}
+                options={STATUS_OPTIONS}
+              />
+            </div>
+            <div className="w-[160px] shrink-0">
+              <DatePicker
+                label={t('meeting_list_filter_from')}
+                value={filterDateFrom}
+                onChange={setFilterDateFrom}
+                placeholder="DD/MM/YYYY"
+              />
+            </div>
+            <div className="w-[160px] shrink-0">
+              <DatePicker
+                label={t('meeting_list_filter_to')}
+                value={filterDateTo}
+                onChange={setFilterDateTo}
+                placeholder="DD/MM/YYYY"
+                opensLeft
+              />
+            </div>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setSearchInput(''); setFilterType(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+                className="flex items-center gap-[4px] text-[13px] text-[#6a3e31] hover:underline bg-transparent border-none cursor-pointer shrink-0 pb-[10px]"
+                style={{ fontFamily: 'Noto Sans' }}
+              >
+                <Icon name="close" size="small" color="#6a3e31" />
+                {t('meeting_list_clear_filters')}
+              </button>
+            )}
+          </div>
+
+          {/* Right: search + button */}
+          <div className="flex items-end gap-[8px] shrink-0">
+            <div className="w-[240px]">
+              <SearchInput
+                value={searchInput}
+                onChange={setSearchInput}
+                onSearch={() => setSearchQuery(searchInput)}
+                placeholder={t('meeting_list_search_placeholder')}
+              />
+            </div>
+            <Button
+              variant="filled"
+              size="default"
+              iconPlacement="none"
+              text={t('meeting_list_search_btn')}
+              onClick={() => setSearchQuery(searchInput)}
+            />
+          </div>
+        </div>
 
         {/* Cards — 3-col grid */}
         {visible.length === 0 ? (

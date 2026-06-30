@@ -44,7 +44,7 @@ export default function DashboardMenuBarItem({
       <div
         className={`border-b border-[#6a3e31] flex items-center gap-[5px] pb-[3px] ${className ?? ''}`}
       >
-        <p className="font-medium text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
+        <p className="font-medium text-[14px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
           {text}
         </p>
         {BadgeEl}
@@ -58,7 +58,7 @@ export default function DashboardMenuBarItem({
       onClick={onClick}
       className={`flex items-center gap-[5px] pb-[3px] bg-transparent border-none cursor-pointer ${className ?? ''}`}
     >
-      <p className="font-medium text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
+      <p className="font-medium text-[14px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
         {text}
       </p>
       {BadgeEl}

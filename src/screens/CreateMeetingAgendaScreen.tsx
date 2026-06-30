@@ -515,6 +515,15 @@ export default function CreateMeetingAgendaScreen() {
                         </li>
                       ))}
                     </ul>
+                    <div className="mt-[4px] border-t border-[rgba(106,62,49,0.2)] pt-[12px] flex flex-col gap-[8px]">
+                      <span className="font-semibold text-[12px] text-[#6a3e31] uppercase tracking-[0.6px]" style={NS}>{t('agenda_tips_examples_heading')}</span>
+                      {(['1','2'] as const).map(n => (
+                        <div key={n} className="bg-white rounded-[8px] px-[12px] py-[10px] border border-[rgba(106,62,49,0.16)] flex flex-col gap-[3px]">
+                          <span className="font-semibold text-[14px] text-[#212121] leading-[20px]" style={NS}>{t(`agenda_tips_example_${n}_title`)}</span>
+                          <span className="text-[12px] text-[#727272] leading-[18px]" style={NS}>{t(`agenda_tips_example_${n}_desc`)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

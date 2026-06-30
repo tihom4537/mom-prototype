@@ -1,4 +1,4 @@
-export type FeedbackTagType = 'fill-blanks' | 'rephrase';
+export type FeedbackTagType = 'fill-blanks' | 'rephrase' | 'suggested-rewrite';
 
 interface FeedbackCardTagsProps {
   type?: FeedbackTagType;
@@ -15,6 +15,11 @@ const tagConfig: Record<FeedbackTagType, { label: string; bg: string; text: stri
     label: 'Rephrase',
     bg: 'bg-[#faefff]',
     text: 'text-[#613af5]',
+  },
+  'suggested-rewrite': {
+    label: 'Suggested Rewrite',
+    bg: 'bg-[#e8f5e9]',
+    text: 'text-[#2e7d32]',
   },
 };
 

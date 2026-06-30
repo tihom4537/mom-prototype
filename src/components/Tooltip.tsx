@@ -10,10 +10,11 @@ interface TooltipProps {
   text: string;
   direction?: TooltipDirection;
   autoWidth?: boolean;
+  dark?: boolean;
   children: React.ReactNode;
 }
 
-export default function Tooltip({ text, direction = 'top', autoWidth = false, children }: TooltipProps) {
+export default function Tooltip({ text, direction = 'top', autoWidth = false, dark = false, children }: TooltipProps) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
   const pageScale = usePageScale();
@@ -32,7 +33,8 @@ export default function Tooltip({ text, direction = 'top', autoWidth = false, ch
 
   const hide = useCallback(() => setPos(null), []);
 
-  const BG = '#f3f3f3';
+  const BG = dark ? '#5e5e5e' : '#f3f3f3';
+  const FG = dark ? '#ffffff' : '#212121';
 
   const arrow = (dir: TooltipDirection) => {
     if (dir === 'top')    return <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: `5px solid ${BG}`, alignSelf: 'center' }} />;
@@ -61,8 +63,8 @@ export default function Tooltip({ text, direction = 'top', autoWidth = false, ch
           {direction === 'bottom' && arrow(direction)}
           {direction === 'right'  && arrow(direction)}
           <div
-            style={{ ...NS, borderRadius, letterSpacing: '0.4px' }}
-            className={`bg-[#f3f3f3] text-[#212121] text-[12px] leading-[20px] px-[8px] py-[4px] pointer-events-none max-w-[160px] text-center${autoWidth ? ' w-auto whitespace-nowrap' : ''}`}
+            style={{ ...NS, borderRadius, letterSpacing: '0.4px', background: BG, color: FG }}
+            className={`text-[12px] leading-[20px] px-[8px] py-[4px] pointer-events-none max-w-[200px] text-left${autoWidth ? ' w-auto whitespace-nowrap' : ''}`}
           >
             {text}
           </div>

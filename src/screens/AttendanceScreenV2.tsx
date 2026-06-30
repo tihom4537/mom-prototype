@@ -436,7 +436,7 @@ export default function AttendanceScreenV2() {
 
               <SectionHolder
                 variant="with-tag"
-                title={t('attendance_section_title')}
+                title={t(isClosureRoute ? 'attendance_closure_section_title' : 'attendance_section_title')}
                 tagText={`${total} ${t('review_viz_participants')}`}
                 bodyClassName="px-[25px] pt-[20px] pb-[30px] flex flex-col gap-[16px]"
               >

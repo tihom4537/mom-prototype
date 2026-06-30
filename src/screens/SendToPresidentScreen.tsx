@@ -674,6 +674,51 @@ export default function SendToPresidentScreen() {
               </SectionHolder>
 
 
+              {/* ── Schedule Next Meeting ───────────────────────────────────── */}
+              <SectionHolder
+                variant="mandatory"
+                title={t('send_president_section_next_meeting')}
+                bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
+              >
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1 min-w-0">
+                    <DropdownField
+                      label={t('send_president_next_type_label')}
+                      placeholder={t('send_president_next_type_placeholder')}
+                      value={nextMeetingType}
+                      onChange={setNextMeetingType}
+                      options={meetingTypeOptions}
+                      required
+                      opensUp
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <DatePicker
+                      label={t('send_president_next_date_label')}
+                      required
+                      value={nextMeetingDate}
+                      onChange={setNextMeetingDate}
+                      placeholder={t('send_president_next_date_placeholder')}
+                      opensUp
+                      minDate={nextMinDate}
+                      meetingType={nextMeetingType}
+                      noticeDays={nextNoticePeriod.days}
+                      onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <TimePicker
+                      label={t('send_president_next_time_label')}
+                      required
+                      value={nextMeetingTime}
+                      onChange={setNextMeetingTime}
+                      placeholder={t('send_president_next_time_placeholder')}
+                      opensUp
+                    />
+                  </div>
+                </div>
+              </SectionHolder>
+
               {/* ── Proceedings Preview ────────────────────────────────────── */}
               <SectionHolder
                 variant="default"
@@ -721,51 +766,6 @@ export default function SendToPresidentScreen() {
                     >
                       <Icon name="chevron_right" size="small" color="#6a3e31" />
                     </button>
-                  </div>
-                </div>
-              </SectionHolder>
-
-              {/* ── Schedule Next Meeting ───────────────────────────────────── */}
-              <SectionHolder
-                variant="mandatory"
-                title={t('send_president_section_next_meeting')}
-                bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
-              >
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 min-w-0">
-                    <DropdownField
-                      label={t('send_president_next_type_label')}
-                      placeholder={t('send_president_next_type_placeholder')}
-                      value={nextMeetingType}
-                      onChange={setNextMeetingType}
-                      options={meetingTypeOptions}
-                      required
-                      opensUp
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <DatePicker
-                      label={t('send_president_next_date_label')}
-                      required
-                      value={nextMeetingDate}
-                      onChange={setNextMeetingDate}
-                      placeholder={t('send_president_next_date_placeholder')}
-                      opensUp
-                      minDate={nextMinDate}
-                      meetingType={nextMeetingType}
-                      noticeDays={nextNoticePeriod.days}
-                      onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <TimePicker
-                      label={t('send_president_next_time_label')}
-                      required
-                      value={nextMeetingTime}
-                      onChange={setNextMeetingTime}
-                      placeholder={t('send_president_next_time_placeholder')}
-                      opensUp
-                    />
                   </div>
                 </div>
               </SectionHolder>

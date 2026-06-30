@@ -80,12 +80,12 @@ export default function InputField({
         </label>
       )}
 
-      <div className={`input-field-wrapper flex items-center bg-white rounded-lg border ${borderColor} ${ring} transition-all duration-150 ${disabled ? 'opacity-50' : ''}`}>
+      <div className={`input-field-wrapper flex items-center rounded-lg border ${disabled ? 'bg-[#F3F3F3] border-[#e0e0e0]' : `bg-white ${borderColor}`} ${disabled ? '' : ring} transition-all duration-150`}>
         <input
           type={type}
           value={value}
           onChange={e => onChange(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={() => !disabled && setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
           placeholder={placeholder}

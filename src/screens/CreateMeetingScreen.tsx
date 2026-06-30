@@ -89,6 +89,9 @@ export default function CreateMeetingScreen() {
   const [meetingLink,  setMeetingLink]  = useState('');
   const [venue,        setVenue]        = useState('');
   const [chairperson,  setChairperson]  = useState('');
+  const [secondChair,  setSecondChair]  = useState('');
+  const [thirdChair,   setThirdChair]   = useState('');
+  const [mandatoryDesig, setMandatoryDesig] = useState('');
   const [title,        setTitle]        = useState('');
   const [description,  setDescription]  = useState('');
 
@@ -304,9 +307,34 @@ export default function CreateMeetingScreen() {
     return n + (s[(v - 20) % 10] || s[v] || s[0]);
   }
 
+  // Mandatory designations per meeting type
+  function getMandatoryDesignations(type: string): string {
+    const t_ = type.toLowerCase();
+    if (t_.includes('general body') || t_.includes('kdp'))
+      return 'Adhyaksha (President), Upadhyaksha (Vice President), All Elected Members';
+    if (t_.includes('gram sabha') || t_.includes('ward sabha') || t_.includes('habitation'))
+      return 'Adhyaksha (President), All Elected Members, All Residents';
+    if (t_.includes('makkala sabha'))
+      return 'Adhyaksha (President), Child Representatives, Elected Members';
+    if (t_.includes('mahila sabha'))
+      return 'Adhyaksha (President), Women Members, Elected Members';
+    if (t_.includes('finance') || t_.includes('standing') || t_.includes('social justice'))
+      return 'Adhyaksha (President), Committee Members';
+    return 'Adhyaksha (President), All Elected Members';
+  }
+
+  // President from GP_STAFF
+  const president = GP_STAFF.find(s => s.designation === 'GP President');
+  const vicePresident = GP_STAFF.find(s => s.designation === 'GP Vice President');
+  const electedMembers = GP_STAFF.filter(s => s.designation.startsWith('Elected Member') && s.gp === 'Kakanur GP');
+
   function handleMeetingTypeChange(val: string) {
     setMeetingType(val);
     setErrors(e => ({ ...e, meetingType: undefined as any }));
+    // Auto-fill chairperson
+    if (president) setChairperson(`${president.name} — ${president.designation}`);
+    // Auto-fill mandatory designations
+    setMandatoryDesig(getMandatoryDesignations(val));
     const year = new Date().getFullYear();
     const keyword = val.toLowerCase();
     const count = meetings.filter(m => {
@@ -497,19 +525,54 @@ export default function CreateMeetingScreen() {
                     </div>
                   </div>
 
-                  {/* Row 3: Chairperson Name (1/3 width) */}
+                  {/* Row 3: Chairperson | Second Chairperson | Third Chairperson */}
                   <div className="flex gap-[30px] items-start">
-                    <div className="w-[346px] shrink-0">
+                    <div className="flex-1 min-w-0">
                       <InputField
                         label={t('field_chairperson')}
                         placeholder={t('field_chairperson_placeholder')}
                         value={chairperson}
-                        onChange={val => { setChairperson(val); setErrors(e => ({ ...e, chairperson: undefined as any })); }}
+                        onChange={() => {}}
                         required
                         fieldState={errors.chairperson ? 'error' : 'default'}
                         errorText={errors.chairperson}
+                        disabled={!!meetingType}
                       />
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <DropdownField
+                        label={t('field_second_chairperson')}
+                        placeholder={t('field_second_chairperson_placeholder')}
+                        value={secondChair}
+                        onChange={setSecondChair}
+                        options={vicePresident ? [`${vicePresident.name} — ${vicePresident.designation}`] : []}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <DropdownField
+                        label={t('field_third_chairperson')}
+                        placeholder={t('field_third_chairperson_placeholder')}
+                        value={thirdChair}
+                        onChange={setThirdChair}
+                        options={electedMembers.map(m => `${m.name} — ${m.designation}`)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 4: Mandatory Designations — same width as row above (3-col) */}
+                  <div className="flex gap-[30px] items-start">
+                    <div className="flex-1 min-w-0">
+                      <InputField
+                        label={t('field_mandatory_designations')}
+                        placeholder={t('field_mandatory_designations_placeholder')}
+                        value={mandatoryDesig}
+                        onChange={() => {}}
+                        fieldState="default"
+                        disabled={!!meetingType}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0" />
+                    <div className="flex-1 min-w-0" />
                   </div>
 
                   {/* Divider */}

@@ -36,6 +36,7 @@ export default function DropdownField({
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const [listPos, setListPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [actuallyOpensUp, setActuallyOpensUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -47,20 +48,24 @@ export default function DropdownField({
   function calcPos() {
     if (!triggerRef.current) return;
     const r = triggerRef.current.getBoundingClientRect();
-    if (opensUp) {
-      setListPos({ top: r.top + window.scrollY - 4, left: r.left + window.scrollX, width: r.width });
+    const spaceBelow = window.innerHeight - r.bottom;
+    const shouldOpenUp = opensUp || spaceBelow < 200;
+    if (shouldOpenUp) {
+      setListPos({ top: r.top - 4, left: r.left, width: r.width });
     } else {
-      setListPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX, width: r.width });
+      setListPos({ top: r.bottom + 4, left: r.left, width: r.width });
     }
+    setActuallyOpensUp(shouldOpenUp);
   }
 
   useEffect(() => {
     if (!open) return;
-    calcPos();
+    const raf = requestAnimationFrame(calcPos);
     const update = () => calcPos();
     window.addEventListener('scroll', update, true);
     window.addEventListener('resize', update);
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('scroll', update, true);
       window.removeEventListener('resize', update);
     };
@@ -149,14 +154,16 @@ export default function DropdownField({
           ref={listRef}
           role="listbox"
           style={{
-            position: 'absolute',
-            top: opensUp ? undefined : listPos.top,
-            bottom: opensUp ? window.innerHeight - listPos.top + 4 : undefined,
+            position: 'fixed',
+            top: actuallyOpensUp ? undefined : listPos.top,
+            bottom: actuallyOpensUp ? window.innerHeight - listPos.top : undefined,
             left: listPos.left,
             width: listPos.width,
             zIndex: 9999,
+            maxHeight: '240px',
+            overflowY: 'auto',
           }}
-          className="bg-white border border-[#e0e0e0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.12)] overflow-hidden"
+          className="bg-white border border-[#e0e0e0] rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
         >
           {allOptions.map((option, index) => (
             <button

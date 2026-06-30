@@ -15,6 +15,10 @@ import MeetingOverviewScreen from './screens/MeetingOverviewScreen';
 import AgendaListScreen from './screens/AgendaListScreen';
 import MoMEntryDefaultScreen from './screens/MoMEntryDefaultScreen';
 import MoMEntryDefaultScreenLegacy from './screens/MoMEntryDefaultScreenLegacy';
+import MoMEntrySimpleScreen from './screens/MoMEntrySimpleScreen';
+import MoMEntrySimpleScreenV2 from './screens/MoMEntrySimpleScreenV2';
+import MoMEntrySimpleScreenV3 from './screens/MoMEntrySimpleScreenV3';
+import MoMEntrySimpleScreenV4 from './screens/MoMEntrySimpleScreenV4';
 import MoMEntryPostRecordingScreen from './screens/MoMEntryPostRecordingScreen';
 import MoMEntryFeedbackScreen from './screens/MoMEntryFeedbackScreen';
 import CreateMeetingScreen from './screens/CreateMeetingScreen';
@@ -76,6 +80,10 @@ export default function App() {
       <Route path="/agenda-list"              element={<AgendaListScreen />} />
       <Route path="/mom-entry"                element={<MoMEntryDefaultScreen />} />
       <Route path="/mom-entry/legacy"         element={<MoMEntryDefaultScreenLegacy />} />
+      <Route path="/mom-entry/simple"        element={<MoMEntrySimpleScreen />} />
+      <Route path="/mom-entry/simple-v2"     element={<MoMEntrySimpleScreenV2 />} />
+      <Route path="/mom-entry/simple-v3"     element={<MoMEntrySimpleScreenV3 />} />
+      <Route path="/mom-entry/simple-v4"     element={<MoMEntrySimpleScreenV4 />} />
       <Route path="/mom-entry/post-recording" element={<MoMEntryPostRecordingScreen />} />
       <Route path="/mom-entry/feedback"       element={<MoMEntryFeedbackScreen />} />
     </Routes>

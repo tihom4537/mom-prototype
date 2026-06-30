@@ -13,6 +13,7 @@ interface DatePickerProps {
   minDate?: Date;
   className?: string;
   opensUp?: boolean;
+  opensLeft?: boolean;
   /** Meeting type label — used to build screen-reader narration about notice period */
   meetingType?: string;
   /** Notice period days — used for blocked-day aria-labels */
@@ -41,7 +42,7 @@ function fmt(y: number, m: number, d: number) {
 
 export default function DatePicker({
   value, onChange, label, required = false,
-  placeholder = 'Select Date', hasError = false, errorText, minDate, className, opensUp = false,
+  placeholder = 'Select Date', hasError = false, errorText, minDate, className, opensUp = false, opensLeft = false,
   meetingType, noticeDays, onOpenNarrate,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false);
@@ -78,9 +79,6 @@ export default function DatePicker({
         setViewMonth(minDate.getMonth());
       }
       setView('day');
-      if (onOpenNarrate && meetingType) {
-        onOpenNarrate(buildDatePickerNarration(meetingType, today));
-      }
     }
     setOpen(o => !o);
   }
@@ -141,9 +139,19 @@ export default function DatePicker({
         </button>
 
         {open && (
-          <div className={`absolute left-0 bg-white rounded-lg shadow-[0px_8px_8px_rgba(0,0,0,0.15)] z-50 overflow-hidden w-[300px] ${opensUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+          <div className={`absolute bg-white rounded-lg shadow-[0px_8px_8px_rgba(0,0,0,0.15)] z-50 overflow-hidden w-[300px] ${opensLeft ? 'right-0' : 'left-0'} ${opensUp ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
             {/* Header */}
             <div className="flex items-center h-[40px] bg-white border-b border-[#ddd] px-2">
+              {onOpenNarrate && meetingType && (
+                <button
+                  type="button"
+                  aria-label="Read notice period requirements"
+                  onClick={() => onOpenNarrate(buildDatePickerNarration(meetingType, today))}
+                  className="flex items-center justify-center w-[22px] h-full text-[#727272] hover:text-[#6a3e31] cursor-pointer bg-transparent border-none shrink-0"
+                >
+                  <Icon name="info" size="small" color="currentColor" />
+                </button>
+              )}
               <button type="button" onClick={() => view === 'decade' ? setViewYear(y => y - 10) : setViewYear(y => y - 1)} className="flex items-center justify-center w-[22px] h-full text-xs text-[#727272] hover:text-[#212121] cursor-pointer bg-transparent border-none">«</button>
               {view === 'day' && (
                 <button type="button" onClick={() => viewMonth === 0 ? (setViewMonth(11), setViewYear(y => y - 1)) : setViewMonth(m => m - 1)} className="flex items-center justify-center w-[22px] h-full cursor-pointer bg-transparent border-none text-[#727272] hover:text-[#212121]">

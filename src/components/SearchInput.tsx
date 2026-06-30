@@ -4,6 +4,7 @@ import Icon from './Icon';
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  onSearch?: () => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
@@ -14,6 +15,7 @@ interface SearchInputProps {
 export default function SearchInput({
   value,
   onChange,
+  onSearch,
   placeholder = 'Search',
   className,
   disabled = false,
@@ -35,6 +37,7 @@ export default function SearchInput({
         type="text"
         value={value}
         onChange={e => onChange(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && onSearch?.()}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         disabled={disabled}
