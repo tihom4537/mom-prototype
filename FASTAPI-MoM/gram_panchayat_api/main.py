@@ -99,6 +99,7 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
         modes,
         flag,
         flag_message,
+        rewrite,
     ) = await run_feedback(
         body.agenda_subject,
         body.mom_discussion,
@@ -121,6 +122,7 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
         modes=modes,
         flag=flag,
         flag_message=flag_message,
+        rewrite=rewrite,
     )
 
     # Only persist when LLM processing succeeded.
@@ -182,20 +184,10 @@ async def ocr(body: OCRRequest) -> OCRResponse:
 @app.websocket("/ws/speech-to-text")
 async def websocket_speech_to_text(websocket: WebSocket, locale: str = "kn") -> None:
     """
-    Real-time streaming Speech-to-Text via Sarvam AI.
+    WebSocket endpoint for real-time Speech-to-Text streaming.
 
-    Query params:
-      locale: "en" | "kn" | "hi"  (default: "kn")
-
-    Client → Server:
-      binary frames : raw audio bytes (WAV chunks, 16 kHz, 16-bit PCM recommended)
-      JSON text     : {"type": "end"} to signal no more audio
-
-    Server → Client:
-      {"type": "transcript", "text": "..."}
-      {"type": "speech_start"}
-      {"type": "speech_end"}
-      {"type": "error", "message": "..."}
+    Expects query parameter: locale (e.g., "en", "kn", "hi")
+    Accumulates audio chunks and calls Sarvam REST API on "end" signal.
     """
     await handle_streaming_stt(websocket, locale)
 

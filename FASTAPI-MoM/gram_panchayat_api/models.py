@@ -7,7 +7,7 @@ class FeedbackRequest(BaseModel):
     agenda_id: str
     agenda_subject: str
     mom_discussion: str
-    feedback_language: str = 'en'  # 'en' or 'kn'
+    feedback_language: str = 'en'
 
     @field_validator("agenda_id", "agenda_subject", "mom_discussion")
     @classmethod
@@ -27,6 +27,7 @@ class FeedbackResult(BaseModel):
     modes: List[str] = []
     flag: Optional[str] = None
     flag_message: Optional[str] = None
+    rewrite: Optional[str] = None  # Complete rewrite of entire minutes with blanks
 
 
 class SpeechToTextRequest(BaseModel):
