@@ -58,7 +58,7 @@ async def generate_text(
     """
     Call the Gemini API (or another compatible model) and return the generated text.
 
-    - Uses Gemini 2.5 Flash Lite Preview by default (model: gemini-3.1-flash-lite-preview).
+    - Uses Gemini 2.5 Flash by default (model: gemini-2.5-flash).
     - Retries up to `max_retries` times on failure with a 1 second delay.
     - To switch models, set the LLM_MODEL_NAME env var or pass `model` explicitly.
     """
@@ -66,7 +66,7 @@ async def generate_text(
     if not api_key:
         raise LLMClientError("GEMINI_API_KEY is not set in the environment.")
 
-    default_model = _get_env("LLM_MODEL_NAME") or "gemini-3.1-flash-lite-preview"
+    default_model = _get_env("LLM_MODEL_NAME") or "gemini-2.5-flash"
     model_name = model or default_model
 
     # For Gemini, the model name is part of the URL path.
