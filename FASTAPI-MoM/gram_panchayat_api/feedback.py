@@ -27,12 +27,12 @@ async def get_feedback(
     agenda_subject: str,
     mom_discussion: str,
     feedback_language: str = 'en',
-) -> Tuple[str, str, List[str], str, bool, List[Optional[str]], List[str], Optional[str], Optional[str]]:
+) -> Tuple[str, str, List[str], str, bool, List[Optional[str]], List[str], Optional[str], Optional[str], Optional[str]]:
     """
-    Single LLM call that both categorizes and generates feedback.
+    Single LLM call that both categorizes and generates feedback with complete rewrite.
 
     Returns:
-        (category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message)
+        (category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message, rewrite)
     """
     prompt = build_single_call_prompt(agenda_subject, mom_discussion, feedback_language)
 
@@ -45,6 +45,7 @@ async def get_feedback(
         feedback_raw_value = data.get("feedback") or []
         flag = data.get("flag") or None
         flag_message = data.get("flag_message") or None
+        rewrite = data.get("rewrite") or None
 
         if category not in CATEGORIES:
             category = DEFAULT_CATEGORY
@@ -82,7 +83,7 @@ async def get_feedback(
             modes_list = ["REPLACE"] * len(feedback_list)
 
         failed = False
-        return category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message
+        return category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message, rewrite
 
     except (LLMClientError, Exception) as exc:
         logger.exception(
@@ -94,5 +95,5 @@ async def get_feedback(
         reason = f"Categorization+feedback failed: {exc}"
         feedback_raw = f"ERROR: {exc}"
         feedback_list: List[str] = []
-        return category, reason, feedback_list, feedback_raw, True, [], [], None, None
+        return category, reason, feedback_list, feedback_raw, True, [], [], None, None, None
 

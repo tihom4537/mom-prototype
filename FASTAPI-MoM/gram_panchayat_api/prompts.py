@@ -263,6 +263,17 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
 
         ---
 
+        COMPLETE REWRITE:
+        In addition to the individual feedback items above, create a comprehensive rewrite of the
+        entire minutes that integrates all the improvements as a single, well-structured, formal
+        document. This rewrite should:
+        - Incorporate all blanks from REPLACE and APPEND suggestions
+        - Apply all REPHRASE corrections
+        - Flow naturally as one cohesive entry
+        - Use official/formal tone suitable for government records
+
+        ---
+
         Agenda Item: {agenda_subject}
         Minutes Text: {mom_discussion}
 
@@ -276,7 +287,8 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
             {{"span": "<exact phrase from minutes or null>", "suggestion": "<rewritten sentence>", "mode": "REPLACE"}},
             {{"span": "<exact phrase from minutes or null>", "suggestion": "<rewritten sentence>", "mode": "APPEND"}},
             {{"span": "<exact phrase from minutes>", "suggestion": "<corrected sentence>", "mode": "REPHRASE"}}
-          ]
+          ],
+          "rewrite": "<complete rewritten minutes as one formal document with all [ ] blanks integrated>"
         }}
 
         When a special flag applies (good_to_go, poor_quality, agenda_copy, mismatch), respond as:
@@ -285,7 +297,8 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
           "reason": "<reason>",
           "flag": "<flag_name>",
           "flag_message": "<the message to display>",
-          "feedback": []
+          "feedback": [],
+          "rewrite": null
         }}
         """
     ).strip()
