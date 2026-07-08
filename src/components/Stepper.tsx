@@ -49,7 +49,7 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
       {steps.map((step, i) => (
         <>
           {/* Step pill — centred */}
-          <div key={`step-${i}`} className="flex items-center justify-center gap-2 p-1 shrink-0">
+          <div key={`step-${i}`} className="flex items-center justify-center gap-2 p-1 min-w-0">
             {/* Circle */}
             {step.status === 'completed' ? (
               <div
@@ -62,7 +62,7 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
             ) : step.status === 'active' ? (
               <div className="border-2 border-[#3c9718] rounded-full shrink-0 size-8 flex items-center justify-center">
                 <span
-                  className="font-medium text-sm text-[#212121] text-center leading-5 tracking-[0.1px]"
+                  className="font-semibold text-[16px] text-[#212121] text-center leading-5 tracking-[0.1px]"
                   style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                 >
                   {step.number}
@@ -71,7 +71,7 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
             ) : (
               <div className="bg-white border border-[#b0b0b0] flex items-center justify-center rounded-full shrink-0 size-8">
                 <span
-                  className="font-medium text-sm text-[#727272] text-center leading-5 tracking-[0.1px]"
+                  className="font-semibold text-[16px] text-[#727272] text-center leading-5 tracking-[0.1px]"
                   style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                 >
                   {step.number}
@@ -83,7 +83,7 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
               {step.label.split('\n').map((line, li) => (
                 <span
                   key={li}
-                  className="font-medium text-[12px] text-[#212121] leading-4 tracking-[0.5px] whitespace-nowrap"
+                  className="font-semibold text-[14px] text-[#212121] leading-5 tracking-[0.5px]"
                   style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                 >
                   {line}

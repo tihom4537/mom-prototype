@@ -60,9 +60,6 @@ export default function MoMEntryDefaultScreen() {
   const [feedbackCompleted, setFeedbackCompleted] = useState(routeState?.feedbackCompleted ?? false);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
-  const [actionOpen, setActionOpen] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
-
   // Per-field recording state
   const [fieldRecState, setFieldRecState] = useState<Record<string, FieldRecordingState>>({});
   const [fieldSttError, setFieldSttError] = useState<Record<string, string | null>>({});
@@ -77,7 +74,6 @@ export default function MoMEntryDefaultScreen() {
 
   // File input refs per field
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const audioInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const hasAnyText = fields.some(f => (fieldValues[f] ?? '').trim().length > 0);
   const isFeedbackEnabled = hasAnyText && !isFetchingFeedback &&
@@ -267,10 +263,10 @@ export default function MoMEntryDefaultScreen() {
           />
         </div>
 
-        <div className="bg-white flex gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
+        <div className="bg-white flex flex-col xl:flex-row gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]">
 
           {/* ── Left column ── */}
-          <div className="flex flex-col gap-[20px] flex-1 min-w-0">
+          <div className="flex flex-col gap-[40px] flex-1 min-w-0">
 
             <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
@@ -281,44 +277,6 @@ export default function MoMEntryDefaultScreen() {
               agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
               className="shrink-0 w-full"
             />
-
-            {/* Action field */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-              <QuestionFieldsSmall
-                type="mandatory"
-                questionText={t('action_field_label')}
-                className="shrink-0 w-full"
-              />
-              <div className="relative shrink-0">
-                {actionOpen && (
-                  <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
-                )}
-                <div className="relative z-20">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    iconPlacement="right"
-                    text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                    onClick={() => setActionOpen(o => !o)}
-                  />
-                  {actionOpen && (
-                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                      {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
-                        <button
-                          key={key}
-                          className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                          onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                        >
-                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={NS}>
-                            {t(key)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
             {/* Structured field rows */}
             <div className="flex flex-col gap-[6px] items-start w-full">
@@ -411,18 +369,7 @@ export default function MoMEntryDefaultScreen() {
                                 if (file) updateField(field, (fieldValues[field] ?? '') + ` [Photo: ${file.name}]`);
                               }}
                             />
-                            <input
-                              type="file"
-                              accept="audio/*"
-                              className="hidden"
-                              ref={el => { audioInputRefs.current[field] = el; }}
-                              onChange={e => {
-                                const file = e.target.files?.[0];
-                                if (file) updateField(field, (fieldValues[field] ?? '') + ` [Audio: ${file.name}]`);
-                              }}
-                            />
-
-                            {/* Left: scan + upload buttons */}
+                            {/* Left: scan button */}
                             <div className="flex items-center gap-[8px]">
                               <button
                                 type="button"
@@ -431,14 +378,6 @@ export default function MoMEntryDefaultScreen() {
                               >
                                 <Icon name="photo_camera" size="small" color="#6a3e31" />
                                 <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_scan_photo')}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); audioInputRefs.current[field]?.click(); }}
-                                className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
-                              >
-                                <Icon name="upload_file" size="small" color="#6a3e31" />
-                                <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_upload_audio')}</span>
                               </button>
                             </div>
 
@@ -495,7 +434,7 @@ export default function MoMEntryDefaultScreen() {
           </div>
 
           {/* ── Right: feedback placeholder ── */}
-          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-[360px] shrink-0 self-stretch overflow-y-auto">
+          <div className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] w-full xl:w-[360px] xl:shrink-0 xl:self-stretch overflow-y-auto">
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
             <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
           </div>

@@ -59,9 +59,7 @@ interface TextAreaContainerProps {
   /** Called when stop button clicked (stop recording) */
   onStopClick?: () => void;
   onScanPhoto?: () => void;
-  onUploadAudio?: () => void;
   scanPhotoLabel?: string;
-  uploadAudioLabel?: string;
   readAloudLabel?: string;
   /** When provided, renders rich-text view with highlighted spans */
   highlights?: HighlightSpan[];
@@ -89,9 +87,7 @@ export default function TextAreaContainer({
   onMicClick,
   onStopClick,
   onScanPhoto,
-  onUploadAudio,
   scanPhotoLabel = 'Scan Photo',
-  uploadAudioLabel = 'Upload Audio',
   readAloudLabel = 'Read out the minutes',
   highlights,
   onSpanHoverEnter,
@@ -117,7 +113,17 @@ export default function TextAreaContainer({
       setIsSpeaking(false);
       return;
     }
-    const utterance = new SpeechSynthesisUtterance(value ?? '');
+    const text = value ?? '';
+    const isKannada = /[ಀ-೿]/.test(text);
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = isKannada ? 'kn-IN' : 'en-IN';
+    // Prefer an exact-language voice if the browser/OS has one installed —
+    // without this, most browsers fall back to the default (usually English)
+    // voice and mispronounce Kannada script.
+    const voices = window.speechSynthesis.getVoices();
+    const matchedVoice = voices.find(v => v.lang.toLowerCase() === utterance.lang.toLowerCase())
+      ?? voices.find(v => v.lang.toLowerCase().startsWith(isKannada ? 'kn' : 'en'));
+    if (matchedVoice) utterance.voice = matchedVoice;
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
@@ -205,7 +211,7 @@ export default function TextAreaContainer({
 
       {/* Bottom action row */}
       <div className="flex items-center justify-between px-[10px] pb-[10px]">
-        {/* Left: Scan Photo + Upload Audio */}
+        {/* Left: Scan Photo */}
         <div className="flex items-center gap-[8px]">
           <button
             type="button"
@@ -218,20 +224,6 @@ export default function TextAreaContainer({
               style={NS}
             >
               {scanPhotoLabel}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onUploadAudio}
-            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <Icon name="upload_file" size="small" color="#6a3e31" />
-            <span
-              className="text-[#6a3e31] text-[12px] font-medium leading-5"
-              style={NS}
-            >
-              {uploadAudioLabel}
             </span>
           </button>
         </div>

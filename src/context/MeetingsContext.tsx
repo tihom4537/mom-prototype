@@ -7,7 +7,7 @@ export type ProceedingsData = string | StructuredProceedings;
 
 // ─── Shared attendance types ───────────────────────────────────────────────────
 export type BiometricStatus = 'none' | 'taken' | 'pending' | 'failed';
-export type MarkStatus      = 'present' | 'absent';
+export type MarkStatus      = 'present' | 'absent' | 'unmarked';
 export type ClosureStatus   = 'present' | 'absent' | 'unmarked';
 
 export interface AttendanceRow {
@@ -56,6 +56,10 @@ export interface MeetingData {
   chairperson?: string;
   meetingType?: string;
   meetingLink?: string;
+  /** Type/date picked for the next meeting during Proceedings Review — carried
+   *  forward to the Send to President proceedings preview. */
+  nextMeetingType?: string;
+  nextMeetingDate?: string;
 }
 
 const DEMO_MEETING: MeetingData = {

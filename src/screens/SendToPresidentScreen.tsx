@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useAccessibility } from '../context/AccessibilityContext';
-import { getNoticePeriod, getEarliestDate } from '../utils/meetingNoticePeriods';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
@@ -13,8 +11,6 @@ import {
   InfoBox,
   TaskRow,
   DropdownField,
-  DatePicker,
-  TimePicker,
   DescriptionField,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
@@ -43,25 +39,6 @@ const MOCK_TASK_KEYS = [
   { id: 2, textKey: 'mock_task_stp_2', assigneeKey: 'mock_task_assignee_secretary', deadlineKey: 'mock_task_deadline_march' },
   { id: 3, textKey: 'mock_task_stp_3', assigneeKey: 'mock_task_assignee_ramesh',    deadlineKey: 'mock_task_deadline_may'   },
 ];
-
-// Built inside component via t() — defined here as keys, resolved below
-const MEETING_TYPE_KEYS = [
-  'meeting_type_gp_general_body',
-  'meeting_type_gram_sabha_ordinary',
-  'meeting_type_gram_sabha_special_budget',
-  'meeting_type_ward_sabha_ordinary',
-  'meeting_type_habitation_ordinary',
-  'meeting_type_habitation_emergency',
-  'meeting_type_kdp',
-  'meeting_type_makkala_sabha',
-  'meeting_type_mahila_sabha',
-  'meeting_type_finance_committee',
-  'meeting_type_general_standing',
-  'meeting_type_social_justice',
-  'meeting_type_gram_sabha_special',
-  'meeting_type_ward_sabha_special',
-  'meeting_type_habitation_special',
-] as const;
 
 // GP staff for assignee dropdown
 const GP_STAFF = [
@@ -499,14 +476,11 @@ export default function SendToPresidentScreen() {
   const { meetings, addMeeting, updateMeeting, meetingAgendas } = useMeetings();
   const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : meetings.find(m => m.id === CURRENT_MEETING_ID);
   const { agendaItems } = useAgenda();
-  const { screenReaderMode, speak } = useAccessibility();
 
   const userAgendas = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;
   const effectiveAgendaItems = userAgendas
     ? userAgendas.map(a => ({ id: a.id, heading: a.title, description: a.description, completed: a.completed, proceedingsText: a.proceedingsText }))
     : agendaItems;
-  const meetingTypeOptions = MEETING_TYPE_KEYS.map(k => t(k));
-
   const [summary, setSummary] = useState(MOCK_SUMMARY);
   const [tasks,   setTasks]   = useState<TaskItem[]>(() =>
     MOCK_TASK_KEYS.map(k => ({ id: k.id, text: t(k.textKey), assignee: t(k.assigneeKey), deadline: t(k.deadlineKey) }))
@@ -514,12 +488,6 @@ export default function SendToPresidentScreen() {
 
   // Task modal state — null = closed, undefined id = adding new
   const [taskModal, setTaskModal] = useState<{ task?: TaskItem } | null>(null);
-
-  const [nextMeetingType, setNextMeetingType] = useState('');
-  const [nextMeetingDate, setNextMeetingDate] = useState('');
-  const [nextMeetingTime, setNextMeetingTime] = useState('');
-  const nextNoticePeriod = getNoticePeriod(nextMeetingType);
-  const nextMinDate = nextMeetingType ? getEarliestDate(nextNoticePeriod.days) : undefined;
 
   const [showModal,   setShowModal]   = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -555,27 +523,6 @@ export default function SendToPresidentScreen() {
       stepsCompleted: 5,
       tab:            'today',
     });
-
-    if (nextMeetingType) {
-      const isSameType = currentMeeting?.meetingType === nextMeetingType;
-      addMeeting({
-        name:               `${nextMeetingType} (Draft)`,
-        mode:               isSameType ? (currentMeeting?.mode ?? 'IN PERSON') : 'IN PERSON',
-        date:               nextMeetingDate || '',
-        time:               nextMeetingTime || '',
-        venue:              isSameType ? (currentMeeting?.venue ?? '') : '',
-        participants:       isSameType ? (currentMeeting?.participants ?? 0) : 0,
-        gpName:             currentMeeting?.gpName ?? 'Hosakote Gram Panchayat',
-        electedQuorum:      currentMeeting?.electedQuorum ?? '51%',
-        participantsQuorum: currentMeeting?.participantsQuorum ?? '10%',
-        stepsCompleted:     0,
-        tab:                'drafts',
-        status:             'draft',
-        meetingType:        nextMeetingType,
-        chairperson:        currentMeeting?.chairperson,
-        description:        currentMeeting?.description,
-      });
-    }
 
     setShowModal(false);
     setShowSuccess(true);
@@ -674,51 +621,6 @@ export default function SendToPresidentScreen() {
               </SectionHolder>
 
 
-              {/* ── Schedule Next Meeting ───────────────────────────────────── */}
-              <SectionHolder
-                variant="mandatory"
-                title={t('send_president_section_next_meeting')}
-                bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
-              >
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 min-w-0">
-                    <DropdownField
-                      label={t('send_president_next_type_label')}
-                      placeholder={t('send_president_next_type_placeholder')}
-                      value={nextMeetingType}
-                      onChange={setNextMeetingType}
-                      options={meetingTypeOptions}
-                      required
-                      opensUp
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <DatePicker
-                      label={t('send_president_next_date_label')}
-                      required
-                      value={nextMeetingDate}
-                      onChange={setNextMeetingDate}
-                      placeholder={t('send_president_next_date_placeholder')}
-                      opensUp
-                      minDate={nextMinDate}
-                      meetingType={nextMeetingType}
-                      noticeDays={nextNoticePeriod.days}
-                      onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <TimePicker
-                      label={t('send_president_next_time_label')}
-                      required
-                      value={nextMeetingTime}
-                      onChange={setNextMeetingTime}
-                      placeholder={t('send_president_next_time_placeholder')}
-                      opensUp
-                    />
-                  </div>
-                </div>
-              </SectionHolder>
-
               {/* ── Proceedings Preview ────────────────────────────────────── */}
               <SectionHolder
                 variant="default"
@@ -737,8 +639,8 @@ export default function SendToPresidentScreen() {
                       meeting={currentMeeting}
                       agendaItems={effectiveAgendaItems}
                       summary={summary}
-                      nextMeetingDate={nextMeetingDate}
-                      nextMeetingType={nextMeetingType}
+                      nextMeetingDate={currentMeeting?.nextMeetingDate ?? ''}
+                      nextMeetingType={currentMeeting?.nextMeetingType ?? ''}
                       page={proceedingsPage}
                     />
                   </div>

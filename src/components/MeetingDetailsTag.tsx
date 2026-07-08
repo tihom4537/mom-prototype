@@ -21,7 +21,7 @@ export default function MeetingDetailsTag({
 }: MeetingDetailsTagProps) {
   return (
     <div
-      className={`bg-[#f7f0ee] flex gap-3 items-end px-2 py-0.5 rounded-[5px] text-sm ${className ?? ''}`}
+      className={`bg-[#f7f0ee] flex flex-wrap gap-x-3 gap-y-1 items-end pl-[6px] pr-[8px] py-0.5 rounded-[5px] text-sm w-fit ${className ?? ''}`}
       style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
     >
       <span className="font-bold text-black leading-6">{date}</span>

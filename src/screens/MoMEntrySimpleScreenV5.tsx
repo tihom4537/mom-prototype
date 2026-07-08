@@ -20,6 +20,10 @@ import { FEEDBACK_API } from '../config/api';
 import { WebSocketSTTClient } from '../utils/websocketSttClient';
 import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
 
+// ── PREVIEW ONLY — not wired into the live meeting flow. ──────────────────────
+// Duplicate of MoMEntrySimpleScreenV4 with a Decision Point field added below
+// the Discussion field, for review before deciding whether to adopt it.
+
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -141,7 +145,7 @@ function RewriteCard({
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 
-export default function MoMEntrySimpleScreenV4() {
+export default function MoMEntrySimpleScreenV5() {
   const { lang, t } = useLanguage();
   const { saveProceedings } = useAgenda();
   const { saveMeetingProceedings, meetingAgendas } = useMeetings();
@@ -156,8 +160,11 @@ export default function MoMEntrySimpleScreenV4() {
   const isFeedbackApplicable = routeState?.isFeedbackApplicable ?? true;
 
   const [discussionText,    setDiscussionText]    = useState(routeState?.discussionText ?? '');
+  const [decisionText,      setDecisionText]      = useState('');
   const [entryState,        setEntryState]        = useState<EntryState>('idle');
+  const [decisionEntryState,setDecisionEntryState]= useState<EntryState>('idle');
   const [sttError,          setSttError]          = useState<string | null>(null);
+  const [decisionSttError,  setDecisionSttError]  = useState<string | null>(null);
   const [feedbackError,     setFeedbackError]     = useState<string | null>(null);
   const [isFetchingFeedback,setIsFetchingFeedback]= useState(false);
   const [feedbackCompleted, setFeedbackCompleted] = useState(routeState?.feedbackCompleted ?? false);
@@ -170,11 +177,17 @@ export default function MoMEntrySimpleScreenV4() {
   const analyserRef    = useRef<AnalyserNode | null>(null);
   const wsClientRef    = useRef<WebSocketSTTClient | null>(null);
   const updatedTextRef = useRef<string>(discussionText);
+  const decisionPcmRecorderRef = useRef<PcmAudioRecorder | null>(null);
+  const decisionAudioCtxRef    = useRef<AudioContext | null>(null);
+  const decisionAnalyserRef    = useRef<AnalyserNode | null>(null);
+  const decisionWsClientRef    = useRef<WebSocketSTTClient | null>(null);
+  const updatedDecisionTextRef = useRef<string>(decisionText);
   const leftColRef     = useRef<HTMLDivElement>(null);
   const rightColRef    = useRef<HTMLDivElement>(null);
   const gridRef        = useRef<HTMLDivElement>(null);
 
   useEffect(() => { updatedTextRef.current = discussionText; }, [discussionText]);
+  useEffect(() => { updatedDecisionTextRef.current = decisionText; }, [decisionText]);
 
   // Sync right column height to left column (same as simple screen)
   useEffect(() => {
@@ -198,7 +211,10 @@ export default function MoMEntrySimpleScreenV4() {
   }, []);
 
   useEffect(() => {
-    return () => { wsClientRef.current?.close().catch(() => {}); };
+    return () => {
+      wsClientRef.current?.close().catch(() => {});
+      decisionWsClientRef.current?.close().catch(() => {});
+    };
   }, []);
 
   const teardownAudio = useCallback(() => {
@@ -207,8 +223,16 @@ export default function MoMEntrySimpleScreenV4() {
     analyserRef.current = null;
   }, []);
 
+  const teardownDecisionAudio = useCallback(() => {
+    decisionAudioCtxRef.current?.close();
+    decisionAudioCtxRef.current = null;
+    decisionAnalyserRef.current = null;
+  }, []);
+
   const isRecording  = entryState === 'recording';
   const isProcessing = entryState === 'processing';
+  const isDecisionRecording  = decisionEntryState === 'recording';
+  const isDecisionProcessing = decisionEntryState === 'processing';
   const hasText      = discussionText.trim().length > 0;
   const hasMissing   = hasUnfilledBlanks(discussionText);
   const isFeedbackEnabled = hasText && entryState === 'idle' && !isFetchingFeedback;
@@ -216,7 +240,7 @@ export default function MoMEntrySimpleScreenV4() {
   // When feedback isn't applicable to this meeting type, saving doesn't require a feedback round.
   const isSaveEnabled = hasText && !hasMissing && (isFeedbackApplicable ? feedbackCompleted : true);
 
-  // ── Mic ───────────────────────────────────────────────────────────────────
+  // ── Mic (Discussion) ─────────────────────────────────────────────────────
   const handleMicClick = async () => {
     if (entryState !== 'idle') return;
     setSttError(null);
@@ -283,6 +307,75 @@ export default function MoMEntrySimpleScreenV4() {
     }
     wsClientRef.current = null;
     setEntryState('idle');
+  };
+
+  // ── Mic (Decision Point) ─────────────────────────────────────────────────
+  const handleDecisionMicClick = async () => {
+    if (decisionEntryState !== 'idle') return;
+    setDecisionSttError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setDecisionSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
+      return;
+    }
+    try { await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (err) {
+      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
+      setDecisionSttError(isNotAllowed
+        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
+        : 'Could not access the microphone. Please check your browser permissions and try again.'
+      );
+      return;
+    }
+    const pcmRecorder = new PcmAudioRecorder();
+    decisionPcmRecorderRef.current = pcmRecorder;
+    try { await pcmRecorder.start(); setDecisionEntryState('recording'); }
+    catch { setDecisionSttError('Failed to initialize audio recorder.'); decisionPcmRecorderRef.current = null; }
+  };
+
+  const handleDecisionStopRecording = async () => {
+    const recorder = decisionPcmRecorderRef.current;
+    if (!recorder) return;
+    setDecisionEntryState('processing');
+    setDecisionSttError(null);
+    let wsClient: WebSocketSTTClient | null = null;
+    try {
+      wsClient = new WebSocketSTTClient(lang);
+      decisionWsClientRef.current = wsClient;
+      await wsClient.connect();
+      const audioData = recorder.stop();
+      decisionPcmRecorderRef.current = null;
+      teardownDecisionAudio();
+      if (audioData.length === 0) throw new Error('No audio data captured');
+      let resolved = false;
+      let resolvePromise: (() => void) | null = null;
+      const transcriptPromise = new Promise<void>(res => { resolvePromise = res; });
+      wsClient.on('transcript', (text: string) => {
+        resolved = true;
+        if (text.trim()) {
+          const cur = updatedDecisionTextRef.current;
+          const next = cur + (cur.trim() ? ' ' : '') + text;
+          updatedDecisionTextRef.current = next;
+          setDecisionText(next);
+        }
+        resolvePromise?.();
+      });
+      wsClient.on('error', (msg: string) => { setDecisionSttError(`Speech recognition error: ${msg}`); });
+      await wsClient.send(audioData);
+      await wsClient.end();
+      await Promise.race([
+        transcriptPromise,
+        new Promise<void>((_, rej) => setTimeout(() => { if (!resolved) rej(new Error('Timeout')); }, 60000)),
+      ]);
+      await wsClient.close();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setDecisionSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
+      if (wsClient) { try { await wsClient.close(); } catch {} }
+      const rec = decisionPcmRecorderRef.current;
+      if (rec) { rec.stop(); decisionPcmRecorderRef.current = null; teardownDecisionAudio(); }
+    }
+    decisionWsClientRef.current = null;
+    setDecisionEntryState('idle');
   };
 
   // ── Feedback ──────────────────────────────────────────────────────────────
@@ -424,8 +517,6 @@ export default function MoMEntrySimpleScreenV4() {
 
               <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
 
-
-
               <TextAreaContainer
                 state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
                 placeholder={t('discussion_field_placeholder')}
@@ -438,7 +529,30 @@ export default function MoMEntrySimpleScreenV4() {
                 className="w-full"
                 style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
               />
+              {sttError && (
+                <p className="text-xs text-[#b7131a] mt-1" style={NS}>{sttError}</p>
+              )}
+            </div>
 
+            {/* Decision Point field — new in this version */}
+            <div className="flex flex-col gap-[6px] items-start w-full mt-[20px]">
+              <QuestionFieldsSmall type="mandatory" questionText={t('decision_field_label')} className="shrink-0" />
+
+              <TextAreaContainer
+                state={isDecisionRecording ? 'recording' : (isDecisionProcessing ? 'recording' : 'default')}
+                placeholder={t('decision_field_placeholder')}
+                value={decisionText}
+                onChange={v => setDecisionText(v)}
+                onMicClick={handleDecisionMicClick}
+                onStopClick={handleDecisionStopRecording}
+                analyserNode={decisionAnalyserRef.current ?? undefined}
+                isProcessing={isDecisionProcessing}
+                className="w-full"
+                style={{ minHeight: '120px', maxHeight: '300px' }}
+              />
+              {decisionSttError && (
+                <p className="text-xs text-[#b7131a] mt-1" style={NS}>{decisionSttError}</p>
+              )}
             </div>
 
             {/* Footer buttons */}
@@ -479,9 +593,6 @@ export default function MoMEntrySimpleScreenV4() {
             {/* Status messages — loading, errors */}
             {isFetchingFeedback && (
               <span className="text-[13px] text-[#727272]" style={NS}>{t('feedback_fetching')}</span>
-            )}
-            {sttError && (
-              <p className="text-[12px] text-[#b7131a]" style={NS}>Voice recording failed. Please try again.</p>
             )}
             {feedbackError && (
               <p className="text-[12px] text-[#b7131a]" style={NS}>{feedbackError}</p>

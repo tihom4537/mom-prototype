@@ -54,9 +54,6 @@ export default function MoMEntryPostRecordingScreen() {
   const [ocrError, setOcrError]                     = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [feedbackCompleted, setFeedbackCompleted]   = useState(routeState?.feedbackCompleted ?? false);
-  const [actionOpen, setActionOpen]                 = useState(false);
-  const [selectedAction, setSelectedAction]         = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
-
   const pcmRecorderRef   = useRef<PcmAudioRecorder | null>(null);
   const audioCtxRef      = useRef<AudioContext | null>(null);
   const analyserRef      = useRef<AnalyserNode | null>(null);
@@ -466,44 +463,6 @@ export default function MoMEntryPostRecordingScreen() {
               className="shrink-0 w-full"
             />
 
-            {/* Action field */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-              <QuestionFieldsSmall
-                type="mandatory"
-                questionText={t('action_field_label')}
-                className="shrink-0 w-full"
-              />
-              <div className="relative shrink-0">
-                {actionOpen && (
-                  <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />
-                )}
-                <div className="relative z-20">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    iconPlacement="right"
-                    text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                    onClick={() => setActionOpen(o => !o)}
-                  />
-                  {actionOpen && (
-                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                      {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
-                        <button
-                          key={key}
-                          className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                          onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                        >
-                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={{ fontFamily: 'Noto Sans' }}>
-                            {t(key)}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
             {/* Discussion field + floating mic */}
             <div className="flex flex-col gap-[6px] items-start w-full">
               <QuestionFieldsSmall
@@ -534,7 +493,6 @@ export default function MoMEntryPostRecordingScreen() {
                 onStopClick={handleMicClick}
                 onScanPhoto={handleScanPhotoClick}
                 scanPhotoLabel={t('btn_scan_photo')}
-                uploadAudioLabel={t('btn_upload_audio')}
                 analyserNode={analyserRef.current ?? undefined}
                 isProcessing={isProcessing || ocrLoading}
                 highlighted

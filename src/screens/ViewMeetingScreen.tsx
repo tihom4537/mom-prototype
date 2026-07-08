@@ -374,6 +374,7 @@ export default function ViewMeetingScreen() {
                   quorumPct={quorumPct}
                   quorumMet={quorumPct >= 51}
                   quorumRequired={51}
+                  celebrationLocked
                 />
                 <ParticipantsTable t={t} />
               </SectionHolder>

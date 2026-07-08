@@ -11,8 +11,7 @@ import {
   Button,
   Icon,
   QuorumBar,
-  Checkbox,
-  Tooltip,
+  AttendancePill,
   InfoBox,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
@@ -25,18 +24,18 @@ const isElected = (designation: string) =>
   ELECTED_DESIGNATIONS.some(d => designation.toLowerCase().startsWith(d.toLowerCase()));
 
 const INITIAL: AttendanceRow[] = [
-  { id: 1,  name: 'Ramesh Kumar',    designation: 'PDO',            gpName: 'Kakanur GP',  phone: '9876543210', email: 'ramesh@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
-  { id: 2,  name: 'Savitha Gowda',   designation: 'Secretary',      gpName: 'Kakanur GP',  phone: '9845123456', email: 'savitha@kgp.gov.in',  status: 'absent', biometric: 'none', reason: '' },
-  { id: 3,  name: 'Manjunath B.',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9741230987', email: 'manju@kgp.gov.in',    status: 'absent', biometric: 'none', reason: '' },
-  { id: 4,  name: 'Lakshmi Devi',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9632014785', email: 'lakshmi@kgp.gov.in',  status: 'absent', biometric: 'none', reason: '' },
-  { id: 5,  name: 'Suresh Patil',    designation: 'President',      gpName: 'Kakanur GP',  phone: '9512345678', email: 'suresh@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
-  { id: 6,  name: 'Anitha Rao',      designation: 'Vice President', gpName: 'Kakanur GP',  phone: '9423567890', email: 'anitha@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
-  { id: 7,  name: 'Prakash Hegde',   designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9334512678', email: 'prakash@kgp.gov.in',  status: 'absent', biometric: 'none', reason: '' },
-  { id: 8,  name: 'Kaveri S.',       designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9245631089', email: 'kaveri@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
-  { id: 9,  name: 'Nagesh M.',       designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '9156789023', email: 'nagesh@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
-  { id: 10, name: 'Bhavana Naik',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9067891234', email: 'bhavana@kgp.gov.in',  status: 'absent', biometric: 'none', reason: '' },
-  { id: 11, name: 'Raju Chandra',    designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '8978012345', email: 'raju@kgp.gov.in',     status: 'absent', biometric: 'none', reason: '' },
-  { id: 12, name: 'Geetha Kumari',   designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '8889123456', email: 'geetha@kgp.gov.in',   status: 'absent', biometric: 'none', reason: '' },
+  { id: 1,  name: 'Ramesh Kumar',    designation: 'PDO',            gpName: 'Kakanur GP',  phone: '9876543210', email: 'ramesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 2,  name: 'Savitha Gowda',   designation: 'Secretary',      gpName: 'Kakanur GP',  phone: '9845123456', email: 'savitha@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 3,  name: 'Manjunath B.',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9741230987', email: 'manju@kgp.gov.in',    status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 4,  name: 'Lakshmi Devi',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9632014785', email: 'lakshmi@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 5,  name: 'Suresh Patil',    designation: 'President',      gpName: 'Kakanur GP',  phone: '9512345678', email: 'suresh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 6,  name: 'Anitha Rao',      designation: 'Vice President', gpName: 'Kakanur GP',  phone: '9423567890', email: 'anitha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 7,  name: 'Prakash Hegde',   designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9334512678', email: 'prakash@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 8,  name: 'Kaveri S.',       designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9245631089', email: 'kaveri@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 9,  name: 'Nagesh M.',       designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '9156789023', email: 'nagesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 10, name: 'Bhavana Naik',    designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9067891234', email: 'bhavana@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 11, name: 'Raju Chandra',    designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '8978012345', email: 'raju@kgp.gov.in',     status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 12, name: 'Geetha Kumari',   designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '8889123456', email: 'geetha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
 ];
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
@@ -92,7 +91,10 @@ export default function AttendanceScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
-  const { setOpeningAbsentIds, attendanceRows, setAttendanceRows } = useMeetings();
+  const { meetings, updateMeeting, setOpeningAbsentIds, attendanceRows, setAttendanceRows } = useMeetings();
+  const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : undefined;
+  // Once attendance has been proceeded past (stepsCompleted >= 1), never celebrate again on revisit.
+  const celebrationLocked = (currentMeeting?.stepsCompleted ?? 0) >= 1;
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -108,6 +110,7 @@ export default function AttendanceScreen() {
   const total    = rows.length;
   const present  = rows.filter(r => r.status === 'present').length;
   const absent   = rows.filter(r => r.status === 'absent').length;
+  const unmarked = rows.filter(r => r.status === 'unmarked').length;
   const noBiometricCount = rows.filter(r => r.status === 'present' && r.biometric === 'none').length;
   const electedRows = rows.filter(r => isElected(r.designation));
   const electedTotal   = electedRows.length;
@@ -121,21 +124,14 @@ export default function AttendanceScreen() {
     setRows(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   }
 
-  function togglePresent(id: number) {
-    const row = rows.find(r => r.id === id)!;
-    if (row.status === 'present') {
-      update(id, { status: 'absent', biometric: 'none', reason: '' });
+  function markStatus(id: number, s: 'present' | 'absent') {
+    const row = rows.find(r => r.id === id);
+    if (row?.status === s) {
+      // toggle off → unmarked
+      update(id, { status: 'unmarked', biometric: 'none', reason: '' });
     } else {
-      update(id, { status: 'present', biometric: 'none', reason: '' });
+      update(id, { status: s, biometric: 'none', reason: '' });
     }
-  }
-
-  function markAllPresent() {
-    setRows(prev => prev.map(r => ({ ...r, status: 'present' as MarkStatus, biometric: 'none' as BiometricStatus, reason: '' })));
-  }
-
-  function unmarkAll() {
-    setRows(prev => prev.map(r => ({ ...r, status: 'absent' as MarkStatus, biometric: 'none' as BiometricStatus, reason: '' })));
   }
 
   function handleTakeBiometric(id: number) {
@@ -149,12 +145,16 @@ export default function AttendanceScreen() {
     }
   }
 
-  function showReason(row: AttendanceRow) {
-    return row.status === 'absent' || (row.status === 'present' && (row.biometric === 'failed' || row.biometric === 'pending'));
+  const allPresent = rows.every(r => r.status === 'present');
+  function markAllPresent() {
+    setRows(prev => prev.map(r => ({ ...r, status: 'present' as MarkStatus, biometric: 'none' as BiometricStatus, reason: '' })));
+  }
+  function unmarkAll() {
+    setRows(prev => prev.map(r => ({ ...r, status: 'unmarked' as MarkStatus, biometric: 'none' as BiometricStatus, reason: '' })));
   }
 
-  function rowBg(status: MarkStatus) {
-    return status === 'present' ? '#e8f5e9' : 'white';
+  function showReason(row: AttendanceRow) {
+    return row.status === 'absent' || (row.status === 'present' && (row.biometric === 'failed' || row.biometric === 'pending'));
   }
 
   const F_PRESENT      = t('attendance_filter_present');
@@ -173,8 +173,6 @@ export default function AttendanceScreen() {
     }
     return list;
   }, [rows, filter, search, F_PRESENT, F_ABSENT, F_NO_BIOMETRIC]);
-
-  const allPresent = rows.every(r => r.status === 'present');
 
   return (
     <MeetingShellLayout
@@ -201,9 +199,10 @@ export default function AttendanceScreen() {
                 <InfoBox type="plain" text={t('attendance_hint')} />
 
                 <QuorumBar
-                  total={electedTotal} present={electedPresent} absent={electedTotal - electedPresent} unmarked={0}
+                  total={electedTotal} present={electedPresent} absent={electedRows.filter(r => r.status === 'absent').length} unmarked={electedRows.filter(r => r.status === 'unmarked').length}
                   noBiometricCount={noBiometricCount} quorumPct={quorumPct} quorumMet={quorumMet}
                   quorumRequired={QUORUM_PERCENT}
+                  celebrationLocked={celebrationLocked}
                 />
 
                 <div className="flex items-center justify-between w-full">
@@ -216,55 +215,56 @@ export default function AttendanceScreen() {
 
                 {/* Table */}
                 <div className="rounded-[6px] border border-[#c6c6c6] overflow-hidden">
-                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                   <colgroup>
                     <col style={{ width: '50px' }} />
-                    <col style={{ width: '220px' }} />
-                    <col style={{ width: '110px' }} />
-                    <col style={{ width: '110px' }} />
                     <col style={{ width: '160px' }} />
-                    <col style={{ width: '210px' }} />
-                    <col style={{ width: '210px' }} />
+                    <col style={{ width: '130px' }} />
+                    <col style={{ width: '120px' }} />
+                    <col style={{ width: '160px' }} />
+                    <col style={{ width: '180px' }} />
+                    <col style={{ width: '160px' }} />
+                    <col style={{ width: '160px' }} />
                   </colgroup>
 
                   <thead>
                     <tr className="bg-[#ddd]">
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle" style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: '#dddddd' }}>
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_sl')}</span>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
-                        <div className="flex flex-col gap-[4px]">
-                          <div className="flex items-center gap-[8px]">
-                            <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_name_designation')}</span>
-                            <button
-                              type="button"
-                              onClick={allPresent ? unmarkAll : markAllPresent}
-                              className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] active:bg-[#c8e6c9] transition-colors whitespace-nowrap shrink-0"
-                              style={NS}
-                            >
-                              <Icon name="check" size="small" color="#388e3c" />
-                              {allPresent ? t('attendance_clear_all') : t('attendance_mark_all_present')}
-                            </button>
-                          </div>
-                          <span className="text-[12px] leading-[16px] text-[#616161] tracking-[0.2px] font-normal" style={NS}>{t('attendance_mark_present_note')}</span>
-                        </div>
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_name_designation')}</span>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
-                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_gp')}</span>
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_gp')}</span>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_phone')}</span>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_email')}</span>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-top">
-                        <div className="flex flex-col gap-[4px]">
-                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_biometric')}</span>
-                          <span className={`text-[10px] leading-[14px] whitespace-nowrap font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#616161]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
+                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                        <div className="flex items-center gap-[8px]">
+                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_attendance')}</span>
+                          <button
+                            type="button"
+                            onClick={allPresent ? unmarkAll : markAllPresent}
+                            className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] transition-colors whitespace-nowrap shrink-0"
+                            style={NS}
+                          >
+                            <Icon name="check" size="small" color="#388e3c" />
+                            {allPresent ? t('attendance_clear_all') : t('attendance_mark_all_present')}
+                          </button>
                         </div>
                       </th>
-                      <th className="px-[12px] py-[8px] text-left border-b border-[#c6c6c6] align-top">
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                        <div className="flex flex-col gap-[2px]">
+                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_biometric')}</span>
+                          <span className={`text-[10px] leading-[13px] whitespace-nowrap font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
+                        </div>
+                      </th>
+                      <th className="px-[12px] h-[43px] text-left border-b border-[#c6c6c6] align-middle">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_reason')}</span>
                       </th>
                     </tr>
@@ -273,45 +273,38 @@ export default function AttendanceScreen() {
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-10 text-center text-[12px] text-[#727272] bg-white" style={NS}>
+                        <td colSpan={8} className="py-10 text-center text-[12px] text-[#727272] bg-white" style={NS}>
                           {t('attendance_no_match')}
                         </td>
                       </tr>
                     ) : filtered.map((row, idx) => {
-                      const isPresent = row.status === 'present';
-                      const hoverCls = isPresent ? '' : 'group-hover:bg-[#eeeeee]';
-                      const borderB = idx < filtered.length - 1 ? ' border-b border-[#e8e8e8]' : '';
+                      const accentCol = row.status === 'present' ? '#2e7d32' : row.status === 'absent' ? '#FFAC9A' : 'white';
+                      const bb = idx < filtered.length - 1 ? 'border-b border-[#e8e8e8]' : '';
                       return (
-                      <tr key={row.id} className="group transition-colors" style={{ backgroundColor: rowBg(row.status) }}>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${hoverCls}${borderB}`}>
+                      <tr key={row.id} className="bg-white transition-colors hover:bg-[#f5f5f5]">
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`} style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: accentCol }}>
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.id}</span>
                         </td>
-                        <td
-                          className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle cursor-pointer ${hoverCls}${borderB}`}
-                          onClick={() => togglePresent(row.id)}
-                        >
-                          <div className="flex items-center gap-[10px]">
-                            <Checkbox
-                              checked={isPresent}
-                              onChange={() => togglePresent(row.id)}
-                              color="green"
-                            />
-                            <div className="flex flex-col">
-                              <span className="text-[12px] font-medium text-[#212121] leading-5" style={NS}>{row.name}</span>
-                              <span className="text-[11px] text-[#727272] leading-4" style={NS}>{tDesignation(row.designation)}</span>
-                            </div>
-                          </div>
+                        <td className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                          <span className="text-[12px] font-medium text-[#212121] leading-5 block" style={NS}>{row.name}</span>
+                          <span className="text-[11px] text-[#727272] leading-4 block" style={NS}>{tDesignation(row.designation)}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.gpName}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.phone}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
                           <span className="text-[12px] text-[#4b4b4b] truncate block w-full overflow-hidden" style={NS}>{row.email}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                          <AttendancePill
+                            status={row.status === 'absent' ? 'absent' : row.status === 'present' ? 'present' : 'unmarked'}
+                            onMark={(s) => markStatus(row.id, s)}
+                          />
+                        </td>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
                           <BiometricCell
                             status={row.status}
                             biometric={row.biometric}
@@ -323,10 +316,9 @@ export default function AttendanceScreen() {
                             tRetry={t('attendance_biometric_retry')}
                           />
                         </td>
-                        <td className={`px-[8px] align-middle ${hoverCls}${borderB}`}>
+                        <td className={`px-[8px] align-middle ${bb}`}>
                           {showReason(row) ? (
                             <div className="flex flex-col gap-[4px] py-[6px]">
-                              {/* Absent reason dropdown */}
                               {row.status === 'absent' ? (
                                 <>
                                   <DropdownField
@@ -337,22 +329,8 @@ export default function AttendanceScreen() {
                                   />
                                   {row.reason === 'with_permission' && (
                                     <div className="flex items-center gap-[6px]">
-                                      <input
-                                        type="file"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                        className="hidden"
-                                        ref={el => { permFileRefs.current[row.id] = el; }}
-                                        onChange={e => {
-                                          const file = e.target.files?.[0] ?? null;
-                                          setPermissionFiles(prev => ({ ...prev, [row.id]: file }));
-                                        }}
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => permFileRefs.current[row.id]?.click()}
-                                        className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors"
-                                        style={NS}
-                                      >
+                                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" ref={el => { permFileRefs.current[row.id] = el; }} onChange={e => { const file = e.target.files?.[0] ?? null; setPermissionFiles(prev => ({ ...prev, [row.id]: file })); }} />
+                                      <button type="button" onClick={() => permFileRefs.current[row.id]?.click()} className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors" style={NS}>
                                         <Icon name="upload" size="small" color="#6a3e31" />
                                         {permissionFiles[row.id] ? permissionFiles[row.id]!.name : t('attendance_upload_permission')}
                                       </button>
@@ -362,40 +340,15 @@ export default function AttendanceScreen() {
                               ) : (
                                 <>
                                   <DropdownField
-                                    value={
-                                      row.reason === 'device_failure' ? t('no_bio_reason_device_failure') :
-                                      row.reason === 'technical_issue' ? t('no_bio_reason_technical_issue') :
-                                      row.reason === 'member_exempt' ? t('no_bio_reason_member_exempt') :
-                                      row.reason === 'other' ? t('no_bio_reason_other') : ''
-                                    }
-                                    onChange={val => update(row.id, {
-                                      reason:
-                                        val === t('no_bio_reason_device_failure') ? 'device_failure' :
-                                        val === t('no_bio_reason_technical_issue') ? 'technical_issue' :
-                                        val === t('no_bio_reason_member_exempt') ? 'member_exempt' :
-                                        val === t('no_bio_reason_other') ? 'other' : ''
-                                    })}
+                                    value={row.reason === 'device_failure' ? t('no_bio_reason_device_failure') : row.reason === 'technical_issue' ? t('no_bio_reason_technical_issue') : row.reason === 'member_exempt' ? t('no_bio_reason_member_exempt') : row.reason === 'other' ? t('no_bio_reason_other') : ''}
+                                    onChange={val => update(row.id, { reason: val === t('no_bio_reason_device_failure') ? 'device_failure' : val === t('no_bio_reason_technical_issue') ? 'technical_issue' : val === t('no_bio_reason_member_exempt') ? 'member_exempt' : val === t('no_bio_reason_other') ? 'other' : '' })}
                                     options={[t('no_bio_reason_device_failure'), t('no_bio_reason_technical_issue'), t('no_bio_reason_member_exempt'), t('no_bio_reason_other')]}
                                     placeholder={t('attendance_reason_no_biometric')}
                                   />
                                   {row.reason !== '' && (
                                     <div className="flex items-center gap-[6px]">
-                                      <input
-                                        type="file"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                        className="hidden"
-                                        ref={el => { permFileRefs.current[row.id] = el; }}
-                                        onChange={e => {
-                                          const file = e.target.files?.[0] ?? null;
-                                          setPermissionFiles(prev => ({ ...prev, [row.id]: file }));
-                                        }}
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => permFileRefs.current[row.id]?.click()}
-                                        className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors"
-                                        style={NS}
-                                      >
+                                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" ref={el => { permFileRefs.current[row.id] = el; }} onChange={e => { const file = e.target.files?.[0] ?? null; setPermissionFiles(prev => ({ ...prev, [row.id]: file })); }} />
+                                      <button type="button" onClick={() => permFileRefs.current[row.id]?.click()} className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors" style={NS}>
                                         <Icon name="upload" size="small" color="#6a3e31" />
                                         {permissionFiles[row.id] ? permissionFiles[row.id]!.name : t('attendance_upload_biometric_proof')}
                                       </button>
@@ -430,6 +383,9 @@ export default function AttendanceScreen() {
                   onClick={canProceed ? () => {
                     const absentIds = new Set(rows.filter(r => r.status === 'absent').map(r => r.id));
                     setOpeningAbsentIds(absentIds);
+                    if (meetingId != null && (currentMeeting?.stepsCompleted ?? 0) < 1) {
+                      updateMeeting(meetingId, { stepsCompleted: 1 });
+                    }
                     navigate('/agenda-list', { state: { meetingId } });
                   } : undefined}
                 />

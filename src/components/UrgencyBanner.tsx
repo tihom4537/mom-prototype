@@ -65,32 +65,30 @@ export default function UrgencyBanner({
 
   return (
     <div
-      className={`bg-white border ${cfg.borderColor} flex items-center justify-between px-[20px] h-[64px] rounded-[10px] ${className ?? 'w-full'}`}
+      className={`bg-white border ${cfg.borderColor} flex flex-col lg:flex-row lg:items-center justify-between gap-[12px] lg:gap-[16px] px-[20px] py-[12px] rounded-[10px] ${className ?? 'w-full'}`}
     >
       {/* Left */}
-      <div className="flex items-center gap-[12px]">
-        <div className={`shrink-0 size-[10px] rounded-[5px] ${cfg.dotColor}`} />
-        <div className="flex flex-col gap-[2px]">
+      <div className="flex items-start gap-[12px] min-w-0">
+        <div className={`shrink-0 size-[10px] rounded-[5px] mt-[4px] ${cfg.dotColor}`} />
+        <div className="flex flex-col gap-[2px] min-w-0">
           <p className={`font-medium text-[12px] leading-[16px] tracking-[1.5px] ${cfg.labelColor}`} style={NS}>
             {resolvedLabel}
           </p>
-          <div className="flex items-center gap-[8px]">
-            <p className={`font-semibold text-[14px] leading-[20px] tracking-[0.1px] ${cfg.nameColor}`} style={NS}>
-              {meetingName}
-            </p>
-            {stagePill && (
-              <div className="bg-[#dfc2b9] flex items-center px-[10px] py-[3px] rounded-full">
-                <p className="font-medium text-[12px] leading-[16px] text-[#6a3e31] tracking-[0.3px] whitespace-nowrap" style={NS}>
-                  {stagePill}
-                </p>
-              </div>
-            )}
-            {meta && (
-              <p className="font-normal text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.25px] whitespace-nowrap" style={NS}>
-                {meta}
+          <p className={`font-semibold text-[14px] leading-[20px] tracking-[0.1px] ${cfg.nameColor}`} style={NS}>
+            {meetingName}
+          </p>
+          {stagePill && (
+            <div className="bg-[#dfc2b9] self-start flex items-center px-[10px] py-[3px] rounded-full mt-[2px]">
+              <p className="font-medium text-[12px] leading-[16px] text-[#6a3e31] tracking-[0.3px] whitespace-nowrap" style={NS}>
+                {stagePill}
               </p>
-            )}
-          </div>
+            </div>
+          )}
+          {meta && (
+            <p className="font-normal text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.25px]" style={NS}>
+              {meta}
+            </p>
+          )}
         </div>
       </div>
 
@@ -101,6 +99,7 @@ export default function UrgencyBanner({
         iconPlacement="none"
         text={resolvedCta}
         onClick={onAction}
+        className="shrink-0 self-start lg:self-auto"
       />
     </div>
   );

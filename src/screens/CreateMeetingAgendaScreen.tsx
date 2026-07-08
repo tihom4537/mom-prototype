@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useMeetings } from '../context/MeetingsContext';
 import {
   Stepper,
   StepNavBar,
@@ -50,7 +51,12 @@ function parseDMY(dmy: string): Date | null {
   return new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
 }
 
+// GP General Body Meeting only — items 3-9 are specific to that meeting's statutory agenda (see default agenda sheets)
+const GP_GENERAL_BODY_MARKERS = ['GP General Body Meeting', 'ಜಿಪಿ ಸಾಮಾನ್ಯ ಸಭೆ'];
+
 function buildDefaultAgendas(meetingType: string, prevMeetingDate: string | undefined, t: (k: string) => string): AgendaItem[] {
+  const isGpGeneralBody = GP_GENERAL_BODY_MARKERS.some(marker => meetingType.includes(marker));
+
   const prevMinutes = PREV_MINUTES[meetingType] ?? 'The proceedings of the previous meeting will be read out, discussed, and confirmed by members.';
 
   const meetingDateObj = prevMeetingDate ? parseDMY(prevMeetingDate) : null;
@@ -64,7 +70,7 @@ function buildDefaultAgendas(meetingType: string, prevMeetingDate: string | unde
       relevantCirculars.map(c => `• ${c.number} (${c.date}): ${c.subject}`).join('\n')
     : 'Government circulars received since the last meeting will be read out and appropriate action/compliance noted.';
 
-  return [
+  const base: AgendaItem[] = [
     {
       id: 1,
       title: t('default_agenda_title_1'),
@@ -76,19 +82,38 @@ function buildDefaultAgendas(meetingType: string, prevMeetingDate: string | unde
       description: circularText,
     },
   ];
+
+  if (!isGpGeneralBody) return base;
+
+  return [
+    ...base,
+    { id: 3, title: t('default_agenda_title_3'), description: t('default_agenda_desc_3') },
+    { id: 4, title: t('default_agenda_title_4'), description: t('default_agenda_desc_4') },
+    { id: 5, title: t('default_agenda_title_5'), description: t('default_agenda_desc_5') },
+    { id: 6, title: t('default_agenda_title_6'), description: t('default_agenda_desc_6') },
+    { id: 7, title: t('default_agenda_title_7'), description: t('default_agenda_desc_7') },
+    { id: 8, title: t('default_agenda_title_8'), description: t('default_agenda_desc_8') },
+    { id: 9, title: t('default_agenda_title_9'), description: t('default_agenda_desc_9') },
+  ];
 }
 
 export default function CreateMeetingAgendaScreen() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+  const { meetingAgendas, setMeetingAgendas } = useMeetings();
   const meetingData = location.state ?? {};
+  const editMeetingId: number | undefined = meetingData.editMeetingId;
+  const isEditMode = editMeetingId !== undefined;
+  const existingAgendas = isEditMode ? meetingAgendas[editMeetingId] : undefined;
 
-  // ── Agenda items — first two pre-populated ────────────────────────────────
-  const nextId = useRef(3);
-  const [agendas, setAgendas] = useState<AgendaItem[]>(() =>
-    buildDefaultAgendas(meetingData.meetingType ?? '', meetingData.date, t)
-  );
+  // ── Agenda items — first nine pre-populated (default agendas), or the
+  // meeting's already-saved agendas when editing an existing upcoming meeting ──
+  const initialAgendas = existingAgendas && existingAgendas.length > 0
+    ? existingAgendas.map(a => ({ id: a.id, title: a.title, description: a.description }))
+    : buildDefaultAgendas(meetingData.meetingType ?? '', meetingData.date, t);
+  const nextId = useRef(Math.max(10, ...initialAgendas.map(a => a.id)) + 1);
+  const [agendas, setAgendas] = useState<AgendaItem[]>(initialAgendas);
 
 
   // ── Per-agenda mic state ──
@@ -157,74 +182,15 @@ export default function CreateMeetingAgendaScreen() {
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
   const [templateTab,        setTemplateTab]        = useState<'paper' | 'word'>('paper');
 
-  // ── Template: agenda classifier (keyword heuristic — swap for API later) ──
-  type AgendaCategory =
-    | 'Issue / Grievance'
-    | 'Review / Status'
-    | 'Planning / Preparatory'
-    | 'Information / Intimation'
-    | 'Multi-Topic / Miscellaneous'
-    | 'Other';
-
-  const CATEGORY_FIELDS: Record<AgendaCategory, string[]> = {
-    'Issue / Grievance':         ['Issue / grievance raised', 'Discussion / response', 'Decision / resolution', 'Responsible person', 'Timeline / next step'],
-    'Review / Status':           ['Subject reviewed', 'Current status', 'Delays / gaps / concerns', 'Instructions issued', 'Further review required?'],
-    'Planning / Preparatory':    ['Activity / event being planned', 'Preparatory steps discussed', 'Responsible person / coordinator', 'Tentative timeline / target', 'Final or subject to approval?'],
-    'Information / Intimation':  ['Information / update shared', 'Source', 'Clarification / explanation provided', 'Action points (if any)'],
-    'Multi-Topic / Miscellaneous': ['Topics covered', 'Key decisions / outcomes', 'Unclear / ambiguous points', 'Follow-up required'],
-    'Other':                     ['Subject / topic', 'Discussion / information / action', 'Decision / approval / resolution', 'Issues / concerns raised', 'Follow-up / timeline / responsible person'],
-  };
-
-  function classifyAgenda(title: string, description: string): AgendaCategory {
-    const text = `${title} ${description}`.toLowerCase();
-    if (/grievance|complaint|application|petition|redress|dispute|objection/.test(text)) return 'Issue / Grievance';
-    if (/review|status|progress|update|inspection|audit|compliance|pending|completion/.test(text)) return 'Review / Status';
-    if (/plan|prepar|propos|schedul|upcoming|organis|arrang|coordinat|tender|estimate/.test(text)) return 'Planning / Preparatory';
-    if (/circular|notification|intimat|inform|communic|read out|government order|instruction/.test(text)) return 'Information / Intimation';
-    if (/various|miscellaneous|other|general|multiple|several|agenda items/.test(text)) return 'Multi-Topic / Miscellaneous';
-    return 'Other';
-  }
-
-  // ── Paper template: 4-column headers per category ────────────────────────
+  // ── Paper template: single common 4-column layout for every agenda item ──
   type ColDef = { kn: string; en: string; width?: string };
 
-  const CATEGORY_COLS: Record<AgendaCategory, ColDef[]> = {
-    'Issue / Grievance': [
-      { kn: 'ಚರ್ಚೆ',                       en: 'Discussion / Issue raised' },
-      { kn: 'ತೀರ್ಮಾನ',                      en: 'Decision / Resolution' },
-      { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',      en: 'Responsible person / org', width: '22%' },
-      { kn: 'ಕಾಲಾವಧಿ',                      en: 'Timeline',                  width: '14%' },
-    ],
-    'Review / Status': [
-      { kn: 'ವಿಷಯ / ಸ್ಥಿತಿ',               en: 'Subject reviewed / Status' },
-      { kn: 'ತೊಂದರೆ / ಅಂತರ',               en: 'Delays / Gaps / Concerns' },
-      { kn: 'ನಿರ್ದೇಶನಗಳು',                  en: 'Instructions issued',        width: '22%' },
-      { kn: 'ಮುಂದಿನ ಪರಿಶೀಲನೆ?',            en: 'Further review?',            width: '14%' },
-    ],
-    'Planning / Preparatory': [
-      { kn: 'ಚಟುವಟಿಕೆ / ಹಂತಗಳು',           en: 'Activity / Steps discussed' },
-      { kn: 'ಜವಾಬ್ದಾರಾದವರು',               en: 'Responsible / Coordinator' },
-      { kn: 'ನಿರೀಕ್ಷಿತ ಸಮಯ',               en: 'Tentative timeline',          width: '22%' },
-      { kn: 'ಅನುಮೋದನೆ ಸ್ಥಿತಿ',             en: 'Final / Approval status',    width: '14%' },
-    ],
-    'Information / Intimation': [
-      { kn: 'ಮಾಹಿತಿ / ಮಾಡಿದ ಮಾಹಿತಿ',      en: 'Information / Update shared' },
-      { kn: 'ಮೂಲ / ವಿವರಣೆ',               en: 'Source / Clarification' },
-      { kn: 'ಕ್ರಮ ಬಿಂದುಗಳು',               en: 'Action points (if any)',      width: '28%' },
-    ],
-    'Multi-Topic / Miscellaneous': [
-      { kn: 'ಒಳಗೊಂಡ ವಿಷಯಗಳು',             en: 'Topics covered' },
-      { kn: 'ಪ್ರಮುಖ ನಿರ್ಧಾರಗಳು',           en: 'Key decisions / Outcomes' },
-      { kn: 'ಅಸ್ಪಷ್ಟ ಅಂಶಗಳು',             en: 'Unclear / Ambiguous points',  width: '22%' },
-      { kn: 'ಮುಂದಿನ ಕ್ರಮ',                 en: 'Follow-up required',          width: '14%' },
-    ],
-    'Other': [
-      { kn: 'ಚರ್ಚೆ / ಮಾಹಿತಿ',             en: 'Discussion / Information' },
-      { kn: 'ತೀರ್ಮಾನ / ನಿರ್ಣಯ',           en: 'Decision / Resolution' },
-      { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',      en: 'Responsible person / org',   width: '22%' },
-      { kn: 'ಕಾಲಾವಧಿ',                      en: 'Timeline / Follow-up',       width: '14%' },
-    ],
-  };
+  const COMMON_COLS: ColDef[] = [
+    { kn: 'ಚರ್ಚೆ / ಮಾಹಿತಿ',        en: 'Discussion / Information' },
+    { kn: 'ತೀರ್ಮಾನ / ನಿರ್ಣಯ',      en: 'Decision / Resolution' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ', en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                en: 'Timeline / Follow-up',     width: '14%' },
+  ];
 
   // ── Build paper (print) HTML ──────────────────────────────────────────────
   function buildPaperHTML(items: AgendaItem[], meeting: Record<string, unknown>): string {
@@ -238,8 +204,7 @@ export default function CreateMeetingAgendaScreen() {
     const instructionText = `[ನಿರ್ದಿಷ್ಟ ವಾರ್ಡ್ / ಗ್ರಾಮ / ಪ್ರದೇಶ]ದಲ್ಲಿರುವ [ನಿರ್ದಿಷ್ಟ ಸಮಸ್ಯೆ]ಗೆ ಸಂಬಂಧಿಸಿದ ವಿಷಯವನ್ನು ಸಭೆಯಲ್ಲಿ [ಸದಸ್ಯರು / ನಾಗರಿಕರು / ನಿರ್ದಿಷ್ಟ ಗುಂಪು] ಮುಂದಿಟ್ಟರು. ಈ ವಿಷಯದ ಬಗ್ಗೆ ಚರ್ಚೆ ನಡೆಸಿದ ನಂತರ, ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲು [ಪ್ರಸ್ತಾವಿತ ಪರಿಹಾರ ಕ್ರಮ / ತಿದ್ದುಪಡಿ ಕ್ರಮ] ಕೈಗೊಳ್ಳಲು ತೀರ್ಮಾನಿಸಲಾಯಿತು.`;
 
     const agendaSections = items.map((a, i) => {
-      const cat  = classifyAgenda(a.title, a.description);
-      const cols = CATEGORY_COLS[cat];
+      const cols = COMMON_COLS;
 
       // Build colgroup widths
       const colgroup = cols.map(c => `<col style="width:${c.width ?? 'auto'}">`).join('');
@@ -314,8 +279,7 @@ export default function CreateMeetingAgendaScreen() {
     const participants = (meeting.participants as unknown[])?.length ?? 0;
 
     const agendaTables = items.map((a, i) => {
-      const cat  = classifyAgenda(a.title, a.description);
-      const cols = CATEGORY_COLS[cat];
+      const cols = COMMON_COLS;
       const fieldRows = cols.map(c => `
         <tr>
           <td style="width:32%;background:#f5f5f5;border:1px solid #C6C6C6;padding:7px 10px;vertical-align:top;">
@@ -374,7 +338,7 @@ export default function CreateMeetingAgendaScreen() {
   }
 
   const sortedForTemplate = (items: AgendaItem[]) =>
-    [...items].sort((a, b) => (a.id <= 2 ? -1 : 1) - (b.id <= 2 ? -1 : 1));
+    [...items].sort((a, b) => (a.id <= 9 ? -1 : 1) - (b.id <= 9 ? -1 : 1));
 
   function addAgenda() {
     const id = nextId.current++;
@@ -395,18 +359,20 @@ export default function CreateMeetingAgendaScreen() {
   return (
     <MeetingShellLayout
       showStepper={false}
-      backRoute="/meetings/create"
+      backRoute={isEditMode ? '/meetings/list' : '/meetings/create'}
       breadcrumbItems={[
         t('breadcrumb_module'),
         t('breadcrumb_meetings'),
-        t('breadcrumb_create_meeting'),
+        t(isEditMode ? 'breadcrumb_edit_meeting' : 'breadcrumb_create_meeting'),
       ]}
     >
       <div className="flex flex-col gap-[15px]">
-        <Stepper
-          activeState={2}
-          stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
-        />
+        {!isEditMode && (
+          <Stepper
+            activeState={2}
+            stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}
+          />
+        )}
 
         <div className="flex flex-col gap-[25px]">
 
@@ -431,9 +397,35 @@ export default function CreateMeetingAgendaScreen() {
                 </div>
 
                 {/* Section body */}
-                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[25px] pb-[35px] flex flex-row gap-[30px] items-start">
-                  {/* Agenda list — left side */}
-                  <div className="flex-1 min-w-0 flex flex-col gap-[16px]">
+                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[25px] pb-[35px] flex flex-col xl:flex-row gap-[30px] xl:items-start">
+
+                  {/* Tips panel — top at < xl, right col at xl+ */}
+                  <div className="w-full xl:w-[360px] xl:shrink-0 bg-[#f7f0ee] rounded-[12px] px-[20px] py-[20px] flex flex-col gap-[10px] xl:self-start xl:order-2">
+                    <div className="flex items-center gap-[6px]">
+                      <Icon name="tips_and_updates" size="small" color="#6a3e31" />
+                      <span className="font-semibold text-[18px] text-[#6a3e31] leading-[24px]" style={NS}>{t('agenda_tips_title')}</span>
+                    </div>
+                    <ul className="flex flex-col gap-[8px] list-none m-0 p-0">
+                      {['agenda_tips_1','agenda_tips_2','agenda_tips_3','agenda_tips_4','agenda_tips_5'].map(key => (
+                        <li key={key} className="flex items-start gap-[6px]">
+                          <span className="shrink-0 mt-[5px] size-[5px] rounded-full bg-[#6a3e31]" />
+                          <span className="text-[14px] text-[#3b3b3b] leading-[20px]" style={NS}>{t(key)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-[4px] border-t border-[rgba(106,62,49,0.2)] pt-[12px] flex flex-col gap-[8px]">
+                      <span className="font-semibold text-[12px] text-[#6a3e31] uppercase tracking-[0.6px]" style={NS}>{t('agenda_tips_examples_heading')}</span>
+                      {(['1','2'] as const).map(n => (
+                        <div key={n} className="bg-white rounded-[8px] px-[12px] py-[10px] border border-[rgba(106,62,49,0.16)] flex flex-col gap-[3px]">
+                          <span className="font-semibold text-[14px] text-[#212121] leading-[20px]" style={NS}>{t(`agenda_tips_example_${n}_title`)}</span>
+                          <span className="text-[12px] text-[#727272] leading-[18px]" style={NS}>{t(`agenda_tips_example_${n}_desc`)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Agenda list — below tips at < xl, left col at xl+ */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-[16px] xl:order-1">
                     {agendas.map((agenda, idx) => (
                       <div key={agenda.id} className="flex flex-col gap-[0px]">
                         <div className="bg-[#f5f5f5] rounded-[15px] px-[20px] pt-[24px] pb-[32px] flex gap-[20px] items-start">
@@ -473,7 +465,7 @@ export default function CreateMeetingAgendaScreen() {
                           </div>
 
                           {/* Remove button — visible for user-added agendas, invisible spacer for defaults */}
-                          {agenda.id >= 3 ? (
+                          {agenda.id >= 10 ? (
                             <button
                               type="button"
                               onClick={() => removeAgenda(agenda.id)}
@@ -498,31 +490,6 @@ export default function CreateMeetingAgendaScreen() {
                         text={t('btn_add_agenda')}
                         onClick={addAgenda}
                       />
-                    </div>
-                  </div>
-
-                  {/* Tips panel — right side */}
-                  <div className="w-[360px] shrink-0 bg-[#f7f0ee] rounded-[12px] px-[20px] py-[20px] flex flex-col gap-[10px] self-start">
-                    <div className="flex items-center gap-[6px]">
-                      <Icon name="tips_and_updates" size="small" color="#6a3e31" />
-                      <span className="font-semibold text-[18px] text-[#6a3e31] leading-[24px]" style={NS}>{t('agenda_tips_title')}</span>
-                    </div>
-                    <ul className="flex flex-col gap-[8px] list-none m-0 p-0">
-                      {['agenda_tips_1','agenda_tips_2','agenda_tips_3','agenda_tips_4','agenda_tips_5'].map(key => (
-                        <li key={key} className="flex items-start gap-[6px]">
-                          <span className="shrink-0 mt-[5px] size-[5px] rounded-full bg-[#6a3e31]" />
-                          <span className="text-[14px] text-[#3b3b3b] leading-[20px]" style={NS}>{t(key)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-[4px] border-t border-[rgba(106,62,49,0.2)] pt-[12px] flex flex-col gap-[8px]">
-                      <span className="font-semibold text-[12px] text-[#6a3e31] uppercase tracking-[0.6px]" style={NS}>{t('agenda_tips_examples_heading')}</span>
-                      {(['1','2'] as const).map(n => (
-                        <div key={n} className="bg-white rounded-[8px] px-[12px] py-[10px] border border-[rgba(106,62,49,0.16)] flex flex-col gap-[3px]">
-                          <span className="font-semibold text-[14px] text-[#212121] leading-[20px]" style={NS}>{t(`agenda_tips_example_${n}_title`)}</span>
-                          <span className="text-[12px] text-[#727272] leading-[18px]" style={NS}>{t(`agenda_tips_example_${n}_desc`)}</span>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 </div>
@@ -576,10 +543,21 @@ export default function CreateMeetingAgendaScreen() {
                   size="large"
                   iconPlacement="none"
                   state={canSubmit ? 'default' : 'disabled'}
-                  text={t('btn_submit_generate_notice')}
+                  text={isEditMode ? t('btn_save_agenda_changes') : t('btn_submit_generate_notice')}
                   onClick={() => {
                     if (!canSubmit) return;
                     Object.values(agendaMediaRefs.current).forEach(mr => mr?.stop());
+                    if (isEditMode) {
+                      setMeetingAgendas(editMeetingId, agendas.map(a => ({
+                        id: a.id,
+                        title: a.title,
+                        description: a.description,
+                        completed: false,
+                        proceedingsText: '',
+                      })));
+                      navigate('/meetings/list');
+                      return;
+                    }
                     navigate('/meetings/create/sign-notice', {
                       state: { ...meetingData, agendas },
                     });

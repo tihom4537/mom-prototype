@@ -19,6 +19,7 @@ import MoMEntrySimpleScreen from './screens/MoMEntrySimpleScreen';
 import MoMEntrySimpleScreenV2 from './screens/MoMEntrySimpleScreenV2';
 import MoMEntrySimpleScreenV3 from './screens/MoMEntrySimpleScreenV3';
 import MoMEntrySimpleScreenV4 from './screens/MoMEntrySimpleScreenV4';
+import MoMEntrySimpleScreenV5 from './screens/MoMEntrySimpleScreenV5';
 import MoMEntryPostRecordingScreen from './screens/MoMEntryPostRecordingScreen';
 import MoMEntryFeedbackScreen from './screens/MoMEntryFeedbackScreen';
 import CreateMeetingScreen from './screens/CreateMeetingScreen';
@@ -84,6 +85,7 @@ export default function App() {
       <Route path="/mom-entry/simple-v2"     element={<MoMEntrySimpleScreenV2 />} />
       <Route path="/mom-entry/simple-v3"     element={<MoMEntrySimpleScreenV3 />} />
       <Route path="/mom-entry/simple-v4"     element={<MoMEntrySimpleScreenV4 />} />
+      <Route path="/mom-entry/simple-v5"     element={<MoMEntrySimpleScreenV5 />} />
       <Route path="/mom-entry/post-recording" element={<MoMEntryPostRecordingScreen />} />
       <Route path="/mom-entry/feedback"       element={<MoMEntryFeedbackScreen />} />
     </Routes>

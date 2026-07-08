@@ -28,6 +28,17 @@ function getCircleType(stepNum: number, stepsCompleted: number): NumberCircleTyp
   return 'greyed-out';
 }
 
+const EDIT_WINDOW_DAYS = 2;
+
+// Meeting ids are Date.now() at scheduling time (see addMeeting) — reuse as the "scheduled at" timestamp.
+// Returns how many whole days of the edit window remain (0 or negative once the window has closed).
+function editDaysLeft(meetingId: number): number {
+  const scheduledAt = new Date(meetingId); scheduledAt.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const daysSinceScheduled = Math.round((today.getTime() - scheduledAt.getTime()) / 86_400_000);
+  return EDIT_WINDOW_DAYS - daysSinceScheduled;
+}
+
 function getCtaKey(tab: MeetingTab, stepsCompleted: number): string {
   if (tab === 'past') return 'btn_view_meeting';
   if (tab === 'cancelled') return 'btn_view_meeting';
@@ -90,13 +101,15 @@ export default function MeetingListScreen() {
     return t('meeting_status_scheduled');
   };
 
-  const STATUS_OPTIONS = [
-    t('meeting_status_scheduled'),
-    t('meeting_status_in_progress'),
-    t('meeting_status_president_sign'),
-    t('meeting_status_completed'),
-    t('meeting_status_cancelled'),
-  ];
+  // Status options that can actually occur per tab — upcoming meetings haven't
+  // started (always "Scheduled"), past meetings are wrapping up or done, and
+  // drafts/cancelled tabs have no meaningful status filter (every row already
+  // shares the one implicit status), so the dropdown is hidden for those.
+  const STATUS_OPTIONS_BY_TAB: Partial<Record<MeetingTab, string[]>> = {
+    upcoming: [t('meeting_status_scheduled')],
+    past:     [t('meeting_status_president_sign'), t('meeting_status_completed')],
+  };
+  const statusOptions = STATUS_OPTIONS_BY_TAB[activeTab];
 
   const allTabs: Array<{ key: MeetingTab; labelKey: string }> = [
     { key: 'today',     labelKey: 'tab_today'     },
@@ -115,6 +128,7 @@ export default function MeetingListScreen() {
 
   const visible = meetings.filter((m: MeetingData) => {
     if (m.tab !== activeTab) return false;
+    if (activeTab === 'today') return true; // no filter/search bar on Today tab
     if (searchQuery && !m.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (filterType && m.meetingType !== filterType) return false;
     if (filterStatus && deriveStatus(m) !== filterStatus) return false;
@@ -161,7 +175,7 @@ export default function MeetingListScreen() {
         bodyClassName="px-[25px] pt-[20px] pb-[30px]"
       >
         {/* Tab bar */}
-        <div className="flex items-center gap-[20px]">
+        <div className="flex items-end gap-[20px]">
           {allTabs.map(({ key, labelKey }) => (
             <DashboardMenuBarItem
               key={key}
@@ -169,7 +183,7 @@ export default function MeetingListScreen() {
               count={countFor(key)}
               state={activeTab === key ? 'selected' : 'default'}
               badgeVariant="neutral"
-              onClick={() => setActiveTab(key)}
+              onClick={() => { setActiveTab(key); setFilterStatus(''); }}
             />
           ))}
         </div>
@@ -177,77 +191,81 @@ export default function MeetingListScreen() {
         {/* Divider */}
         <hr className="border-t border-[#e6e6e6] w-full mb-[28px] mt-0" />
 
-        {/* Filter bar */}
-        <div className="flex gap-[12px] items-end mb-[32px] justify-between">
-          {/* Left: filter dropdowns + dates */}
-          <div className="flex gap-[12px] items-end flex-wrap">
-            <div className="w-[220px] shrink-0">
-              <DropdownField
-                label={t('meeting_list_filter_type_label')}
-                placeholder={t('meeting_list_filter_type')}
-                value={filterType}
-                onChange={setFilterType}
-                options={meetingTypeOptions}
-              />
+        {/* Filter bar — hidden on Today tab, not needed there */}
+        {activeTab !== 'today' && (
+          <div className="flex gap-[12px] items-end mb-[32px] justify-between">
+            {/* Left: filter dropdowns + dates */}
+            <div className="flex gap-[12px] items-end flex-wrap">
+              <div className="w-[180px] shrink-0">
+                <DropdownField
+                  label={t('meeting_list_filter_type_label')}
+                  placeholder={t('meeting_list_filter_type')}
+                  value={filterType}
+                  onChange={setFilterType}
+                  options={meetingTypeOptions}
+                />
+              </div>
+              {statusOptions && (
+                <div className="w-[160px] shrink-0">
+                  <DropdownField
+                    label={t('meeting_list_filter_status_label')}
+                    placeholder={t('meeting_list_filter_status')}
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    options={statusOptions}
+                  />
+                </div>
+              )}
+              <div className="w-[140px] shrink-0">
+                <DatePicker
+                  label={t('meeting_list_filter_from')}
+                  value={filterDateFrom}
+                  onChange={setFilterDateFrom}
+                  placeholder="DD/MM/YYYY"
+                />
+              </div>
+              <div className="w-[140px] shrink-0">
+                <DatePicker
+                  label={t('meeting_list_filter_to')}
+                  value={filterDateTo}
+                  onChange={setFilterDateTo}
+                  placeholder="DD/MM/YYYY"
+                  opensLeft
+                />
+              </div>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(''); setSearchInput(''); setFilterType(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }}
+                  className="flex items-center gap-[4px] text-[13px] text-[#6a3e31] hover:underline bg-transparent border-none cursor-pointer shrink-0 pb-[10px]"
+                  style={{ fontFamily: 'Noto Sans' }}
+                >
+                  <Icon name="close" size="small" color="#6a3e31" />
+                  {t('meeting_list_clear_filters')}
+                </button>
+              )}
             </div>
-            <div className="w-[200px] shrink-0">
-              <DropdownField
-                label={t('meeting_list_filter_status_label')}
-                placeholder={t('meeting_list_filter_status')}
-                value={filterStatus}
-                onChange={setFilterStatus}
-                options={STATUS_OPTIONS}
-              />
-            </div>
-            <div className="w-[160px] shrink-0">
-              <DatePicker
-                label={t('meeting_list_filter_from')}
-                value={filterDateFrom}
-                onChange={setFilterDateFrom}
-                placeholder="DD/MM/YYYY"
-              />
-            </div>
-            <div className="w-[160px] shrink-0">
-              <DatePicker
-                label={t('meeting_list_filter_to')}
-                value={filterDateTo}
-                onChange={setFilterDateTo}
-                placeholder="DD/MM/YYYY"
-                opensLeft
-              />
-            </div>
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={() => { setSearchQuery(''); setSearchInput(''); setFilterType(''); setFilterStatus(''); setFilterDateFrom(''); setFilterDateTo(''); }}
-                className="flex items-center gap-[4px] text-[13px] text-[#6a3e31] hover:underline bg-transparent border-none cursor-pointer shrink-0 pb-[10px]"
-                style={{ fontFamily: 'Noto Sans' }}
-              >
-                <Icon name="close" size="small" color="#6a3e31" />
-                {t('meeting_list_clear_filters')}
-              </button>
-            )}
-          </div>
 
-          {/* Right: search + button */}
-          <div className="flex items-end gap-[8px] shrink-0">
-            <div className="w-[240px]">
-              <SearchInput
-                value={searchInput}
-                onChange={setSearchInput}
-                onSearch={() => setSearchQuery(searchInput)}
-                placeholder={t('meeting_list_search_placeholder')}
+            {/* Right: search + button */}
+            <div className="flex items-end gap-[8px] shrink-0">
+              <div className="w-[240px]">
+                <SearchInput
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={() => setSearchQuery(searchInput)}
+                  placeholder={t('meeting_list_search_placeholder')}
+                />
+              </div>
+              <Button
+                variant="filled"
+                size="default"
+                iconPlacement="none"
+                text={t('meeting_list_search_btn')}
+                onClick={() => setSearchQuery(searchInput)}
               />
             </div>
-            <Button
-              variant="filled"
-              size="default"
-              iconPlacement="none"
-              text={t('meeting_list_search_btn')}
-              onClick={() => setSearchQuery(searchInput)}
-            />
           </div>
-        </div>
+        )}
 
         {/* Cards — 3-col grid */}
         {visible.length === 0 ? (
@@ -258,7 +276,7 @@ export default function MeetingListScreen() {
             {t('meeting_list_empty')}
           </p>
         ) : (
-          <div className="grid grid-cols-3 gap-[20px]">
+          <div className={`grid grid-cols-2 xl:grid-cols-3 gap-[20px] ${activeTab === 'today' ? 'mt-[24px]' : ''}`}>
             {visible.map((meeting: MeetingData) => (
               <MeetingCard
                 key={meeting.id}
@@ -268,6 +286,19 @@ export default function MeetingListScreen() {
                 t={t}
                 onCta={() => meeting.tab === 'past' ? navigate(`/meetings/view/${meeting.id}`) : navigate('/meetings/attendance', { state: { meetingId: meeting.id } })}
                 onDraftCta={() => navigate('/meetings/create')}
+                onEditAgenda={() => navigate('/meetings/create/agenda', {
+                  state: {
+                    editMeetingId: meeting.id,
+                    title: meeting.name,
+                    meetingType: meeting.meetingType,
+                    date: meeting.date,
+                    time: meeting.time,
+                    venue: meeting.venue,
+                    chairperson: meeting.chairperson,
+                    description: meeting.description,
+                  },
+                })}
+                showStages={false}
               />
             ))}
           </div>
@@ -336,18 +367,14 @@ function ActionsMenu({ actions, t }: ActionsMenuProps) {
   if (actions.length === 0) return null;
 
   return (
-    <div
-      ref={ref}
-      className="relative"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div ref={ref} className="relative">
       <Button
         variant="outlined"
         size="small"
         iconPlacement="right"
         iconName="arrow_drop_down"
         text={t('btn_other_actions')}
+        onClick={() => setOpen(o => !o)}
       />
 
       {open && (
@@ -356,6 +383,7 @@ function ActionsMenu({ actions, t }: ActionsMenuProps) {
             <button
               key={key}
               disabled={disabled}
+              onClick={() => setOpen(false)}
               className={`w-full text-left px-[16px] py-[10px] text-[13px] leading-5 transition-colors
                 ${disabled
                   ? 'text-[#bdbdbd] cursor-not-allowed'
@@ -381,9 +409,11 @@ interface MeetingCardProps {
   t: (key: string) => string;
   onCta: () => void;
   onDraftCta: () => void;
+  onEditAgenda: () => void;
+  showStages?: boolean;
 }
 
-function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }: MeetingCardProps) {
+function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, onEditAgenda, showStages = true }: MeetingCardProps) {
   const modeLabel = meeting.mode === 'IN PERSON'
     ? t('meeting_mode_in_person')
     : t('meeting_mode_online');
@@ -397,11 +427,25 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }
   const badgeVariant = isCancelled ? 'red' : isDraft ? 'yellow' : isPast ? 'green' : isPendingPresident ? 'yellow' : 'blue';
   const badgeLabel   = isCancelled ? t('meeting_badge_cancelled') : isDraft ? t('meeting_badge_draft') : isPast ? t('meeting_badge_completed') : isPendingPresident ? t('meeting_badge_president_pending') : t('meeting_badge_scheduled');
 
+  // Upcoming meetings that haven't started yet can have their details edited
+  // for EDIT_WINDOW_DAYS days after scheduling, then the edit window closes.
+  const isUpcomingUnstarted = meeting.tab === 'upcoming' && meeting.stepsCompleted === 0;
+  const daysLeft = isUpcomingUnstarted ? editDaysLeft(meeting.id) : null;
+  const editLocked = daysLeft !== null && daysLeft <= 0;
+
   return (
     <div className="bg-white border border-[rgba(106,62,49,0.32)] flex flex-col gap-3 items-start p-[20px] rounded-[15px]">
 
       {/* Status badge */}
-      <StatusBadge variant={badgeVariant} label={badgeLabel} />
+      <div className="flex items-center gap-[8px] flex-wrap">
+        <StatusBadge variant={badgeVariant} label={badgeLabel} />
+        {isUpcomingUnstarted && (
+          <StatusBadge
+            variant={editLocked ? 'red' : 'green'}
+            label={editLocked ? t('meeting_edit_locked') : `${t('meeting_edit_open')} · ${daysLeft}${t('meeting_edit_days_left_suffix')}`}
+          />
+        )}
+      </div>
 
       {/* Meeting info */}
       <div className="flex flex-col gap-[6px] items-start w-full">
@@ -414,9 +458,19 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }
 
         <MeetingDetailsTag modeOfMeeting={modeLabel} date={meeting.date} time={meeting.time} />
 
-        <div className="flex flex-col items-start gap-0">
-          <SmallDetailsText text={`${t('meeting_venue_label')} ${meeting.venue}`} />
-          <SmallDetailsText text={`${t('meeting_participants_label')} ${meeting.participants}`} />
+        <div className="flex flex-col items-start gap-[4px]">
+          <div className="flex items-center gap-[4px]">
+            <Icon name="place" size="small" color="#3b3b3b" />
+            <span className="text-xs font-medium text-[#3b3b3b] leading-6" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {meeting.venue}
+            </span>
+          </div>
+          <div className="flex items-center gap-[4px]">
+            <Icon name="people_alt" size="small" color="#3b3b3b" />
+            <span className="text-xs font-medium text-[#3b3b3b] leading-6" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {meeting.participants} {t('meeting_participants_label')}
+            </span>
+          </div>
         </div>
 
         <div className="bg-[#F5F5F5] flex flex-col gap-0 items-start px-2 py-1 rounded-[5px] w-full">
@@ -427,7 +481,7 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }
       </div>
 
       {/* Progress steps */}
-      {!isCancelled && !isPast ? (
+      {!showStages ? null : !isCancelled && !isPast ? (
         <div className="flex flex-col items-start w-full">
           {(isDraft ? createStepKeys : stepKeys).map((key, idx) => {
             const stepNum = idx + 1;
@@ -470,7 +524,7 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }
       )}
 
       {/* CTAs */}
-      <div className="flex gap-[10px] w-full justify-end items-center">
+      <div className={`flex gap-[10px] w-full justify-end items-center ${!showStages ? 'mt-[12px]' : ''}`}>
         {actions.length > 0 && <ActionsMenu actions={actions} t={t} />}
         {isDraft ? (
           <Button
@@ -480,14 +534,23 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta }
             text={t('btn_schedule_meeting')}
             onClick={onDraftCta}
           />
+        ) : isUpcomingUnstarted ? (
+          <Button
+            variant="filled"
+            size="small"
+            iconPlacement="left"
+            iconName="edit"
+            text={t('btn_edit_meeting')}
+            state={editLocked ? 'disabled' : 'default'}
+            onClick={editLocked ? undefined : onEditAgenda}
+          />
         ) : (
           <Button
             variant="filled"
             size="small"
             iconPlacement="none"
             text={t(getCtaKey(meeting.tab, meeting.stepsCompleted))}
-            state={meeting.tab === 'upcoming' && meeting.stepsCompleted === 0 ? 'disabled' : 'default'}
-            onClick={meeting.tab === 'upcoming' && meeting.stepsCompleted === 0 ? undefined : onCta}
+            onClick={onCta}
           />
         )}
       </div>

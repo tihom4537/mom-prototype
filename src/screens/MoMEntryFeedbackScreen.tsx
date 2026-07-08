@@ -117,9 +117,13 @@ export default function MoMEntryFeedbackScreen() {
   const [activeField, setActiveField] = useState<string | null>(null);
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
-  const [actionOpen, setActionOpen] = useState(false);
-  const [selectedAction, setSelectedAction] = useState<'action_option_approval' | 'action_option_discussion' | 'action_option_information' | null>(null);
-
+  const [is2xl, setIs2xl] = useState(false);
+  useEffect(() => {
+    const check = () => setIs2xl(window.innerWidth >= 1536);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   const [fieldRecState, setFieldRecState] = useState<Record<string, FieldRecordingState>>({});
   const [fieldSttError, setFieldSttError] = useState<Record<string, string | null>>({});
   const mediaRecordersRef = useRef<Record<string, MediaRecorder>>({});
@@ -129,7 +133,6 @@ export default function MoMEntryFeedbackScreen() {
   const [analyserNodes, setAnalyserNodes] = useState<Record<string, AnalyserNode | null>>({});
   const [speakingField, setSpeakingField] = useState<string | null>(null);
   const photoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const audioInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const fieldTextareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
@@ -193,9 +196,14 @@ export default function MoMEntryFeedbackScreen() {
     const grid  = gridRef.current;
     if (!left || !right || !grid) return;
     const sync = () => {
+      const isGrid = window.innerWidth >= 1280;
+      if (!isGrid) {
+        left.style.minHeight = '';
+        right.style.height = '';
+        return;
+      }
       const gridRect  = grid.getBoundingClientRect();
       const viewportH = window.innerHeight;
-      // grid p-[30px]: subtract top+bottom padding + scroll container pb-6 (24px)
       const availableH = viewportH - gridRect.top - 30 - 30 - 24;
       const leftH = left.getBoundingClientRect().height;
       const targetH = Math.max(leftH, availableH);
@@ -628,10 +636,10 @@ export default function MoMEntryFeedbackScreen() {
           />
         </div>
 
-        <div ref={gridRef} className="bg-white grid gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]" style={{ gridTemplateColumns: '1fr 360px', alignItems: 'start' }}>
+        <div ref={gridRef} className="bg-white flex flex-col xl:grid gap-[32px] p-[30px] rounded-bl-[15px] rounded-br-[15px]" style={{ gridTemplateColumns: is2xl ? '1fr 360px' : '1fr 280px', alignItems: 'start' }}>
 
           {/* ── Left column ── */}
-          <div ref={leftColRef} className="flex flex-col gap-[20px] min-w-0">
+          <div ref={leftColRef} className="flex flex-col gap-[40px] min-w-0">
 
             <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
@@ -643,34 +651,6 @@ export default function MoMEntryFeedbackScreen() {
                 agendaDescription={agenda?.description ?? ''}
                 className="shrink-0 w-full"
               />
-              {/* Action field */}
-              <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-                <QuestionFieldsSmall type="mandatory" questionText={t('action_field_label')} className="shrink-0 w-full" />
-                <div className="relative shrink-0">
-                  {actionOpen && <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />}
-                  <div className="relative z-20">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      iconPlacement="right"
-                      text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                      onClick={() => setActionOpen(o => !o)}
-                    />
-                    {actionOpen && (
-                      <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                        {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
-                          <button key={key}
-                            className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                            onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                          >
-                            <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={NS}>{t(key)}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
               <div className="flex flex-col gap-[6px] items-start w-full">
                 <QuestionFieldsSmall type="mandatory" questionText={t('discussion_field_label')} className="shrink-0" />
                 <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
@@ -705,35 +685,7 @@ export default function MoMEntryFeedbackScreen() {
               className="shrink-0 w-full"
             />
 
-            {/* Action field */}
-            <div className="flex flex-col gap-[6px] items-start shrink-0 w-full">
-              <QuestionFieldsSmall type="mandatory" questionText={t('action_field_label')} className="shrink-0 w-full" />
-              <div className="relative shrink-0">
-                {actionOpen && <div className="fixed inset-0 z-10" onClick={() => setActionOpen(false)} />}
-                <div className="relative z-20">
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    iconPlacement="right"
-                    text={selectedAction ? t(selectedAction) : t('action_field_placeholder')}
-                    onClick={() => setActionOpen(o => !o)}
-                  />
-                  {actionOpen && (
-                    <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-md overflow-hidden min-w-full">
-                      {(['action_option_approval', 'action_option_discussion', 'action_option_information'] as const).map(key => (
-                        <button
-                          key={key}
-                          className="bg-white flex items-center px-4 py-2 w-full hover:bg-[#f7f0ee] transition-colors text-left"
-                          onClick={() => { setSelectedAction(key); setActionOpen(false); }}
-                        >
-                          <span className="font-normal text-sm text-[#212121] tracking-[0.25px]" style={NS}>{t(key)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+
 
             {/* Structured field rows */}
             <div className="flex flex-col gap-[6px] items-start w-full">
@@ -848,11 +800,6 @@ export default function MoMEntryFeedbackScreen() {
                               ref={el => { photoInputRefs.current[field] = el; }}
                               onChange={e => { const file = e.target.files?.[0]; if (file) updateField(field, (fieldValues[field] ?? '') + ` [Photo: ${file.name}]`); }}
                             />
-                            <input
-                              type="file" accept="audio/*" className="hidden"
-                              ref={el => { audioInputRefs.current[field] = el; }}
-                              onChange={e => { const file = e.target.files?.[0]; if (file) updateField(field, (fieldValues[field] ?? '') + ` [Audio: ${file.name}]`); }}
-                            />
                             <div className="flex items-center gap-[8px]">
                               <button
                                 type="button"
@@ -861,14 +808,6 @@ export default function MoMEntryFeedbackScreen() {
                               >
                                 <Icon name="photo_camera" size="small" color="#6a3e31" />
                                 <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_scan_photo')}</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); audioInputRefs.current[field]?.click(); }}
-                                className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
-                              >
-                                <Icon name="upload_file" size="small" color="#6a3e31" />
-                                <span className="text-[#6a3e31] text-[12px] font-medium leading-5" style={NS}>{t('btn_upload_audio')}</span>
                               </button>
                             </div>
                             <div className="flex items-center gap-[8px]">

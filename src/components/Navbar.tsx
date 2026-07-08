@@ -7,6 +7,7 @@ import DropdownBoxOfIcon from './DropdownBoxOfIcon';
 
 // Karnataka government logo — saved locally in /public to avoid broken remote URLs
 const imgLogo = "/karnataka-emblem.png";
+const imgZillaLogo = "/Grama Panchayat Final Logo Feb 28-03.png";
 
 export type NavbarVersion = 'default-with-welcome' | 'no-welcome' | 'home-page-nav' | 'version4' | 'home-page-identity' | 'home-page-nav-menu';
 
@@ -104,7 +105,7 @@ export default function Navbar({
 }: NavbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang, t } = useLanguage();
   const [langOpen, setLangOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -116,28 +117,28 @@ export default function Navbar({
   // home-page-identity: top identity bar — RDPR left, Panchatantra 2.0 right
   if (version === 'home-page-identity') {
     return (
-      <div className={`bg-white border border-[rgba(204,204,204,0.15)] flex items-center justify-between px-[50px] py-[18px] w-full ${className ?? ''}`}>
+      <div className={`bg-white border border-[rgba(204,204,204,0.15)] flex items-center justify-between px-[50px] py-[12px] w-full ${className ?? ''}`}>
         {/* Left: Logo + RDPR */}
-        <div className="flex gap-[15px] items-start shrink-0">
+        <div className="flex gap-[15px] items-center shrink-0">
           <div className="relative h-[45px] w-[52px] shrink-0">
             <img alt="Karnataka Logo" className="absolute inset-0 max-w-none object-contain size-full" src={imgLogo} />
           </div>
-          <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
-            <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Rural Development and Panchayati Raj Department
+          <div className="flex flex-col gap-[8px] items-start text-[#212121]">
+            <p className="font-semibold text-sm leading-none whitespace-nowrap" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_rdpr')}
             </p>
-            <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Government of Karnataka
+            <p className="font-normal text-sm leading-none" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_govt_karnataka')}
             </p>
           </div>
         </div>
         {/* Right: Panchatantra 2.0 */}
-        <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
-          <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-            Panchatantra 2.0
+        <div className="flex flex-col gap-[8px] items-start shrink-0 text-[#212121]">
+          <p className="font-semibold text-sm leading-none whitespace-nowrap" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+            {t('navbar_panchatantra')}
           </p>
-          <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-            Digital Platform for Governance in Panchayat Raj Institutions
+          <p className="font-normal text-sm leading-none whitespace-nowrap" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+            {t('navbar_panchatantra_sub')}
           </p>
         </div>
       </div>
@@ -220,12 +221,12 @@ export default function Navbar({
           <div className="relative h-[57px] w-[66px] shrink-0">
             <img alt="Karnataka Logo" className="absolute inset-0 max-w-none object-contain size-full" src={imgLogo} />
           </div>
-          <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
-            <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Rural Development and Panchayati Raj Department
+          <div className="flex flex-col gap-[8px] items-start text-[#212121] max-w-[354px]">
+            <p className="font-semibold text-sm leading-none" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_rdpr')}
             </p>
-            <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Government of Karnataka
+            <p className="font-normal text-sm leading-none" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_govt_karnataka')}
             </p>
           </div>
         </div>
@@ -255,12 +256,12 @@ export default function Navbar({
           <div className="relative h-[57px] w-[66px] shrink-0">
             <img alt="Karnataka Logo" className="absolute inset-0 max-w-none object-contain size-full" src={imgLogo} />
           </div>
-          <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
-            <p className="font-medium text-sm leading-7 w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Rural Development and Panchayati Raj Department
+          <div className="flex flex-col gap-[8px] items-start text-[#212121] max-w-[354px]">
+            <p className="font-semibold text-sm leading-none" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_rdpr')}
             </p>
-            <p className="font-light text-xs leading-[18px] w-full" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
-              Government of Karnataka
+            <p className="font-normal text-sm leading-none" style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}>
+              {t('navbar_govt_karnataka')}
             </p>
           </div>
         </div>
@@ -289,32 +290,42 @@ export default function Navbar({
   return (
     <div
       className={`bg-white border border-[rgba(204,204,204,0.15)] flex items-center justify-between px-[26px] w-full
-        ${version === 'no-welcome' ? 'py-[15px]' : 'py-[18px]'}
+        ${version === 'no-welcome' ? 'py-[9px]' : 'py-[9px]'}
         ${className ?? ''}`}
     >
-      {/* Left: Logo + Org name */}
+      {/* Left: GP logo + divider + Karnataka emblem + RDPR */}
       <div className="flex gap-[15px] items-center shrink-0">
-        {/* Logo — branding asset, kept as img */}
-        <div className="relative h-[57px] w-[66px] shrink-0">
+        {/* Grama Panchayat logo */}
+        <div className="relative h-[62px] w-[62px] shrink-0">
+          <img
+            alt="Grama Panchayat Logo"
+            className="absolute inset-0 max-w-none object-contain size-full"
+            src={imgZillaLogo}
+          />
+        </div>
+        {/* Divider */}
+        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.2)] mx-[4px] shrink-0" />
+        {/* Karnataka emblem */}
+        <div className="relative h-[52px] w-[60px] shrink-0">
           <img
             alt="Karnataka Logo"
             className="absolute inset-0 max-w-none object-contain size-full"
             src={imgLogo}
           />
         </div>
-        {/* Org name block */}
-        <div className="flex flex-col gap-[4px] items-start shrink-0 text-[#212121] w-[354px]">
+        {/* RDPR block */}
+        <div className="flex flex-col gap-[8px] items-start shrink-0 text-[#212121]">
           <p
-            className="font-medium text-sm leading-7 w-full"
+            className="font-semibold text-[13px] leading-none"
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >
-            Rural Development and Panchayati Raj Department
+            {t('navbar_rdpr')}
           </p>
           <p
-            className="font-light text-xs leading-[18px] w-full"
+            className="font-normal text-[13px] leading-none"
             style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
           >
-            Government of Karnataka
+            {t('navbar_govt_karnataka')}
           </p>
         </div>
       </div>

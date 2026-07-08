@@ -68,6 +68,13 @@ export default function CreateMeetingScreen() {
   const navigate = useNavigate();
   const { meetings } = useMeetings();
   const { screenReaderMode, speak } = useAccessibility();
+  const [isLg, setIsLg] = useState(false);
+  useEffect(() => {
+    const check = () => setIsLg(window.innerWidth > 1024);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const desigKeyMapMain: Record<string, string> = {
     'Panchayat Development Officer': 'desig_pdo_full',
@@ -439,9 +446,11 @@ export default function CreateMeetingScreen() {
               <SectionHolder variant="mandatory" title={t('section_meeting_details')}>
                 <div className="flex flex-col gap-[30px] px-[30px] pt-[25px] pb-[35px]">
 
-                  {/* Row 1: Meeting Type | Date | Time — 3 equal columns */}
-                  <div className="flex gap-[30px] items-start">
-                    <div className="flex-1 min-w-0">
+                  {/* Row 1: Meeting Type | Date | Time
+                      < lg : 2-per-row (Time wraps), lone field capped at half-width
+                      ≥ lg : 3-per-row, no cap */}
+                  <div className="flex flex-wrap gap-[30px] items-start">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <DropdownField
                         label={t('field_meeting_type')}
                         placeholder={t('field_meeting_type_placeholder')}
@@ -453,7 +462,7 @@ export default function CreateMeetingScreen() {
                         errorText={errors.meetingType}
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <DatePicker
                         label={t('field_date')}
                         required
@@ -468,7 +477,7 @@ export default function CreateMeetingScreen() {
                         onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <TimePicker
                         label={t('field_time')}
                         required
@@ -481,9 +490,11 @@ export default function CreateMeetingScreen() {
                     </div>
                   </div>
 
-                  {/* Row 2: Mode | Online link (only when online) | Venue */}
-                  <div className="flex gap-[30px] items-start">
-                    <div className="flex-1 min-w-0">
+                  {/* Row 2: Mode | Online link (only when online) | Venue
+                      < lg : 2-per-row, lone field capped at half-width
+                      ≥ lg : 3-per-row, no cap */}
+                  <div className="flex flex-wrap gap-[30px] items-start">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <DropdownField
                         label={t('field_mode')}
                         placeholder={t('field_mode_placeholder')}
@@ -500,7 +511,7 @@ export default function CreateMeetingScreen() {
                       />
                     </div>
                     {isOnline && (
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                         <InputField
                           label={t('field_meeting_link')}
                           placeholder={t('field_meeting_link_placeholder')}
@@ -512,7 +523,7 @@ export default function CreateMeetingScreen() {
                         />
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <InputField
                         label={t('field_venue')}
                         placeholder={t('field_venue_placeholder')}
@@ -525,9 +536,11 @@ export default function CreateMeetingScreen() {
                     </div>
                   </div>
 
-                  {/* Row 3: Chairperson | Second Chairperson | Third Chairperson */}
-                  <div className="flex gap-[30px] items-start">
-                    <div className="flex-1 min-w-0">
+                  {/* Row 3: Chairperson | Second Chairperson | Third Chairperson
+                      < lg : 2-per-row, lone field capped at half-width
+                      ≥ lg : 3-per-row, no cap */}
+                  <div className="flex flex-wrap gap-[30px] items-start">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <InputField
                         label={t('field_chairperson')}
                         placeholder={t('field_chairperson_placeholder')}
@@ -539,7 +552,7 @@ export default function CreateMeetingScreen() {
                         disabled={!!meetingType}
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <DropdownField
                         label={t('field_second_chairperson')}
                         placeholder={t('field_second_chairperson_placeholder')}
@@ -548,7 +561,7 @@ export default function CreateMeetingScreen() {
                         options={vicePresident ? [`${vicePresident.name} — ${vicePresident.designation}`] : []}
                       />
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:min-w-0 lg:max-w-none">
                       <DropdownField
                         label={t('field_third_chairperson')}
                         placeholder={t('field_third_chairperson_placeholder')}
@@ -559,9 +572,9 @@ export default function CreateMeetingScreen() {
                     </div>
                   </div>
 
-                  {/* Row 4: Mandatory Designations — same width as row above (3-col) */}
-                  <div className="flex gap-[30px] items-start">
-                    <div className="flex-1 min-w-0">
+                  {/* Row 4: Mandatory Designations — 1/3 width at lg+, half-width cap below lg */}
+                  <div className="flex">
+                    <div className="flex-1 min-w-[200px] max-w-[calc(50%-15px)] lg:max-w-[calc(33.333%-20px)]">
                       <InputField
                         label={t('field_mandatory_designations')}
                         placeholder={t('field_mandatory_designations_placeholder')}
@@ -571,15 +584,13 @@ export default function CreateMeetingScreen() {
                         disabled={!!meetingType}
                       />
                     </div>
-                    <div className="flex-1 min-w-0" />
-                    <div className="flex-1 min-w-0" />
                   </div>
 
                   {/* Divider */}
                   <div className="h-px bg-[#c6c6c6] w-full" />
 
-                  {/* Title (720px wide) */}
-                  <div className="w-[720px]">
+                  {/* Title — max 720px, fluid below */}
+                  <div className="max-w-[720px] w-full">
                     <InputField
                       label={t('field_title')}
                       placeholder={t('field_title_placeholder')}
@@ -591,8 +602,8 @@ export default function CreateMeetingScreen() {
                     />
                   </div>
 
-                  {/* Description (720px wide) + mic */}
-                  <div className="w-[720px]">
+                  {/* Description — max 720px, fluid below */}
+                  <div className="max-w-[720px] w-full">
                     <DescriptionField
                       label={t('field_description')}
                       placeholder={t('field_description_placeholder')}
@@ -631,10 +642,14 @@ export default function CreateMeetingScreen() {
                     />
                   </div>
 
-                  {/* Selected participants table */}
+                  {/* Selected participants table
+                      < lg : Sl.No, Name, Gender, Phone, Remove (fits without scroll)
+                      ≥ lg : all columns, scrolls if viewport too narrow */}
                   {participants.length > 0 && (
+                    <div className="overflow-x-auto">
                     <Table
-                      columns={[
+                      className={isLg ? 'min-w-[800px]' : undefined}
+                      columns={([
                         {
                           key: 'slno',
                           label: t('participant_col_slno'),
@@ -644,7 +659,7 @@ export default function CreateMeetingScreen() {
                         {
                           key: 'name',
                           label: t('participant_col_name'),
-                          width: 'flex-1 min-w-0',
+                          width: 'flex-1 min-w-[150px]',
                           render: (_v, row) => {
                             const p = row as unknown as StaffMember;
                             return (
@@ -655,27 +670,27 @@ export default function CreateMeetingScreen() {
                             );
                           },
                         },
-                        {
+                        isLg && {
                           key: 'gender',
                           label: t('participant_col_gender'),
                           width: 'w-[80px] shrink-0',
                         },
-                        {
+                        isLg && {
                           key: 'phone',
                           label: t('participant_col_phone'),
                           width: 'w-[115px] shrink-0',
                         },
-                        {
+                        isLg && {
                           key: 'email',
                           label: t('participant_col_email'),
                           width: 'w-[170px] shrink-0',
                         },
-                        {
+                        isLg && {
                           key: 'gp',
                           label: t('participant_col_gp'),
                           width: 'w-[160px] shrink-0',
                         },
-                        {
+                        isLg && {
                           key: 'district',
                           label: t('participant_col_district'),
                           width: 'w-[160px] shrink-0',
@@ -697,10 +712,11 @@ export default function CreateMeetingScreen() {
                             );
                           },
                         },
-                      ] as TableColumn<Record<string, unknown>>[]}
+                      ].filter(Boolean)) as TableColumn<Record<string, unknown>>[]}
                       rows={participants.map((p, idx) => ({ ...p, _idx: idx } as unknown as Record<string, unknown>))}
                       getRowId={row => (row as unknown as StaffMember).id}
                     />
+                    </div>
                   )}
 
                   {participants.length > 0 && participants.length < 5 && (

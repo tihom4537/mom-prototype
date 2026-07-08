@@ -101,7 +101,7 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
     <div
       className={`bg-white border border-[rgba(204,204,204,0.15)] flex flex-col justify-between pb-4 pt-[15px] px-4 rounded-br-[15px] rounded-tr-[15px]
         ${isFull ? 'w-[220px] items-start' : 'w-20 items-center'}
-        ${className ?? 'h-[969px]'}`}
+        ${className ?? 'h-full'}`}
     >
       {/* Top section */}
       <div className={`flex flex-col gap-[15px] items-${isFull ? 'start' : 'center'} w-full shrink-0`}>

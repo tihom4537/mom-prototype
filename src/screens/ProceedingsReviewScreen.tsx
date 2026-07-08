@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda } from '../context/AgendaContext';
 import { useMeetings } from '../context/MeetingsContext';
+import { useAccessibility } from '../context/AccessibilityContext';
+import { getNoticePeriod, getEarliestDate } from '../utils/meetingNoticePeriods';
 import {
   AgendaCard,
   MeetingDetailsCard,
@@ -11,8 +13,29 @@ import {
   AttendancePill,
   Icon,
   CloseButton,
+  DropdownField,
+  DatePicker,
+  TimePicker,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+
+const MEETING_TYPE_KEYS = [
+  'meeting_type_gp_general_body',
+  'meeting_type_gram_sabha_ordinary',
+  'meeting_type_gram_sabha_special_budget',
+  'meeting_type_ward_sabha_ordinary',
+  'meeting_type_habitation_ordinary',
+  'meeting_type_habitation_emergency',
+  'meeting_type_kdp',
+  'meeting_type_makkala_sabha',
+  'meeting_type_mahila_sabha',
+  'meeting_type_finance_committee',
+  'meeting_type_general_standing',
+  'meeting_type_social_justice',
+  'meeting_type_gram_sabha_special',
+  'meeting_type_ward_sabha_special',
+  'meeting_type_habitation_special',
+] as const;
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -146,13 +169,24 @@ function VoteTable({
   );
 }
 
+const CURRENT_MEETING_ID = 2;
+
 export default function ProceedingsReviewScreen() {
   const { t, tDesignation } = useLanguage();
   const { agendaItems } = useAgenda();
   const navigate = useNavigate();
   const location = useLocation();
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
-  const { openingAbsentIds, savedVotes, setSavedVotes, reviews, setReviews, meetingAgendas } = useMeetings();
+  const { openingAbsentIds, savedVotes, setSavedVotes, reviews, setReviews, meetingAgendas, meetings, addMeeting, updateMeeting } = useMeetings();
+  const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : meetings.find(m => m.id === CURRENT_MEETING_ID);
+  const { screenReaderMode, speak } = useAccessibility();
+  const meetingTypeOptions = MEETING_TYPE_KEYS.map(k => t(k));
+
+  const [nextMeetingType, setNextMeetingType] = useState('');
+  const [nextMeetingDate, setNextMeetingDate] = useState('');
+  const [nextMeetingTime, setNextMeetingTime] = useState('');
+  const nextNoticePeriod = getNoticePeriod(nextMeetingType);
+  const nextMinDate = nextMeetingType ? getEarliestDate(nextNoticePeriod.days) : undefined;
 
   // Use per-meeting agendas if this is a user-created meeting
   const userAgendas = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;
@@ -216,6 +250,38 @@ export default function ProceedingsReviewScreen() {
   const menCount    = workingParticipants.filter(p => p.gender === 'man').length;
   const othersCount = workingParticipants.filter(p => p.gender === 'other').length;
 
+  function handleProceed() {
+    if (!allReviewed) return;
+
+    // Record the chosen next-meeting details on the current meeting so the
+    // Send to President proceedings preview can show them later.
+    const targetId = meetingId ?? CURRENT_MEETING_ID;
+    if (nextMeetingType) {
+      updateMeeting(targetId, { nextMeetingType, nextMeetingDate });
+
+      const isSameType = currentMeeting?.meetingType === nextMeetingType;
+      addMeeting({
+        name:               `${nextMeetingType} (Draft)`,
+        mode:               isSameType ? (currentMeeting?.mode ?? 'IN PERSON') : 'IN PERSON',
+        date:               nextMeetingDate || '',
+        time:               nextMeetingTime || '',
+        venue:              isSameType ? (currentMeeting?.venue ?? '') : '',
+        participants:       isSameType ? (currentMeeting?.participants ?? 0) : 0,
+        gpName:             currentMeeting?.gpName ?? 'Hosakote Gram Panchayat',
+        electedQuorum:      currentMeeting?.electedQuorum ?? '51%',
+        participantsQuorum: currentMeeting?.participantsQuorum ?? '10%',
+        stepsCompleted:     0,
+        tab:                'drafts',
+        status:             'draft',
+        meetingType:        nextMeetingType,
+        chairperson:        currentMeeting?.chairperson,
+        description:        currentMeeting?.description,
+      });
+    }
+
+    navigate('/meetings/closure-attendance', { state: { meetingId } });
+  }
+
   return (
     <MeetingShellLayout stepperActiveState={3}>
 
@@ -252,6 +318,51 @@ export default function ProceedingsReviewScreen() {
         ))}
       </SectionHolder>
 
+      {/* ── Schedule Next Meeting ───────────────────────────────────── */}
+      <SectionHolder
+        variant="mandatory"
+        title={t('send_president_section_next_meeting')}
+        bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-4"
+      >
+        <div className="flex gap-4 items-end">
+          <div className="flex-1 min-w-0">
+            <DropdownField
+              label={t('send_president_next_type_label')}
+              placeholder={t('send_president_next_type_placeholder')}
+              value={nextMeetingType}
+              onChange={setNextMeetingType}
+              options={meetingTypeOptions}
+              required
+              opensUp
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <DatePicker
+              label={t('send_president_next_date_label')}
+              required
+              value={nextMeetingDate}
+              onChange={setNextMeetingDate}
+              placeholder={t('send_president_next_date_placeholder')}
+              opensUp
+              minDate={nextMinDate}
+              meetingType={nextMeetingType}
+              noticeDays={nextNoticePeriod.days}
+              onOpenNarrate={screenReaderMode ? (text) => speak(text) : undefined}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <TimePicker
+              label={t('send_president_next_time_label')}
+              required
+              value={nextMeetingTime}
+              onChange={setNextMeetingTime}
+              placeholder={t('send_president_next_time_placeholder')}
+              opensUp
+            />
+          </div>
+        </div>
+      </SectionHolder>
+
       <div className="flex items-center justify-center gap-[10px] pb-2 mt-[20px]">
         <Button
           variant="outlined"
@@ -266,7 +377,7 @@ export default function ProceedingsReviewScreen() {
           iconName="arrow_forward"
           text={t('proceedings_review_btn_proceed')}
           state={allReviewed ? 'default' : 'disabled'}
-          onClick={allReviewed ? () => navigate('/meetings/closure-attendance', { state: { meetingId } }) : undefined}
+          onClick={allReviewed ? handleProceed : undefined}
         />
       </div>
 
@@ -286,8 +397,8 @@ export default function ProceedingsReviewScreen() {
             {/* Body */}
             <div className="bg-white rounded-bl-[20px] rounded-br-[20px] flex flex-col gap-[20px] px-[30px] pt-[25px] pb-[30px] min-h-0">
               {/* Agenda card — shown in both phases */}
-              <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] pt-[8px] pb-[15px] flex flex-col gap-[8px] shrink-0">
-                <div className="flex items-start gap-[15px] pt-[3px]">
+              <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[12px] flex items-center shrink-0">
+                <div className="flex items-center gap-[15px]">
                   <div className="bg-[#efe0dc] flex items-center justify-center rounded-full size-[32px] shrink-0">
                     <span className="font-medium text-[14px] text-[#6a3e31] text-center" style={NS}>
                       {reviewModalItem.id}
@@ -297,20 +408,7 @@ export default function ProceedingsReviewScreen() {
                     <span className="font-medium text-[14px] text-[#4b4b4b] leading-6" style={NS}>
                       {reviewModalItem.heading}
                     </span>
-                    <span className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
-                      {reviewModalItem.description}
-                    </span>
                   </div>
-                </div>
-                <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[10px] ml-[47px]">
-                  <p className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
-                    {(() => {
-                      const pt = reviewModalItem.proceedingsText;
-                      if (!pt) return t(`agenda_proceedings_${reviewModalItem.id}`);
-                      if (typeof pt === 'object') return Object.entries(pt).filter(([,v]) => v.trim()).map(([k,v]) => `${k}: ${v}`).join('\n');
-                      return pt;
-                    })()}
-                  </p>
                 </div>
               </div>
 

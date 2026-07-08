@@ -30,7 +30,7 @@ export default function MeetingDetailsCard({
   if (isShortened) {
     // Horizontal: heading left, details tag inline with venue+participants, venue+count on right
     return (
-      <div className={`bg-white flex items-center justify-between p-5 rounded-[15px] ${className ?? 'w-full'}`}>
+      <div className={`bg-white flex flex-col xl:flex-row xl:items-center xl:justify-between gap-[12px] px-5 py-[15px] rounded-[15px] ${className ?? 'w-full'}`}>
         <SectionHeading text={meetingTitle} className="shrink-0" />
         <MeetingDetailsTag
           modeOfMeeting={modeOfMeeting}
@@ -39,14 +39,13 @@ export default function MeetingDetailsCard({
           venue={venue}
           participants={participants}
           showVenueParticipants
-          className="shrink-0"
         />
       </div>
     );
   }
 
   return (
-    <div className={`bg-white flex flex-col items-start p-5 rounded-[15px] ${className ?? 'w-full'}`}>
+    <div className={`bg-white flex flex-col items-start px-5 py-[15px] rounded-[15px] ${className ?? 'w-full'}`}>
       <div className="flex gap-3 items-end w-full">
         {/* Left: heading + tag */}
         <div className="flex flex-1 flex-col gap-[18px] items-start justify-end min-h-px min-w-px">

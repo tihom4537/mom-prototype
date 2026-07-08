@@ -37,7 +37,7 @@ export default function UpcomingMeetingRow({
         ${className ?? 'w-full'}`}
     >
       {/* Left: day pill + name/meta + notice badge */}
-      <div className="flex items-start gap-[14px]">
+      <div className="flex items-start gap-[14px] min-w-0 flex-1">
         {/* Day pill */}
         <div className={`flex items-center px-[10px] py-[4px] rounded-full shrink-0 ${daysLabelVariant === 'red' ? 'bg-[#ffebee]' : 'bg-[#f7f0ee]'}`}>
           <p className={`font-semibold text-[12px] leading-[16px] tracking-[0.3px] whitespace-nowrap ${daysLabelVariant === 'red' ? 'text-[#c62828]' : 'text-[#6a3e31]'}`} style={NS}>
@@ -45,17 +45,17 @@ export default function UpcomingMeetingRow({
           </p>
         </div>
         {/* Name + meta */}
-        <div className="flex flex-col gap-[3px]">
-          {/* Title row + badge inline */}
-          <div className="flex items-center gap-[8px]">
-            <p className="font-semibold text-[14px] leading-[20px] text-[#212121] tracking-[0.1px] whitespace-nowrap" style={NS}>
+        <div className="flex flex-col gap-[3px] min-w-0">
+          {/* Title row + badge — wraps when narrow */}
+          <div className="flex items-center gap-[8px] flex-wrap">
+            <p className="font-semibold text-[14px] leading-[20px] text-[#212121] tracking-[0.1px]" style={NS}>
               {meetingName}
             </p>
             {noticeBadge && (
               <DashboardStatusBadge label={noticeBadgeLabel} variant={noticeBadge} />
             )}
           </div>
-          <p className="font-normal text-[12px] leading-[16px] text-[#525c66] tracking-[0.25px] whitespace-nowrap" style={NS}>
+          <p className="font-normal text-[12px] leading-[16px] text-[#525c66] tracking-[0.25px]" style={NS}>
             {meetingMeta}
           </p>
         </div>
@@ -69,6 +69,7 @@ export default function UpcomingMeetingRow({
         iconName="chevron_right"
         iconPlacement="right"
         onClick={onViewDetails}
+        className="shrink-0"
       />
     </div>
   );

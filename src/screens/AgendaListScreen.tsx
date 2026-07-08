@@ -12,10 +12,14 @@ const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 1
 export default function AgendaListScreen() {
   const { t } = useLanguage();
   const { agendaItems } = useAgenda();
-  const { meetingAgendas } = useMeetings();
+  const { meetingAgendas, meetings } = useMeetings();
   const navigate = useNavigate();
   const location = useLocation();
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
+  const meetingType: string | undefined = meetingId != null ? meetings.find(m => m.id === meetingId)?.meetingType : undefined;
+  // AI feedback is only meaningful for GP General Body Meeting proceedings — other meeting
+  // types (Gram Sabha, standing committees, etc.) skip the feedback step entirely.
+  const isFeedbackApplicable = meetingType ? meetingType.includes('GP General Body Meeting') || meetingType.includes('ಜಿಪಿ ಸಾಮಾನ್ಯ ಸಭೆ') : true;
 
   // Use per-meeting agendas if this is a user-created meeting; fall back to demo AgendaContext
   const userAgendas: MeetingAgendaItem[] | null = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;
@@ -37,7 +41,7 @@ export default function AgendaListScreen() {
 
   const handleAddProceedings = (id: number) => {
     const item = effectiveAgendaItems.find(a => a.id === id)!;
-    navigate('/mom-entry/simple-v4', { state: { agenda: item, meetingId } });
+    navigate('/mom-entry/simple-v4', { state: { agenda: item, meetingId, isFeedbackApplicable } });
   };
 
   const handleEditProceedings = (id: number) => {
@@ -47,7 +51,7 @@ export default function AgendaListScreen() {
       : undefined;
     const proceedings = ctxProceedings ?? item.proceedingsText ?? '';
     // Pass as discussionText regardless of type — MoMEntryDefaultScreen parses it
-    navigate('/mom-entry/simple-v4', { state: { agenda: item, meetingId, discussionText: proceedings, feedbackCompleted: item.completed } });
+    navigate('/mom-entry/simple-v4', { state: { agenda: item, meetingId, discussionText: proceedings, feedbackCompleted: item.completed, isFeedbackApplicable } });
   };
 
   const handleViewProceedings = (id: number) => {

@@ -9,9 +9,10 @@ import {
   DropdownBoxOfProfile,
   DropdownBoxOfIcon,
   StepNavBar,
+  Button,
+  Icon,
 } from '../components';
 import type { StepperActiveState } from '../components';
-import ScaleToFitHeight from '../components/ScaleToFitHeight';
 
 const STEP_ROUTES: Record<number, string> = {
   1: '/meetings/attendance',
@@ -34,6 +35,8 @@ interface MeetingShellLayoutProps {
   breadcrumbItems?: string[];
   /** Set false to hide the Stepper row (e.g. screens outside the 5-step flow) */
   showStepper?: boolean;
+  /** Set false to hide the Exit Meeting button + confirm modal (e.g. MoM entry sub-pages) */
+  showExitButton?: boolean;
 }
 
 export default function MeetingShellLayout({
@@ -44,6 +47,7 @@ export default function MeetingShellLayout({
   fillHeight = false,
   breadcrumbItems,
   showStepper = true,
+  showExitButton = true,
 }: MeetingShellLayoutProps) {
   const { t } = useLanguage();
   const navigate = useNavigate();
@@ -53,13 +57,13 @@ export default function MeetingShellLayout({
   const [sidebarState, setSidebarState] = useState<'full' | 'shortened'>('shortened');
   const [profileOpen, setProfileOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
 
   const toggleSidebar = () =>
     setSidebarState(s => (s === 'full' ? 'shortened' : 'full'));
 
   return (
-    <ScaleToFitHeight>
-    <div className="h-full overflow-hidden flex flex-col bg-[#f1f2f2]">
+    <div className="h-screen overflow-hidden flex flex-col bg-[#f1f2f2]">
 
       {/* ── Row 1: Navbar (fixed) ── */}
       <div className="shrink-0 relative z-40">
@@ -158,12 +162,58 @@ export default function MeetingShellLayout({
             <div className={`flex flex-col gap-5 ${fillHeight ? 'flex-1 min-h-0' : ''}`}>
               <StepNavBar onBack={showBack && resolvedBackRoute ? () => navigate(resolvedBackRoute, { state: { meetingId } }) : undefined} backLabel={t('nav_previous_step')} />
               {children}
+              {showStepper && showExitButton && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="outlined"
+                    iconPlacement="left"
+                    iconName="logout"
+                    text={t('btn_exit_to_meetings')}
+                    onClick={() => setExitConfirmOpen(true)}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
         </div>
       </div>
+
+      {/* ── Exit confirmation modal ── */}
+      {exitConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-[440px] shadow-2xl flex flex-col">
+            <div className="bg-white flex items-center justify-between gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] border-b border-[#c6c6c6] shrink-0">
+              <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={{ fontFamily: 'Noto Sans' }}>
+                {t('exit_confirm_title')}
+              </span>
+              <button type="button" onClick={() => setExitConfirmOpen(false)} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
+                <Icon name="close" size="small" color="#6a3e31" />
+              </button>
+            </div>
+            <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[25px] pt-[20px] pb-[25px] flex flex-col gap-[20px]">
+              <p className="text-[14px] leading-[22px] text-[#3b3b3b]" style={{ fontFamily: 'Noto Sans' }}>
+                <span className="font-semibold text-[#2e7d32]">{t('exit_confirm_body_highlight')}</span>{' '}
+                {t('exit_confirm_body_rest')}
+              </p>
+              <div className="flex items-center justify-end gap-[12px]">
+                <Button
+                  variant="outlined"
+                  iconPlacement="none"
+                  text={t('exit_confirm_no')}
+                  onClick={() => setExitConfirmOpen(false)}
+                />
+                <Button
+                  variant="filled"
+                  iconPlacement="none"
+                  text={t('exit_confirm_yes')}
+                  onClick={() => navigate('/meetings/list')}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-    </ScaleToFitHeight>
   );
 }

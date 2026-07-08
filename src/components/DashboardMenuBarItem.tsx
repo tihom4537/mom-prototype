@@ -31,23 +31,29 @@ export default function DashboardMenuBarItem({
   const isSelected = state === 'selected';
   const badge = BADGE_STYLES[badgeVariant];
 
-  const BadgeEl = (
-    <div className={`${badge.bg} flex items-center px-[8px] py-[3px] rounded-[5px]`}>
-      <p className={`font-semibold text-[13px] leading-[20px] ${badge.text} whitespace-nowrap`} style={NS}>
+  const lastSpace = text.lastIndexOf(' ');
+  const head = lastSpace >= 0 ? text.slice(0, lastSpace) : '';
+  const tail = lastSpace >= 0 ? text.slice(lastSpace + 1) : text;
+
+  const Badge = (
+    <span className={`${badge.bg} inline-block px-[6px] py-[2px] rounded-[5px] align-bottom ml-[5px]`}>
+      <span className={`font-semibold text-[13px] leading-[20px] ${badge.text}`} style={NS}>
         {count}
-      </p>
-    </div>
+      </span>
+    </span>
+  );
+
+  const content = (
+    <span className="font-medium text-[14px] leading-[20px] text-[#6a3e31] tracking-[0.1px]" style={NS}>
+      {head ? <>{head} </> : null}
+      <span className="whitespace-nowrap">{tail}{Badge}</span>
+    </span>
   );
 
   if (isSelected) {
     return (
-      <div
-        className={`border-b border-[#6a3e31] flex items-center gap-[5px] pb-[3px] ${className ?? ''}`}
-      >
-        <p className="font-medium text-[14px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
-          {text}
-        </p>
-        {BadgeEl}
+      <div className={`border-b border-[#6a3e31] inline-block pb-[3px] ${className ?? ''}`}>
+        {content}
       </div>
     );
   }
@@ -56,12 +62,9 @@ export default function DashboardMenuBarItem({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-[5px] pb-[3px] bg-transparent border-none cursor-pointer ${className ?? ''}`}
+      className={`inline-block pb-[3px] bg-transparent border-none cursor-pointer text-left ${className ?? ''}`}
     >
-      <p className="font-medium text-[14px] leading-[20px] text-[#6a3e31] tracking-[0.1px] whitespace-nowrap" style={NS}>
-        {text}
-      </p>
-      {BadgeEl}
+      {content}
     </button>
   );
 }

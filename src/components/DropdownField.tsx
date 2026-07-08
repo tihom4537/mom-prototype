@@ -35,7 +35,7 @@ export default function DropdownField({
 }: DropdownFieldProps) {
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
-  const [listPos, setListPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [listPos, setListPos] = useState<{ top: number; left: number; right: number; width: number } | null>(null);
   const [actuallyOpensUp, setActuallyOpensUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -50,11 +50,8 @@ export default function DropdownField({
     const r = triggerRef.current.getBoundingClientRect();
     const spaceBelow = window.innerHeight - r.bottom;
     const shouldOpenUp = opensUp || spaceBelow < 200;
-    if (shouldOpenUp) {
-      setListPos({ top: r.top - 4, left: r.left, width: r.width });
-    } else {
-      setListPos({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
+    const top = shouldOpenUp ? r.top - 4 : r.bottom + 4;
+    setListPos({ top, left: r.left, right: window.innerWidth - r.right, width: r.width });
     setActuallyOpensUp(shouldOpenUp);
   }
 
@@ -157,8 +154,10 @@ export default function DropdownField({
             position: 'fixed',
             top: actuallyOpensUp ? undefined : listPos.top,
             bottom: actuallyOpensUp ? window.innerHeight - listPos.top : undefined,
-            left: listPos.left,
-            width: listPos.width,
+            right: listPos.right,
+            minWidth: listPos.width,
+            width: 'max-content',
+            maxWidth: '280px',
             zIndex: 9999,
             maxHeight: '240px',
             overflowY: 'auto',

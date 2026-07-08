@@ -67,7 +67,7 @@ export default function AgendaCard({
       <div className={`flex items-start shrink-0 w-full ${isCompact ? 'pt-[3px]' : 'justify-between'}`}>
 
         {/* Left: circle + text */}
-        <div className="flex gap-[15px] items-start flex-1 min-w-0">
+        <div className="flex gap-[15px] items-center flex-1 min-w-0">
 
           <NumberCircle type={circleType} number={agendaNumber} />
 

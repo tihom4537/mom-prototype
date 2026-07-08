@@ -238,6 +238,93 @@ export default function MeetingOverviewScreen() {
                 </div>
               </div>
 
+              {/* ── Section 3b: Meeting Tracker ── */}
+              {(() => {
+                const totalScheduled  = allCards.reduce((s, c) => s + c.total, 0);
+                const totalCompleted  = allCards.reduce((s, c) => s + c.completed, 0);
+                const totalPending    = totalScheduled - totalCompleted;
+                const monthlyTotal    = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                const monthlyDone     = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+                const semiTotal       = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                const semiDone        = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+                const fixedTotal      = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                const fixedDone       = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+
+                const groups = [
+                  { label: t('mandatory_group_monthly'),    total: monthlyTotal, done: monthlyDone },
+                  { label: t('mandatory_group_semi_annual'), total: semiTotal,   done: semiDone },
+                  { label: t('mandatory_group_fixed_date'), total: fixedTotal,   done: fixedDone },
+                ];
+
+                return (
+                  <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
+                      <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
+                        {t('section_meeting_tracker')}
+                      </span>
+                      <AgendaNoLabel type="default" text={`FY 2025–26`} />
+                    </div>
+
+                    {/* Body */}
+                    <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[28px] flex flex-col gap-[24px]">
+
+                      {/* Summary row */}
+                      <div className="flex items-center gap-[20px]">
+                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
+                          <span className="font-bold text-[32px] leading-none text-[#6a3e31]" style={NS}>{totalScheduled}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_total_scheduled')}</span>
+                        </div>
+                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.15)]" />
+                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
+                          <span className="font-bold text-[32px] leading-none text-[#2e7d32]" style={NS}>{totalCompleted}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_completed')}</span>
+                        </div>
+                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.15)]" />
+                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
+                          <span className="font-bold text-[32px] leading-none text-[#c62828]" style={NS}>{totalPending}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_pending')}</span>
+                        </div>
+                      </div>
+
+                      {/* Per-group rows */}
+                      <div className="flex flex-col gap-[14px]">
+                        {groups.map(g => {
+                          const pct = g.total > 0 ? Math.round((g.done / g.total) * 100) : 0;
+                          const pending = g.total - g.done;
+                          return (
+                            <div key={g.label} className="flex flex-col gap-[6px]">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-[14px] text-[#4b4b4b]" style={NS}>{g.label}</span>
+                                <span className="font-medium text-[14px] text-[#727272]" style={NS}>
+                                  {g.done}/{g.total} &nbsp;·&nbsp; <span className="text-[#c62828]">{pending} {t('tracker_pending')}</span>
+                                </span>
+                              </div>
+                              <div className="h-[6px] rounded-full bg-[rgba(106,62,49,0.1)] overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#2e7d32' : pct > 50 ? '#6a3e31' : '#c62828' }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Pulsing pending reminder */}
+                      {totalPending > 0 && (
+                        <div className="flex items-center gap-[10px] bg-[rgba(198,40,40,0.06)] border border-[rgba(198,40,40,0.2)] rounded-[10px] px-[16px] py-[12px]">
+                          <span className="animate-pulse text-[20px] leading-none shrink-0">⏰</span>
+                          <span className="font-semibold text-[14px] text-[#c62828]" style={NS}>
+                            {t('tracker_reminder').replace('{n}', String(totalPending))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ── Section 4: Mandatory Meetings ── */}
               <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
                 {/* Header */}

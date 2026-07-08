@@ -60,19 +60,18 @@ function AgendaVoteCard({ index, heading, description, proceedings, vote, border
   tEmpty: string;
 }) {
   const wrapCls = bordered
-    ? 'border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] pt-[8px] pb-[15px]'
+    ? 'border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[12px]'
     : 'px-[0px] pt-[0px] pb-[0px]';
 
   return (
     <div className={`flex flex-col gap-[8px] ${wrapCls}`}>
       {/* Agenda header row: number circle + heading/desc + vote pill */}
-      <div className="flex items-start gap-[15px] pt-[3px]">
+      <div className="flex items-center gap-[15px]">
         <div className="bg-[#efe0dc] flex items-center justify-center rounded-full size-[32px] shrink-0">
           <span className="font-medium text-[14px] text-[#6a3e31] text-center" style={NS}>{index}</span>
         </div>
         <div className="flex flex-col flex-1 min-w-0">
           <span className="font-medium text-[14px] text-[#4b4b4b] leading-6" style={NS}>{heading}</span>
-          {description && <span className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>{description}</span>}
         </div>
         {/* Vote pill */}
         {vote === 'agree' && (
@@ -92,12 +91,6 @@ function AgendaVoteCard({ index, heading, description, proceedings, vote, border
             <span className="text-[11px] font-medium text-[#727272] whitespace-nowrap" style={NS}>{tNone}</span>
           </div>
         )}
-      </div>
-      {/* Proceedings box — indented to align with heading text (32px circle + 15px gap) */}
-      <div className="ml-[47px] bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[10px]">
-        <p className="font-normal text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
-          {proceedings || <span className="text-[#b0b0b0]">{tEmpty}</span>}
-        </p>
       </div>
     </div>
   );
@@ -156,6 +149,38 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
               <span className="text-[13px] text-[#4b4b4b] leading-[18px]" style={NS}>{tDesignation(row.designation)}</span>
             </div>
           </div>
+          {/* Overview bar */}
+          {(() => {
+            const total = agendaItems.length;
+            const agreed = agendaItems.filter(a => {
+              const p = (savedVotes[a.id] ?? []).find(p => p.id === row.id);
+              return p?.vote === 'agree';
+            }).length;
+            const disagreed = agendaItems.filter(a => {
+              const p = (savedVotes[a.id] ?? []).find(p => p.id === row.id);
+              return p?.vote === 'disagree';
+            }).length;
+            return (
+              <div className="flex items-center gap-[20px] bg-[rgba(106,62,49,0.05)] rounded-[10px] px-[20px] py-[12px] mb-[24px]">
+                <div className="flex items-center gap-[5px]">
+                  <span className="text-[14px] font-medium text-[#6a3e31]" style={NS}>{t('bio_modal_overview_total')}:</span>
+                  <span className="text-[14px] font-bold text-[#6a3e31]" style={NS}>{total}</span>
+                </div>
+                <div className="w-px h-[20px] bg-[rgba(106,62,49,0.2)]" />
+                <div className="flex items-center gap-[5px]">
+                  <Icon name="check" size="small" color="#2e7d32" />
+                  <span className="text-[14px] font-medium text-[#6a3e31]" style={NS}>{t('bio_modal_overview_agreed')}:</span>
+                  <span className="text-[14px] font-bold text-[#2e7d32]" style={NS}>{agreed}</span>
+                </div>
+                <div className="w-px h-[20px] bg-[rgba(106,62,49,0.2)]" />
+                <div className="flex items-center gap-[5px]">
+                  <Icon name="close" size="small" color="#c62828" />
+                  <span className="text-[14px] font-medium text-[#6a3e31]" style={NS}>{t('bio_modal_overview_disagreed')}:</span>
+                  <span className="text-[14px] font-bold text-[#c62828]" style={NS}>{disagreed}</span>
+                </div>
+              </div>
+            );
+          })()}
           <p className="text-[13px] font-semibold text-[#4b4b4b] mb-[20px]" style={NS}>{t('bio_modal_agendas_label')}</p>
           {agendaItems.map((agenda, idx) => {
             const participants = savedVotes[agenda.id] ?? [];
@@ -176,7 +201,7 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
                   tEmpty={t('bio_modal_proceedings_empty')}
                 />
                 {idx < agendaItems.length - 1 && (
-                  <div className="border-b border-[#c6c6c6] mt-[30px] mb-[30px]" />
+                  <div className="border-b border-[#c6c6c6] mt-[14px] mb-[14px]" />
                 )}
               </div>
             );
@@ -287,9 +312,12 @@ export default function AttendanceScreenV2() {
   const location = useLocation();
   const { pathname } = location;
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
-  const { openingAbsentIds, closureRows, setClosureRows, savedVotes, meetingAgendas } = useMeetings();
+  const { meetings, updateMeeting, openingAbsentIds, closureRows, setClosureRows, savedVotes, meetingAgendas } = useMeetings();
   const { agendaItems: globalAgendaItems } = useAgenda();
   const isClosureRoute = pathname === '/meetings/closure-attendance';
+  const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : undefined;
+  // Closure attendance is step 4 — once proceeded past (stepsCompleted >= 4), never celebrate again.
+  const celebrationLocked = (currentMeeting?.stepsCompleted ?? 0) >= 4;
 
   const [biometricModalRow, setBiometricModalRow] = useState<ClosureRow | null>(null);
 
@@ -326,13 +354,9 @@ export default function AttendanceScreenV2() {
   }
 
   function markStatus(id: number, s: 'present' | 'absent' | 'unmarked') {
-    if (s === 'unmarked') {
-      update(id, { status: 'unmarked', biometric: 'none', reason: '' });
-    } else if (s === 'present') {
-      update(id, { status: 'present', biometric: 'none', reason: '' });
-    } else {
-      update(id, { status: 'absent', biometric: 'none', reason: '' });
-    }
+    const row = rows.find(r => r.id === id);
+    const next = (s !== 'unmarked' && row?.status === s) ? 'unmarked' : s;
+    update(id, { status: next, biometric: 'none', reason: '' });
   }
 
   function openBiometricModal(id: number) {
@@ -354,6 +378,7 @@ export default function AttendanceScreenV2() {
     }
   }
 
+  const allPresent = rows.every(r => r.status === 'present');
   function markAllPresent() {
     setRows(prev => prev.map(r => ({ ...r, status: 'present' as AttendanceStatus, biometric: 'none' as BiometricStatus, reason: '' })));
   }
@@ -447,6 +472,7 @@ export default function AttendanceScreenV2() {
                   total={electedTotal} present={electedPresent} absent={electedTotal - electedPresent} unmarked={electedRows.filter(r => r.status === 'unmarked').length}
                   noBiometricCount={noBiometricCount} quorumPct={quorumPct} quorumMet={quorumMet}
                   quorumRequired={QUORUM_PERCENT}
+                  celebrationLocked={celebrationLocked}
                 />
 
                 {/* Search + filter */}
@@ -492,9 +518,18 @@ export default function AttendanceScreenV2() {
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_email')}</span>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <div className="flex items-center gap-[8px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal shrink-0" style={NS}>{t('attendance_col_attendance')}</span>
+                          <button
+                            type="button"
+                            onClick={allPresent ? unmarkAll : markAllPresent}
+                            className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] transition-colors whitespace-nowrap shrink-0"
+                            style={NS}
+                          >
+                            <Icon name="check" size="small" color="#388e3c" />
+                            {allPresent ? t('attendance_clear_all') : t('attendance_mark_all_present')}
+                          </button>
                         </div>
                       </th>
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
@@ -667,7 +702,12 @@ export default function AttendanceScreenV2() {
                   iconName="arrow_forward"
                   text={t('btn_proceed_next')}
                   state={canProceed ? 'default' : 'disabled'}
-                  onClick={canProceed ? () => navigate(isClosureRoute ? '/meetings/send-to-president' : '/agenda-list', { state: { meetingId } }) : undefined}
+                  onClick={canProceed ? () => {
+                    if (isClosureRoute && meetingId != null && (currentMeeting?.stepsCompleted ?? 0) < 4) {
+                      updateMeeting(meetingId, { stepsCompleted: 4 });
+                    }
+                    navigate(isClosureRoute ? '/meetings/send-to-president' : '/agenda-list', { state: { meetingId } });
+                  } : undefined}
                 />
               </div>
       </MeetingShellLayout>

@@ -34,6 +34,7 @@ export default function SignNoticeScreen() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [signed,      setSigned]      = useState(false);
   const [signedAt,    setSignedAt]    = useState('');
+  const [noticePage,  setNoticePage]  = useState<1 | 2>(1);
 
   const noticeRef = useRef<HTMLDivElement>(null);
 
@@ -177,25 +178,47 @@ export default function SignNoticeScreen() {
               </div>
               {/* Body */}
               <div className="px-[25px] pt-[20px] pb-[25px]">
-                <div
-                  ref={noticeRef}
-                  className="max-w-[760px] mx-auto shadow-[0_2px_12px_rgba(0,0,0,0.10)] overflow-hidden"
-                >
-                  <NoticeDocumentView
-                    meetingTitle={meetingTitle}
-                    meetingType={meetingType}
-                    meetingDate={meetingDate}
-                    meetingTime={meetingTime}
-                    meetingVenue={meetingVenue}
-                    chairperson={chairperson}
-                    agendas={agendas}
-                    participants={participants}
-                    printDate={printDate}
-                    signed={signed}
-                    signerName={signerName}
-                    signerDesig={signerDesig}
-                    signedAt={signedAt}
-                  />
+                <div className="max-w-[760px] mx-auto w-full flex flex-col gap-3">
+                  <div ref={noticeRef} className="shadow-[0_2px_12px_rgba(0,0,0,0.10)]">
+                    <NoticeDocumentView
+                      meetingTitle={meetingTitle}
+                      meetingType={meetingType}
+                      meetingDate={meetingDate}
+                      meetingTime={meetingTime}
+                      meetingVenue={meetingVenue}
+                      chairperson={chairperson}
+                      agendas={agendas}
+                      participants={participants}
+                      printDate={printDate}
+                      signed={signed}
+                      signerName={signerName}
+                      signerDesig={signerDesig}
+                      signedAt={signedAt}
+                      page={noticePage}
+                    />
+                  </div>
+                  {/* Pagination */}
+                  <div className="flex items-center justify-center gap-[12px]">
+                    <button
+                      type="button"
+                      disabled={noticePage === 1}
+                      onClick={() => setNoticePage(1)}
+                      className="flex items-center justify-center size-[32px] rounded-full border border-[#c6c6c6] bg-white disabled:opacity-30 hover:bg-[#f5f0ee] transition-colors"
+                    >
+                      <Icon name="chevron_left" size="small" color="#6a3e31" />
+                    </button>
+                    <span className="text-[12px] font-medium text-[#454545]" style={NS}>
+                      {noticePage} / 2
+                    </span>
+                    <button
+                      type="button"
+                      disabled={noticePage === 2}
+                      onClick={() => setNoticePage(2)}
+                      className="flex items-center justify-center size-[32px] rounded-full border border-[#c6c6c6] bg-white disabled:opacity-30 hover:bg-[#f5f0ee] transition-colors"
+                    >
+                      <Icon name="chevron_right" size="small" color="#6a3e31" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -330,85 +353,100 @@ interface NoticeProps {
   signerName: string;
   signerDesig: string;
   signedAt: string;
+  page: 1 | 2;
 }
 
 function NoticeDocumentView(p: NoticeProps) {
   const { t } = useLanguage();
-  return (
-    <div className="bg-white font-['Noto_Sans'] text-[13px] text-[#1a1a1a]">
-      {/* Govt header */}
-      <div className="flex flex-col items-center gap-[6px] px-[40px] py-[24px] border-b border-[#d0d0d0]">
-        <GovtEmblem />
-        <p className="font-bold text-[13px] text-center text-[#1a237e]" style={NS}>ಕರ್ನಾಟಕ ಸರ್ಕಾರ</p>
-        <p className="text-[12px] text-center text-[#3b3b3b]" style={NS}>ಗ್ರಾಮೀಣಾಭಿವೃದ್ಧಿ ಮತ್ತು ಪಂಚಾಯತ್ ರಾಜ್ ಇಲಾಖೆ</p>
-        <p className="font-bold text-[18px] mt-[6px] text-[#1a1a1a] underline" style={NS}>ಸಭೆಯ ಸೂಚನೆ</p>
-        <p className="text-[11px] text-[#5a5a5a] italic" style={NS}>(Meeting Notice)</p>
-      </div>
 
-      {/* Details table */}
-      <div className="px-[40px] pt-[20px]">
-        <table className="w-full border-collapse border border-[#c0c0c0] text-[12px]">
-          <tbody>
-            {[
-              ['ಜಿಲ್ಲಾ ಪಂಚಾಯತಿ / District', 'Raichur', 'ತಾಲೂಕು ಪಂಚಾಯತಿ / Taluk', 'Kakanur'],
-              ['ಗ್ರಾಮ ಪಂಚಾಯತಿ / GP', 'Kakanur GP', 'ಪ್ರಕಾರ / Type', p.meetingType],
-              ['ದಿನಾಂಕ / Date', p.meetingDate, 'ಸಮಯ / Time', p.meetingTime],
-              ['ಸ್ಥಳ / Venue', p.meetingVenue, 'ಅಧ್ಯಕ್ಷರು / Chairperson', p.chairperson],
-            ].map((row, ri) => (
-              <tr key={ri}>
-                {row.map((cell, ci) => (
-                  <td
-                    key={ci}
-                    className={`border border-[#c0c0c0] px-[10px] py-[7px] ${ci % 2 === 0 ? 'bg-[#f5f0ef] font-medium text-[#5a3a2e] w-[22%]' : 'w-[28%]'}`}
-                    style={NS}
-                  >
-                    {cell}
+  const pageStyle = 'bg-white font-[\'Noto_Sans\'] text-[13px] text-[#1a1a1a] min-h-[1056px] box-border flex flex-col';
+
+  const govtHeader = (
+    <div className="flex flex-col items-center gap-[6px] px-[40px] py-[24px] border-b border-[#d0d0d0]">
+      <GovtEmblem />
+      <p className="font-bold text-[13px] text-center text-[#1a237e]" style={NS}>ಕರ್ನಾಟಕ ಸರ್ಕಾರ</p>
+      <p className="text-[12px] text-center text-[#3b3b3b]" style={NS}>ಗ್ರಾಮೀಣಾಭಿವೃದ್ಧಿ ಮತ್ತು ಪಂಚಾಯತ್ ರಾಜ್ ಇಲಾಖೆ</p>
+      <p className="font-bold text-[18px] mt-[6px] text-[#1a1a1a] underline" style={NS}>ಸಭೆಯ ಸೂಚನೆ</p>
+      <p className="text-[11px] text-[#5a5a5a] italic" style={NS}>(Meeting Notice)</p>
+    </div>
+  );
+
+  if (p.page === 1) {
+    return (
+      <div className={pageStyle}>
+        {govtHeader}
+
+        {/* Details table */}
+        <div className="px-[40px] pt-[20px]">
+          <table className="w-full border-collapse border border-[#c0c0c0] text-[12px]">
+            <tbody>
+              {[
+                ['ಜಿಲ್ಲಾ ಪಂಚಾಯತಿ / District', 'Raichur', 'ತಾಲೂಕು ಪಂಚಾಯತಿ / Taluk', 'Kakanur'],
+                ['ಗ್ರಾಮ ಪಂಚಾಯತಿ / GP', 'Kakanur GP', 'ಪ್ರಕಾರ / Type', p.meetingType],
+                ['ದಿನಾಂಕ / Date', p.meetingDate, 'ಸಮಯ / Time', p.meetingTime],
+                ['ಸ್ಥಳ / Venue', p.meetingVenue, 'ಅಧ್ಯಕ್ಷರು / Chairperson', p.chairperson],
+              ].map((row, ri) => (
+                <tr key={ri}>
+                  {row.map((cell, ci) => (
+                    <td
+                      key={ci}
+                      className={`border border-[#c0c0c0] px-[10px] py-[7px] ${ci % 2 === 0 ? 'bg-[#f5f0ef] font-medium text-[#5a3a2e] w-[22%]' : 'w-[28%]'}`}
+                      style={NS}
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Meeting title */}
+        <div className="px-[40px] pt-[16px]">
+          <p className="font-semibold text-[14px] text-[#1a1a1a]" style={NS}>{p.meetingTitle}</p>
+        </div>
+
+        {/* Agenda table */}
+        <div className="px-[40px] pt-[16px]">
+          <p className="font-semibold text-[13px] underline mb-[8px]" style={NS}>ಸಭೆಯ ಕಾರ್ಯಸೂಚಿ / Meeting Agenda:</p>
+          <table className="w-full border-collapse border border-[#c0c0c0] text-[12px]">
+            <thead>
+              <tr className="bg-[#f5f0ef]">
+                <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e] w-[60px]" style={NS}>ಕ್ರ.ಸಂ.</th>
+                <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e]" style={NS}>ವಿಷಯ / Subject</th>
+                <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e] w-[180px]" style={NS}>ಸೂಚನೆ / Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {p.agendas.length > 0 ? p.agendas.map((a, i) => (
+                <tr key={a.id}>
+                  <td className="border border-[#c0c0c0] px-[10px] py-[7px] text-center" style={NS}>{i + 1}</td>
+                  <td className="border border-[#c0c0c0] px-[10px] py-[7px]" style={NS}>
+                    <span className="font-medium">{a.title}</span>
+                    {a.description && <span className="block text-[11px] text-[#5a5a5a] mt-[2px]">{a.description}</span>}
                   </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td className="border border-[#c0c0c0] px-[10px] py-[7px]" style={NS}></td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan={3} className="border border-[#c0c0c0] px-[10px] py-[7px] text-center text-[#727272]" style={NS}>No agenda items</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+    );
+  }
 
-      {/* Meeting title */}
-      <div className="px-[40px] pt-[16px]">
-        <p className="font-semibold text-[14px] text-[#1a1a1a]" style={NS}>{p.meetingTitle}</p>
-      </div>
-
-      {/* Agenda table */}
-      <div className="px-[40px] pt-[16px]">
-        <p className="font-semibold text-[13px] underline mb-[8px]" style={NS}>ಸಭೆಯ ಕಾರ್ಯಸೂಚಿ / Meeting Agenda:</p>
-        <table className="w-full border-collapse border border-[#c0c0c0] text-[12px]">
-          <thead>
-            <tr className="bg-[#f5f0ef]">
-              <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e] w-[60px]" style={NS}>ಕ್ರ.ಸಂ.</th>
-              <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e]" style={NS}>ವಿಷಯ / Subject</th>
-              <th className="border border-[#c0c0c0] px-[10px] py-[7px] text-left font-semibold text-[#5a3a2e] w-[180px]" style={NS}>ಸೂಚನೆ / Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {p.agendas.length > 0 ? p.agendas.map((a, i) => (
-              <tr key={a.id}>
-                <td className="border border-[#c0c0c0] px-[10px] py-[7px] text-center" style={NS}>{i + 1}</td>
-                <td className="border border-[#c0c0c0] px-[10px] py-[7px]" style={NS}>
-                  <span className="font-medium">{a.title}</span>
-                  {a.description && <span className="block text-[11px] text-[#5a5a5a] mt-[2px]">{a.description}</span>}
-                </td>
-                <td className="border border-[#c0c0c0] px-[10px] py-[7px]" style={NS}></td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={3} className="border border-[#c0c0c0] px-[10px] py-[7px] text-center text-[#727272]" style={NS}>No agenda items</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+  return (
+    <div className={pageStyle}>
+      {govtHeader}
 
       {/* Participants */}
       {p.participants.length > 0 && (
-        <div className="px-[40px] pt-[16px]">
+        <div className="px-[40px] pt-[24px]">
           <p className="font-semibold text-[13px] underline mb-[8px]" style={NS}>ಭಾಗವಹಿಸುವವರ ಪಟ್ಟಿ / Participants:</p>
           <table className="w-full border-collapse border border-[#c0c0c0] text-[12px]">
             <thead>
@@ -432,7 +470,7 @@ function NoticeDocumentView(p: NoticeProps) {
       )}
 
       {/* Signature block */}
-      <div className="px-[40px] pt-[24px] pb-[30px]">
+      <div className="px-[40px] pt-[24px] pb-[30px] mt-auto">
         {p.signed ? (
           <div className="flex flex-col items-end gap-[4px]">
             <div className="flex items-center gap-[6px] text-[#2e7d32]">
@@ -457,9 +495,9 @@ function NoticeDocumentView(p: NoticeProps) {
   );
 }
 
-// ── Print-only version ────────────────────────────────────────────────────────
+// ── Print-only version — renders everything in one flow; browser handles pagination ──
 
-function NoticePrintContent(p: NoticeProps) {
+function NoticePrintContent(p: Omit<NoticeProps, 'page'>) {
   const { t } = useLanguage();
   return (
     <div style={{ fontFamily: 'Noto Sans, sans-serif', fontSize: '13px', padding: '40px', color: '#1a1a1a' }}>

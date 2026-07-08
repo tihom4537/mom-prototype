@@ -68,11 +68,11 @@ export default function ViewProceedingsModal({
         <div className="bg-white flex flex-col gap-[30px] items-start px-[30px] pt-[25px] pb-[35px] overflow-y-auto">
 
           {/* Agenda card — subpage style */}
-          <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] flex flex-col gap-[8px] px-[15px] pt-[8px] pb-[15px] w-full">
+          <div className="border border-[rgba(106,62,49,0.24)] rounded-[8px] px-[15px] py-[12px] flex flex-col gap-[8px] w-full">
 
             {/* Agenda header row */}
-            <div className="flex items-start pt-[3px] w-full">
-              <div className="flex flex-1 gap-[15px] items-start min-w-0">
+            <div className="flex items-center w-full">
+              <div className="flex flex-1 gap-[15px] items-center min-w-0">
                 <NumberCircle type="subpage" number={String(agendaNumber)} />
                 <div className="flex flex-col flex-1 min-w-0">
                   <p
@@ -81,14 +81,6 @@ export default function ViewProceedingsModal({
                   >
                     {agendaHeading}
                   </p>
-                  {agendaDescription && (
-                    <p
-                      className="text-[12px] font-normal text-[#3b3b3b] leading-[20px]"
-                      style={NS}
-                    >
-                      {agendaDescription}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -102,10 +94,10 @@ export default function ViewProceedingsModal({
                     className={`flex min-h-[40px] ${idx < arr.length - 1 ? 'border-b border-[rgba(106,62,49,0.14)]' : ''}`}
                   >
                     <div className="w-[150px] shrink-0 bg-[#faf7f6] px-[12px] py-[10px] border-r border-[rgba(106,62,49,0.14)]">
-                      <span className="text-[11px] font-semibold text-[#6a3e31] leading-[16px]" style={NS}>{label}</span>
+                      <span className="text-[12px] font-semibold text-[#6a3e31] leading-[16px]" style={NS}>{label}</span>
                     </div>
                     <div className="flex-1 bg-[rgba(221,221,221,0.1)] px-[12px] py-[10px]">
-                      <p className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
+                      <p className="text-[13px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
                         {value || <span className="text-[#bdbdbd] italic">—</span>}
                       </p>
                     </div>
@@ -113,7 +105,7 @@ export default function ViewProceedingsModal({
                 ))
               ) : (
                 <div className="bg-[rgba(221,221,221,0.15)] px-[15px] pt-[8px] pb-[10px]">
-                  <p className="text-[12px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
+                  <p className="text-[13px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
                     {proceedingsText || <span className="text-[#727272] italic">{t('view_proceedings_empty')}</span>}
                   </p>
                 </div>
