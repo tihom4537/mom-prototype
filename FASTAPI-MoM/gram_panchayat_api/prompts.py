@@ -94,16 +94,16 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
     shape must be specified in the prompt text itself (see the format block below).
     `feedback_language` ('{feedback_language}') determines the language for all output.
     """
-    lang_instruction = ""
+    # CRITICAL: Put language instruction at the very beginning
     if feedback_language.lower() == 'kn':
-        lang_instruction = "\n\n🌐 LANGUAGE: The user selected KANNADA. Return ALL feedback, suggestions, rewrite, and messages ENTIRELY IN KANNADA (ಕನ್ನಡ), not English."
-    elif feedback_language.lower() == 'en':
-        lang_instruction = "\n\n🌐 LANGUAGE: The user selected ENGLISH. Return all feedback in English."
+        lang_prefix = "🌐 CRITICAL INSTRUCTION: You MUST respond ENTIRELY IN KANNADA (ಕನ್ನಡ). Every single word, including feedback, suggestions, categories, and rewrite, must be in Kannada. Do NOT use English at all.\n\n"
+    else:
+        lang_prefix = "🌐 LANGUAGE: Respond in English.\n\n"
 
     return dedent(
         f"""
-        You are an AI assistant that reviews Gram Panchayat meeting minutes. You do TWO
-        things in one step:{lang_instruction}
+        {lang_prefix}You are an AI assistant that reviews Gram Panchayat meeting minutes. You do TWO
+        things in one step:
 
         STEP 1 — CLASSIFY: read the agenda item and minutes and assign the SINGLE best
         category from this fixed list (choose exactly one, using the exact label):
