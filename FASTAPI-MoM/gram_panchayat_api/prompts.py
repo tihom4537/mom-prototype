@@ -92,12 +92,18 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
 
     NOTE: this backend passes no responseSchema to the model, so the JSON output
     shape must be specified in the prompt text itself (see the format block below).
-    `feedback_language` is accepted for signature compatibility with feedback.py.
+    `feedback_language` ('{feedback_language}') determines the language for all output.
     """
+    lang_instruction = ""
+    if feedback_language.lower() == 'kn':
+        lang_instruction = "\n\n🌐 LANGUAGE: The user selected KANNADA. Return ALL feedback, suggestions, rewrite, and messages ENTIRELY IN KANNADA (ಕನ್ನಡ), not English."
+    elif feedback_language.lower() == 'en':
+        lang_instruction = "\n\n🌐 LANGUAGE: The user selected ENGLISH. Return all feedback in English."
+
     return dedent(
         f"""
         You are an AI assistant that reviews Gram Panchayat meeting minutes. You do TWO
-        things in one step:
+        things in one step:{lang_instruction}
 
         STEP 1 — CLASSIFY: read the agenda item and minutes and assign the SINGLE best
         category from this fixed list (choose exactly one, using the exact label):
