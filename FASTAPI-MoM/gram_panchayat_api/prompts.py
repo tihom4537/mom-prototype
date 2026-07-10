@@ -87,8 +87,150 @@ def build_feedback_prompt(
 
 def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_language: str = 'en') -> str:
     """
-    Build the prompt for a single LLM call that categorizes and generates
-    fill-in-the-blank feedback with per-item span references to the original text.
+    Build the prompt for a single LLM call that both classifies the agenda item
+    and produces constructive, question/suggestion-style feedback plus a rewrite.
+
+    NOTE: this backend passes no responseSchema to the model, so the JSON output
+    shape must be specified in the prompt text itself (see the format block below).
+    `feedback_language` ('{feedback_language}') determines the language for all output.
+    """
+    # CRITICAL: Put language instruction at the very beginning
+    if feedback_language.lower() == 'kn':
+        lang_prefix = "🌐 CRITICAL INSTRUCTION: You MUST respond ENTIRELY IN KANNADA (ಕನ್ನಡ). Every single word, including feedback, suggestions, categories, and rewrite, must be in Kannada. Do NOT use English at all.\n\n"
+    else:
+        lang_prefix = "🌐 LANGUAGE: Respond in English.\n\n"
+
+    return dedent(
+        f"""
+        {lang_prefix}You are an AI assistant that reviews Gram Panchayat meeting minutes. You do TWO
+        things in one step:
+
+        STEP 1 — CLASSIFY: read the agenda item and minutes and assign the SINGLE best
+        category from this fixed list (choose exactly one, using the exact label):
+        - Issue / Grievance
+        - Review / Status
+        - Planning / Preparatory
+        - Information / Intimation
+        - Multi-Topic / Miscellaneous
+        - Other / Can't Categorize
+
+        STEP 2 — FEEDBACK: using ONLY that category's checklist below, give constructive
+        feedback to help the user write clearer, more detailed notes.
+
+        Key Instructions:
+        - Provide feedback as a list of separate points — each point is one item in the
+          feedback array. Keep each point a short, actionable suggestion — no long paragraphs.
+        - If the text is good, provide positive reinforcement.
+        - CRITICAL: This app is for a single, specific Panchayat. If the user mentions
+          "the panchayat," do not ask them to specify which one. Assume it is the correct
+          one. Absolutely do not suggest adding the name of the panchayat.
+
+        Feedback Guidelines:
+        - CRITICAL DISTINCTION — Use two different tones based on the nature of the gap:
+          1. CLARIFYING QUESTIONS (Direct): ONLY when the user HAS mentioned something but
+             it is unclear or incomplete. Ask directly. Do NOT start with "You mentioned...".
+             GOOD: "Could you specify what action was decided regarding this?"
+          2. SUGGESTIVE PROMPTS (Gentle): When an element is COMPLETELY ABSENT. Use
+             "If... it may be worth adding" phrasing ONLY here.
+          STRICT RULE — Before each point: did the user mention this? YES-but-vague →
+          direct question; NO/absent → gentle suggestive prompt. Never use direct
+          questions for things never mentioned.
+
+        - COMPREHENSION RULE: Re-read the full text first. Do NOT ask about something
+          already clearly answered, even if mentioned briefly.
+
+        - SPECIFICS RULE: When only a summary is given, ask for missing specifics — exact
+          figures/amounts, counts (how many applications/beneficiaries/items), specific
+          dates, named villages/locations, and reference numbers. Do NOT praise a section
+          whose key specifics (numbers, names, dates) are actually absent.
+
+        - REFERENCE-CONTENT RULE: When a circular, letter, notice, application, report, or
+          shared "information" is mentioned, ask what it contained, its reference number if
+          any, and what action/next step/responsibility resulted. "A circular was read" is
+          not complete on its own.
+
+        - RESPONSIBILITY RULE: Do NOT ask who is responsible when it is clearly the Gram
+          Panchayat as a body. EXCEPTION: when a SPECIFIC task/work/collection is assigned
+          (e.g. fee collection, completing toilets, a named officer/PDO action), ask who
+          specifically is accountable and by when.
+
+        - ROUTINE AGENDA RULE: Do NOT ask about standard routine items (PDO reading monthly
+          expenditure, secretary presenting accounts) unless something specific is genuinely
+          unclear. Flag only genuinely missing details like an unspecified time period.
+
+        - DECISION vs REQUEST GAP RULE: If the decision taken does not clearly address what
+          was requested, flag it: "The decision mentions X — could you clarify if this also
+          covers the request for Y?"
+
+        - CATEGORY RULE — Multi-Topic / Miscellaneous: handle per the Multi-Topic checklist
+          below — do NOT drill into individual sub-topics, only flag genuine
+          ambiguities/typos/errors, max 3-4 points.
+
+        - META-COMMENTARY RULE: Do NOT announce patterns ("This appears to be a batch of
+          complaints"). Just give feedback directly.
+
+        Category-Specific Feedback Checklist (apply the CRITICAL DISTINCTION):
+
+        **Issue / Grievance:** exact issue raised? discussion/response? decision or steps?
+        who is responsible for follow-up? timeline/next step? specific
+        locations/villages/areas affected?
+          Special Case — Batch Complaints: if it is a LIST of complaints/applications
+          resolved by one collective decision, comment ONLY on the collective resolution
+          (is it clearly stated? is "action as per rules" vague? any responsible person /
+          follow-up?), max 2-3 points.
+
+        **Review / Status:** what was reviewed? current status? delays/gaps/concerns?
+        instruction issued? further review needed? status update on previous resolutions
+        incl. action taken on each? findings quantified (social-audit
+        objections/recoveries/deficiencies, pending counts, sector-wise budget/financial
+        figures)?
+
+        **Planning / Preparatory:** what is planned? preparatory steps/proposals? who is
+        responsible? tentative timeline/target? final or subject to approval?
+
+        **Information / Intimation:** what info/instruction/update was shared? source?
+        clarification given? Do NOT invent a decision if only info was shared — but DO ask
+        for the specific content, figures, or source when vague or only summarized.
+
+        **Multi-Topic / Miscellaneous:** covers multiple topics. Do NOT add suggestive
+        prompts for missing elements. Do NOT drill into each sub-topic. Do NOT re-ask
+        well-explained sub-topics. ONLY flag genuine ambiguities/typos/errors. Max 3-4
+        points.
+
+        **Other / Can't Categorize:** subject/topic? discussion/info/action?
+        decision/approval/resolution? issues/concerns/objections? follow-up
+        action/timeline/responsible person?
+
+        STEP 3 — REWRITE: produce a suggested rewrite of the minutes discussion that applies
+        your feedback and improves clarity, completeness, and structure.
+        - Keep the actual decisions and facts already recorded; do NOT invent details that
+          were not stated (no fabricated names, dates, amounts, or places).
+        - Wherever a specific detail is missing but should be recorded (the same gaps your
+          feedback points out), insert a fill-in-the-blank placeholder using double square
+          brackets with a short label, e.g. [[ward number or location]], [[concrete
+          timeline]], [[names of members assigned]], [[estimated cost range]].
+        - Each placeholder must correspond to a real gap; do not add placeholders for
+          details already present. Write clean, official-record prose, not a list.
+
+        Agenda Subject: {agenda_subject}
+        Minutes Discussion: {mom_discussion}
+
+        Respond in exactly this JSON format (no extra text, no markdown):
+        {{
+          "category": "<one exact label from the six categories above>",
+          "reason": "<one short sentence explaining the classification>",
+          "feedback": ["<point 1>", "<point 2>", "..."],
+          "rewrite": "<suggested rewrite as official-record prose with [[placeholder]] markers>"
+        }}
+        """
+    ).strip()
+
+
+def _unused_legacy_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_language: str = 'en') -> str:
+    """
+    PRESERVED (not called): the previous span/mode/flag + bilingual prompt.
+    Kept here temporarily so the advanced design isn't lost while the simpler
+    question/suggestion prompt above is being trialled. Safe to delete or restore.
     """
     return dedent(
         f"""

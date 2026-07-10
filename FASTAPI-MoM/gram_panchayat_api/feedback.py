@@ -34,6 +34,7 @@ async def get_feedback(
     Returns:
         (category, reason, feedback_list, feedback_raw, failed, spans_list, modes_list, flag, flag_message, rewrite)
     """
+    logger.info(f"Feedback request: language='{feedback_language}', agenda='{agenda_subject}'")
     prompt = build_single_call_prompt(agenda_subject, mom_discussion, feedback_language)
 
     try:

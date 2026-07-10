@@ -654,13 +654,13 @@ export default function CreateMeetingScreen() {
                           key: 'slno',
                           label: t('participant_col_slno'),
                           width: 'w-[50px] shrink-0',
-                          render: (_v, row) => <span>{String((row as unknown as StaffMember & { _idx: number })._idx + 1)}</span>,
+                          render: (_v: unknown, row: Record<string, unknown>) => <span>{String((row as unknown as StaffMember & { _idx: number })._idx + 1)}</span>,
                         },
                         {
                           key: 'name',
                           label: t('participant_col_name'),
                           width: 'flex-1 min-w-[150px]',
-                          render: (_v, row) => {
+                          render: (_v: unknown, row: Record<string, unknown>) => {
                             const p = row as unknown as StaffMember;
                             return (
                               <div className="flex flex-col">
@@ -699,7 +699,7 @@ export default function CreateMeetingScreen() {
                           key: 'remove',
                           label: '',
                           width: 'w-[48px] shrink-0',
-                          render: (_v, row) => {
+                          render: (_v: unknown, row: Record<string, unknown>) => {
                             const p = row as unknown as StaffMember;
                             return (
                               <button
