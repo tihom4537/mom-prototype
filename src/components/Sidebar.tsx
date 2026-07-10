@@ -51,6 +51,11 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
       onParentClick: () => navigate('/meetings/overview'),
       subItems: [
         {
+          label: t('nav_meeting_module_overview'),
+          onClick: () => navigate('/meetings/overview'),
+          isActive: location.pathname === '/meetings/overview',
+        },
+        {
           label: t('nav_create_meeting'),
           onClick: () => navigate('/meetings/create'),
           isActive: location.pathname === '/meetings/create',

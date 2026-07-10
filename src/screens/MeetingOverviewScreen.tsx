@@ -31,25 +31,25 @@ type ActionItemData = {
 };
 
 const MONTHLY_CARDS_DATA: MC[] = [
-  { typeKey: 'mock_type_gp_general_ordinary',   completed: 1, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
-  { typeKey: 'mock_type_finance_committee',      completed: 1, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
-  { typeKey: 'mock_type_general_standing',       completed: 1, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
-  { typeKey: 'mock_type_social_justice',         completed: 0, total: 12, status: 'circle-overdue',  nextDueKey: 'mock_due_overdue_april' },
+  { typeKey: 'mock_type_gp_general_ordinary',   completed: 4, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
+  { typeKey: 'mock_type_finance_committee',      completed: 3, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
+  { typeKey: 'mock_type_general_standing',       completed: 4, total: 12, status: 'circle-due-soon', nextDueKey: 'mock_due_end_of_may' },
+  { typeKey: 'mock_type_social_justice',         completed: 2, total: 12, status: 'circle-overdue',  nextDueKey: 'mock_due_overdue_april' },
 ];
 
 const SEMI_ANNUAL_CARDS_DATA: MC[] = [
-  { typeKey: 'mock_type_grama_sabha_ordinary',       completed: 0, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_october' },
-  { typeKey: 'mock_type_ward_sabha_ordinary',        completed: 0, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_september' },
-  { typeKey: 'mock_type_habitation_sabha_ordinary',  completed: 0, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_october' },
+  { typeKey: 'mock_type_grama_sabha_ordinary',       completed: 1, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_october' },
+  { typeKey: 'mock_type_ward_sabha_ordinary',        completed: 1, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_september' },
+  { typeKey: 'mock_type_habitation_sabha_ordinary',  completed: 1, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_october' },
   { typeKey: 'mock_type_habitation_sabha_emergency', completed: 0, total: 2, status: 'circle-on-track', nextDueKey: 'mock_due_as_required' },
 ];
 
 const FIXED_DATE_CARDS_DATA: MC[] = [
-  { typeKey: 'mock_type_grama_sabha_budget',   completed: 0, total: 2, status: 'circle-overdue',  nextDueKey: 'mock_due_april_missed_oct' },
-  { typeKey: 'mock_type_kdp_meeting',          completed: 0, total: 4, status: 'circle-overdue',  nextDueKey: 'mock_due_april_missed_jul' },
-  { typeKey: 'mock_type_makkala_sabha',        completed: 0, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_by_march' },
+  { typeKey: 'mock_type_grama_sabha_budget',   completed: 1, total: 2, status: 'circle-overdue',  nextDueKey: 'mock_due_april_missed_oct' },
+  { typeKey: 'mock_type_kdp_meeting',          completed: 2, total: 4, status: 'circle-overdue',  nextDueKey: 'mock_due_april_missed_jul' },
+  { typeKey: 'mock_type_makkala_sabha',        completed: 1, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_by_march' },
   { typeKey: 'mock_type_mahila_sabha',         completed: 0, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_by_march' },
-  { typeKey: 'mock_type_grama_sabha_special',  completed: 0, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_min_3months' },
+  { typeKey: 'mock_type_grama_sabha_special',  completed: 1, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_min_3months' },
   { typeKey: 'mock_type_ward_sabha_special',   completed: 0, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_min_3months' },
   { typeKey: 'mock_type_habitation_sabha_special', completed: 0, total: 1, status: 'circle-on-track', nextDueKey: 'mock_due_min_3months' },
 ];
@@ -147,36 +147,130 @@ export default function MeetingOverviewScreen() {
                 />
               </div>
 
-              {/* ── Section 2: Quick Actions ── */}
-              <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
-                {/* Header */}
-                <div className="bg-white flex items-center px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
-                  <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
-                    {t('section_quick_actions')}
-                  </span>
-                </div>
-                {/* Body */}
-                <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[30px]">
-                  <div className="flex gap-[20px] flex-wrap">
-                    <QuickActionCard
-                      title={t('quick_action_schedule_title')}
-                      description={t('quick_action_schedule_desc')}
-                      onClick={() => navigate('/meetings/create')}
-                    />
-                    <QuickActionCard
-                      title={t('quick_action_view_all_title')}
-                      description={t('quick_action_view_all_desc')}
-                      icon="format_list_bulleted"
-                      onClick={() => navigate('/meetings/list')}
-                    />
-                    <QuickActionCard
-                      title={t('quick_action_calendar_title')}
-                      description={t('quick_action_calendar_desc')}
-                      icon="calendar_month"
-                      onClick={() => navigate('/meetings/calendar')}
-                    />
+              {/* ── Section 2: Quick Actions + Meeting Tracker (side by side, both hug content) ── */}
+              <div className="flex items-stretch gap-[20px] flex-wrap">
+
+                {/* Quick Actions */}
+                <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden w-fit">
+                  {/* Header */}
+                  <div className="bg-white flex items-center px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] shrink-0">
+                    <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
+                      {t('section_quick_actions')}
+                    </span>
+                  </div>
+                  {/* Body */}
+                  <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[30px] flex-1 flex items-start">
+                    <div className="flex gap-[20px] flex-wrap">
+                      <QuickActionCard
+                        title={t('quick_action_schedule_title')}
+                        description={t('quick_action_schedule_desc')}
+                        onClick={() => navigate('/meetings/create')}
+                      />
+                      <QuickActionCard
+                        title={t('quick_action_view_all_title')}
+                        description={t('quick_action_view_all_desc')}
+                        icon="format_list_bulleted"
+                        onClick={() => navigate('/meetings/list')}
+                      />
+                      <QuickActionCard
+                        title={t('quick_action_calendar_title')}
+                        description={t('quick_action_calendar_desc')}
+                        icon="calendar_month"
+                        onClick={() => navigate('/meetings/calendar')}
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Meeting Tracker — plain card, not a full section */}
+                {(() => {
+                  const totalScheduled  = allCards.reduce((s, c) => s + c.total, 0);
+                  const totalCompleted  = allCards.reduce((s, c) => s + c.completed, 0);
+                  const totalPending    = totalScheduled - totalCompleted;
+                  const monthlyTotal    = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                  const monthlyDone     = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+                  const semiTotal       = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                  const semiDone        = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+                  const fixedTotal      = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.total, 0);
+                  const fixedDone       = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
+
+                  const groups = [
+                    { label: t('mandatory_group_monthly'),    total: monthlyTotal, done: monthlyDone },
+                    { label: t('mandatory_group_semi_annual'), total: semiTotal,   done: semiDone },
+                    { label: t('mandatory_group_fixed_date'), total: fixedTotal,   done: fixedDone },
+                  ];
+
+                  return (
+                    <div className="bg-[#FFEEEA] border border-[#FF8B78] rounded-[16px] px-[25px] pt-[20px] pb-[25px] flex flex-col gap-[20px] flex-1 min-w-[380px]">
+                      {/* Title */}
+                      <div className="flex items-center gap-[10px]">
+                        <span className="font-semibold text-[18px] leading-[22px] text-[#6a3e31]" style={NS}>
+                          {t('tracker_title')}
+                        </span>
+                        <AgendaNoLabel type="default" text="FY 2025–26" />
+                      </div>
+
+                      {/* Summary row */}
+                      <div className="flex items-center gap-[20px]">
+                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
+                          <span className="font-bold text-[28px] leading-none text-[#6a3e31]" style={NS}>{totalScheduled}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_total_scheduled')}</span>
+                        </div>
+                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.2)]" />
+                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
+                          <span className="font-bold text-[28px] leading-none" style={{ ...NS, color: 'var(--success-500)' }}>{totalCompleted}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_completed')}</span>
+                        </div>
+                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.2)]" />
+                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
+                          <span className="font-bold text-[28px] leading-none text-[#c62828]" style={NS}>{totalPending}</span>
+                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_pending')}</span>
+                        </div>
+                      </div>
+
+                      {/* Per-group rows */}
+                      <div className="flex flex-col gap-[14px]">
+                        {groups.map(g => {
+                          const donePct    = g.total > 0 ? (g.done / g.total) * 100 : 0;
+                          const pendingPct = 100 - donePct;
+                          const pending    = g.total - g.done;
+                          return (
+                            <div key={g.label} className="flex flex-col gap-[6px]">
+                              <div className="flex items-center justify-between">
+                                <span className="font-medium text-[14px] text-[#4b4b4b]" style={NS}>{g.label}</span>
+                                <span className="font-medium text-[14px] text-[#727272]" style={NS}>
+                                  <span style={{ color: 'var(--success-500)' }}>{g.done} {t('tracker_completed')}</span>
+                                  &nbsp;·&nbsp;
+                                  <span className="text-[#c62828]">{pending} {t('tracker_pending')}</span>
+                                </span>
+                              </div>
+                              {/* Split bar: green completed | grey pending */}
+                              <div className="h-[7px] rounded-full overflow-hidden flex">
+                                {donePct > 0 && (
+                                  <div className="h-full transition-all duration-500" style={{ width: `${donePct}%`, backgroundColor: 'var(--success-500)' }} />
+                                )}
+                                {pendingPct > 0 && (
+                                  <div className="h-full transition-all duration-500" style={{ width: `${pendingPct}%`, backgroundColor: '#c6c6c6' }} />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Pulsing pending reminder */}
+                      {totalPending > 0 && (
+                        <div className="flex items-center gap-[10px] bg-white border border-[#FFCDC0] rounded-[10px] px-[14px] py-[10px]">
+                          <span className="animate-pulse text-[18px] leading-none shrink-0">⏰</span>
+                          <span className="font-semibold text-[14px] text-[#c62828]" style={NS}>
+                            {t('tracker_reminder').replace('{n}', String(totalPending))}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
               </div>
 
               {/* ── Section 2b: Draft Reminders ── */}
@@ -237,93 +331,6 @@ export default function MeetingOverviewScreen() {
                   ))}
                 </div>
               </div>
-
-              {/* ── Section 3b: Meeting Tracker ── */}
-              {(() => {
-                const totalScheduled  = allCards.reduce((s, c) => s + c.total, 0);
-                const totalCompleted  = allCards.reduce((s, c) => s + c.completed, 0);
-                const totalPending    = totalScheduled - totalCompleted;
-                const monthlyTotal    = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.total, 0);
-                const monthlyDone     = MONTHLY_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
-                const semiTotal       = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.total, 0);
-                const semiDone        = SEMI_ANNUAL_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
-                const fixedTotal      = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.total, 0);
-                const fixedDone       = FIXED_DATE_CARDS_DATA.reduce((s, c) => s + c.completed, 0);
-
-                const groups = [
-                  { label: t('mandatory_group_monthly'),    total: monthlyTotal, done: monthlyDone },
-                  { label: t('mandatory_group_semi_annual'), total: semiTotal,   done: semiDone },
-                  { label: t('mandatory_group_fixed_date'), total: fixedTotal,   done: fixedDone },
-                ];
-
-                return (
-                  <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-white flex items-center gap-[15px] px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px]">
-                      <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
-                        {t('section_meeting_tracker')}
-                      </span>
-                      <AgendaNoLabel type="default" text={`FY 2025–26`} />
-                    </div>
-
-                    {/* Body */}
-                    <div className="bg-white rounded-bl-[20px] rounded-br-[20px] px-[30px] pt-[20px] pb-[28px] flex flex-col gap-[24px]">
-
-                      {/* Summary row */}
-                      <div className="flex items-center gap-[20px]">
-                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
-                          <span className="font-bold text-[32px] leading-none text-[#6a3e31]" style={NS}>{totalScheduled}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_total_scheduled')}</span>
-                        </div>
-                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.15)]" />
-                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
-                          <span className="font-bold text-[32px] leading-none text-[#2e7d32]" style={NS}>{totalCompleted}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_completed')}</span>
-                        </div>
-                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.15)]" />
-                        <div className="flex flex-col items-center gap-[2px] min-w-[80px]">
-                          <span className="font-bold text-[32px] leading-none text-[#c62828]" style={NS}>{totalPending}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_pending')}</span>
-                        </div>
-                      </div>
-
-                      {/* Per-group rows */}
-                      <div className="flex flex-col gap-[14px]">
-                        {groups.map(g => {
-                          const pct = g.total > 0 ? Math.round((g.done / g.total) * 100) : 0;
-                          const pending = g.total - g.done;
-                          return (
-                            <div key={g.label} className="flex flex-col gap-[6px]">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-[14px] text-[#4b4b4b]" style={NS}>{g.label}</span>
-                                <span className="font-medium text-[14px] text-[#727272]" style={NS}>
-                                  {g.done}/{g.total} &nbsp;·&nbsp; <span className="text-[#c62828]">{pending} {t('tracker_pending')}</span>
-                                </span>
-                              </div>
-                              <div className="h-[6px] rounded-full bg-[rgba(106,62,49,0.1)] overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-500"
-                                  style={{ width: `${pct}%`, backgroundColor: pct === 100 ? '#2e7d32' : pct > 50 ? '#6a3e31' : '#c62828' }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Pulsing pending reminder */}
-                      {totalPending > 0 && (
-                        <div className="flex items-center gap-[10px] bg-[rgba(198,40,40,0.06)] border border-[rgba(198,40,40,0.2)] rounded-[10px] px-[16px] py-[12px]">
-                          <span className="animate-pulse text-[20px] leading-none shrink-0">⏰</span>
-                          <span className="font-semibold text-[14px] text-[#c62828]" style={NS}>
-                            {t('tracker_reminder').replace('{n}', String(totalPending))}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
 
               {/* ── Section 4: Mandatory Meetings ── */}
               <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden">

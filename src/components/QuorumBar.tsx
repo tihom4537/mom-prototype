@@ -121,8 +121,8 @@ export default function QuorumBar({
 
   return (
     <div className="flex flex-col gap-[14px] bg-[rgba(106,62,49,0.05)] rounded-[10px] px-[20px] py-[12px] w-full">
-      <div className="flex items-center justify-between gap-[24px]">
-        <div className="flex items-center gap-[20px] shrink-0">
+      <div className="flex items-center flex-wrap justify-between gap-x-[24px] gap-y-[10px]">
+        <div className="flex items-center flex-wrap gap-x-[20px] gap-y-[8px]">
           <StatChip label={t('quorum_stat_total')}    value={total}    color="#6a3e31" />
           <div className="w-px h-[20px] bg-[rgba(106,62,49,0.2)]" />
           <StatChip label={t('quorum_stat_present')}  value={present}  color="#2e7d32" />

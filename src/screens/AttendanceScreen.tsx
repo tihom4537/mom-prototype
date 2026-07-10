@@ -15,6 +15,7 @@ import {
   InfoBox,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+import { useMediaQuery } from '../hooks/useMediaQuery';
 
 const QUORUM_PERCENT   = 51;
 const NO_BIOMETRIC_MAX = 2;
@@ -95,6 +96,9 @@ export default function AttendanceScreen() {
   const currentMeeting = meetingId != null ? meetings.find(m => m.id === meetingId) : undefined;
   // Once attendance has been proceeded past (stepsCompleted >= 1), never celebrate again on revisit.
   const celebrationLocked = (currentMeeting?.stepsCompleted ?? 0) >= 1;
+  // GP and Email columns only fit comfortably at wider laptop/desktop viewports —
+  // below this, the table starts clipping/overflowing its container.
+  const showWideColumns = useMediaQuery('(min-width: 1366px)');
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -177,7 +181,8 @@ export default function AttendanceScreen() {
   return (
     <MeetingShellLayout
       stepperActiveState={1}
-      showBack={false}
+      backRoute="/meetings/list"
+      backLabel={t('nav_back_to_meetings')}
       breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_attendance')]}
     >
               <MeetingDetailsCard
@@ -215,42 +220,36 @@ export default function AttendanceScreen() {
 
                 {/* Table */}
                 <div className="rounded-[6px] border border-[#c6c6c6] overflow-hidden">
-                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                  <colgroup>
-                    <col style={{ width: '50px' }} />
-                    <col style={{ width: '160px' }} />
-                    <col style={{ width: '130px' }} />
-                    <col style={{ width: '120px' }} />
-                    <col style={{ width: '160px' }} />
-                    <col style={{ width: '180px' }} />
-                    <col style={{ width: '160px' }} />
-                    <col style={{ width: '160px' }} />
-                  </colgroup>
+                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'auto' }}>
 
                   <thead>
                     <tr className="bg-[#ddd]">
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle" style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: '#dddddd' }}>
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle whitespace-nowrap" style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: '#dddddd' }}>
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_sl')}</span>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_name_designation')}</span>
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle" style={{ width: '150px' }}>
+                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_name_designation')}</span>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_gp')}</span>
+                      {showWideColumns && (
+                        <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle whitespace-nowrap">
+                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_gp')}</span>
+                        </th>
+                      )}
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle whitespace-nowrap">
+                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_phone')}</span>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_phone')}</span>
-                      </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_email')}</span>
-                      </th>
+                      {showWideColumns && (
+                        <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle whitespace-nowrap">
+                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_email')}</span>
+                        </th>
+                      )}
                       <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <div className="flex items-center gap-[8px]">
+                        <div className="flex flex-col items-start gap-[6px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_attendance')}</span>
                           <button
                             type="button"
                             onClick={allPresent ? unmarkAll : markAllPresent}
-                            className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] transition-colors whitespace-nowrap shrink-0"
+                            className="flex items-center gap-[3px] px-[6px] py-[3px] rounded-[5px] border border-[#388e3c] text-[#388e3c] text-[10px] font-medium bg-white hover:bg-[#e8f5e9] transition-colors whitespace-nowrap"
                             style={NS}
                           >
                             <Icon name="check" size="small" color="#388e3c" />
@@ -264,7 +263,7 @@ export default function AttendanceScreen() {
                           <span className={`text-[10px] leading-[13px] whitespace-nowrap font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
                         </div>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-[#c6c6c6] align-middle">
+                      <th className="px-[12px] h-[43px] text-left border-b border-[#c6c6c6] align-middle w-full">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_reason')}</span>
                       </th>
                     </tr>
@@ -273,7 +272,7 @@ export default function AttendanceScreen() {
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-10 text-center text-[12px] text-[#727272] bg-white" style={NS}>
+                        <td colSpan={showWideColumns ? 8 : 6} className="py-10 text-center text-[12px] text-[#727272] bg-white" style={NS}>
                           {t('attendance_no_match')}
                         </td>
                       </tr>
@@ -282,22 +281,26 @@ export default function AttendanceScreen() {
                       const bb = idx < filtered.length - 1 ? 'border-b border-[#e8e8e8]' : '';
                       return (
                       <tr key={row.id} className="bg-white transition-colors hover:bg-[#f5f5f5]">
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`} style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: accentCol }}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle whitespace-nowrap ${bb}`} style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: accentCol }}>
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.id}</span>
                         </td>
-                        <td className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                        <td className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle ${bb}`} style={{ width: '150px' }}>
                           <span className="text-[12px] font-medium text-[#212121] leading-5 block" style={NS}>{row.name}</span>
                           <span className="text-[11px] text-[#727272] leading-4 block" style={NS}>{tDesignation(row.designation)}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
-                          <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.gpName}</span>
-                        </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                        {showWideColumns && (
+                          <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle whitespace-nowrap ${bb}`}>
+                            <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.gpName}</span>
+                          </td>
+                        )}
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle whitespace-nowrap ${bb}`}>
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.phone}</span>
                         </td>
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
-                          <span className="text-[12px] text-[#4b4b4b] truncate block w-full overflow-hidden" style={NS}>{row.email}</span>
-                        </td>
+                        {showWideColumns && (
+                          <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                            <span className="text-[12px] text-[#4b4b4b] truncate block w-full overflow-hidden" style={NS}>{row.email}</span>
+                          </td>
+                        )}
                         <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
                           <AttendancePill
                             status={row.status === 'absent' ? 'absent' : row.status === 'present' ? 'present' : 'unmarked'}
@@ -338,23 +341,12 @@ export default function AttendanceScreen() {
                                   )}
                                 </>
                               ) : (
-                                <>
-                                  <DropdownField
-                                    value={row.reason === 'device_failure' ? t('no_bio_reason_device_failure') : row.reason === 'technical_issue' ? t('no_bio_reason_technical_issue') : row.reason === 'member_exempt' ? t('no_bio_reason_member_exempt') : row.reason === 'other' ? t('no_bio_reason_other') : ''}
-                                    onChange={val => update(row.id, { reason: val === t('no_bio_reason_device_failure') ? 'device_failure' : val === t('no_bio_reason_technical_issue') ? 'technical_issue' : val === t('no_bio_reason_member_exempt') ? 'member_exempt' : val === t('no_bio_reason_other') ? 'other' : '' })}
-                                    options={[t('no_bio_reason_device_failure'), t('no_bio_reason_technical_issue'), t('no_bio_reason_member_exempt'), t('no_bio_reason_other')]}
-                                    placeholder={t('attendance_reason_no_biometric')}
-                                  />
-                                  {row.reason !== '' && (
-                                    <div className="flex items-center gap-[6px]">
-                                      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" ref={el => { permFileRefs.current[row.id] = el; }} onChange={e => { const file = e.target.files?.[0] ?? null; setPermissionFiles(prev => ({ ...prev, [row.id]: file })); }} />
-                                      <button type="button" onClick={() => permFileRefs.current[row.id]?.click()} className="flex items-center gap-[4px] text-[11px] text-[#6a3e31] border border-[#6a3e31] rounded-[6px] px-[8px] py-[3px] hover:bg-[#f7f0ee] transition-colors" style={NS}>
-                                        <Icon name="upload" size="small" color="#6a3e31" />
-                                        {permissionFiles[row.id] ? permissionFiles[row.id]!.name : t('attendance_upload_biometric_proof')}
-                                      </button>
-                                    </div>
-                                  )}
-                                </>
+                                <DropdownField
+                                  value={row.reason === 'device_failure' ? t('no_bio_reason_device_failure') : row.reason === 'technical_issue' ? t('no_bio_reason_technical_issue') : row.reason === 'member_exempt' ? t('no_bio_reason_member_exempt') : row.reason === 'other' ? t('no_bio_reason_other') : ''}
+                                  onChange={val => update(row.id, { reason: val === t('no_bio_reason_device_failure') ? 'device_failure' : val === t('no_bio_reason_technical_issue') ? 'technical_issue' : val === t('no_bio_reason_member_exempt') ? 'member_exempt' : val === t('no_bio_reason_other') ? 'other' : '' })}
+                                  options={[t('no_bio_reason_device_failure'), t('no_bio_reason_technical_issue'), t('no_bio_reason_member_exempt'), t('no_bio_reason_other')]}
+                                  placeholder={t('attendance_reason_no_biometric')}
+                                />
                               )}
                             </div>
                           ) : (

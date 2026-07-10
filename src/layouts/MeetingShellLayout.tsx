@@ -29,6 +29,8 @@ interface MeetingShellLayoutProps {
   backRoute?: string;
   /** Set false to hide the Previous step link (e.g. sub-pages within a step) */
   showBack?: boolean;
+  /** Override the "Previous step" link label — e.g. "Back to Meetings" on Step 1 */
+  backLabel?: string;
   /** Fill viewport height — no scroll; children must manage their own overflow */
   fillHeight?: boolean;
   /** Override the 3-item breadcrumb trail — defaults to module / meetings / start-meeting */
@@ -44,6 +46,7 @@ export default function MeetingShellLayout({
   stepperActiveState = 2,
   backRoute,
   showBack = true,
+  backLabel,
   fillHeight = false,
   breadcrumbItems,
   showStepper = true,
@@ -160,7 +163,7 @@ export default function MeetingShellLayout({
           {/* Lower section */}
           <div className={`flex-1 min-h-0 px-6 pt-4 pb-6 ${fillHeight ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
             <div className={`flex flex-col gap-5 ${fillHeight ? 'flex-1 min-h-0' : ''}`}>
-              <StepNavBar onBack={showBack && resolvedBackRoute ? () => navigate(resolvedBackRoute, { state: { meetingId } }) : undefined} backLabel={t('nav_previous_step')} />
+              <StepNavBar onBack={showBack && resolvedBackRoute ? () => navigate(resolvedBackRoute, { state: { meetingId } }) : undefined} backLabel={backLabel ?? t('nav_previous_step')} />
               {children}
               {showStepper && showExitButton && (
                 <div className="flex justify-center pt-2">

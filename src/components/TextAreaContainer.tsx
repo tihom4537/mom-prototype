@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import Icon from './Icon';
 import MicButton from './MicButton';
 import Tooltip from './Tooltip';
@@ -70,6 +70,9 @@ interface TextAreaContainerProps {
   highlighted?: boolean;
   /** Removes max-height cap — textarea grows to fill parent flex container */
   fillHeight?: boolean;
+  /** Textarea hugs its own text content height (no cap, no internal scroll) —
+   *  independent of fillHeight, which stretches to fill the parent instead */
+  autoResize?: boolean;
   className?: string;
   style?: React.CSSProperties;
   // Legacy props — accepted but unused so existing call-sites don't break
@@ -95,6 +98,7 @@ export default function TextAreaContainer({
   onSpanClick,
   highlighted = false,
   fillHeight = false,
+  autoResize = false,
   className,
   style,
   analyserNode,
@@ -106,6 +110,16 @@ export default function TextAreaContainer({
   const hasText = (value ?? '').trim().length > 0;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const autoResizeRef = useRef<HTMLTextAreaElement>(null);
+
+  // Hug the typed content's height — same pattern as DescriptionField.
+  useLayoutEffect(() => {
+    if (!autoResize) return;
+    const el = autoResizeRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [autoResize, value]);
 
   const handleReadAloud = () => {
     if (isSpeaking) {
@@ -139,10 +153,10 @@ export default function TextAreaContainer({
       : 'border border-[#727272] bg-[rgba(201,201,201,0.2)]';
 
   return (
-    <div className={`flex flex-col rounded-[8px] ${borderClass} ${fillHeight ? 'flex-1 min-h-[100px]' : ''} ${className ?? 'w-full'}`} style={style}>
+    <div className={`flex flex-col rounded-[8px] ${borderClass} ${fillHeight && !autoResize ? 'flex-1 min-h-[100px]' : ''} ${className ?? 'w-full'}`} style={style}>
 
       {/* Text display area */}
-      <div className={`flex items-start px-[8px] pt-[4px] pb-[8px] w-full ${(fillHeight || hasExplicitHeight) ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
+      <div className={`flex items-start px-[8px] pt-[4px] pb-[8px] w-full ${autoResize ? '' : (fillHeight || hasExplicitHeight) ? 'flex-1 min-h-0 overflow-hidden' : ''}`}>
         {useRichText ? (
           <div className={`flex-1 relative ${(fillHeight || hasExplicitHeight) ? 'h-full min-h-0' : 'min-h-[160px] max-h-[300px]'}`}>
             {onChange && (
@@ -192,8 +206,21 @@ export default function TextAreaContainer({
           </div>
         ) : onChange ? (
           <textarea
-            className={`flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none overflow-y-auto text-[#212121] placeholder:text-[#727272] ${(fillHeight || hasExplicitHeight) ? 'h-full min-h-0' : 'min-h-[160px]'}`}
-            style={{ ...NS, ...(style?.minHeight ? { minHeight: style.minHeight } : {}), ...(style?.maxHeight ? { maxHeight: style.maxHeight } : {}) }}
+            ref={autoResize ? autoResizeRef : undefined}
+            className={`flex-1 font-normal text-sm leading-[20px] tracking-[0.25px] bg-transparent border-none outline-none resize-none text-[#212121] placeholder:text-[#727272] ${
+              autoResize ? 'overflow-hidden min-h-[160px]' : (fillHeight || hasExplicitHeight) ? 'overflow-y-auto min-h-0' : 'overflow-y-auto min-h-[160px]'
+            }`}
+            style={{
+              ...NS,
+              ...(style?.minHeight ? { minHeight: style.minHeight } : {}),
+              // When an explicit height is set on the container (e.g. matching the
+              // feedback column), give the textarea that same height directly rather
+              // than relying on h-full — percentage heights inside a flex chain are
+              // unreliable across browsers, this is exact and unambiguous. The parent
+              // row is flex-direction:row, so flex-1 (width) is unaffected by this.
+              ...(style?.height ? { height: style.height } : {}),
+              ...(style?.maxHeight ? { maxHeight: style.maxHeight } : {}),
+            }}
             placeholder={placeholder}
             value={value}
             onChange={e => onChange(e.target.value)}

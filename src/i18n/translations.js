@@ -127,6 +127,7 @@ export const translations = {
 
     // --- Sidebar ---
     nav_meetings: "Meetings",
+    nav_meeting_module_overview: "Meeting Overview",
     nav_create_meeting: "Create Meeting",
     nav_meeting_list: "Meeting List",
     nav_start_meeting: "Start Meeting",
@@ -154,6 +155,7 @@ export const translations = {
     btn_previous: "Previous",
     btn_next: "Next",
     nav_previous_step: "Previous step",
+    nav_back_to_meetings: "Back to Meetings",
     tag_pending: "Pending",
     tag_completed: "Completed",
     btn_add_proceedings: "+ Add Proceedings",
@@ -201,7 +203,7 @@ export const translations = {
     // --- Simple feedback panel ---
     feedback_pointers_heading: "What could be improved",
     feedback_rewrite_heading: "Suggested version",
-    feedback_rewrite_info: "This is a suggested rewrite based on the feedback points above. You can accept it to replace your entry, or keep editing manually.",
+    feedback_rewrite_info: "Suggested rewrite is also below. You can accept it or edit manually.",
     feedback_rewrite_accept: "Accept suggested version",
     feedback_rewrite_accepted: "Accepted — your entry has been updated",
     feedback_good_to_go: "Your entry looks good — all key details are covered.",
@@ -495,8 +497,9 @@ export const translations = {
     upcoming_notice_sent: "Notice sent",
     upcoming_view_details: "View details →",
     section_meeting_tracker: "Meeting Tracker",
-    tracker_total_scheduled: "Scheduled",
-    tracker_completed: "Completed",
+    tracker_title: "11th Panchayat Elected Body — Meeting Status",
+    tracker_total_scheduled: "To be Conducted",
+    tracker_completed: "Conducted",
     tracker_pending: "Pending",
     tracker_reminder: "{n} meetings still pending this financial year",
     section_mandatory_meetings: "Mandatory Meetings to be conducted",
@@ -1338,6 +1341,7 @@ export const translations = {
 
     // --- Sidebar ---
     nav_meetings: "ಸಭೆಗಳು",
+    nav_meeting_module_overview: "ಸಭೆಗಳ ಅವಲೋಕನ",
     nav_create_meeting: "ಸಭೆ ರಚಿಸಿ",
     nav_meeting_list: "ಸಭೆ ಪಟ್ಟಿ",
     nav_start_meeting: "ಸಭೆ ಆರಂಭಿಸಿ",
@@ -1365,6 +1369,7 @@ export const translations = {
     btn_previous: "ಹಿಂದಿನ",
     btn_next: "ಮುಂದಿನ",
     nav_previous_step: "ಹಿಂದಿನ ಹಂತ",
+    nav_back_to_meetings: "ಸಭೆಗಳಿಗೆ ಹಿಂತಿರುಗಿ",
     tag_pending: "ಬಾಕಿ ಇದೆ",
     tag_completed: "ಪೂರ್ಣಗೊಂಡಿದೆ",
     btn_add_proceedings: "+ ಕಲಾಪಗಳನ್ನು ಸೇರಿಸಿ",
@@ -1395,8 +1400,8 @@ export const translations = {
     mom_field_further_placeholder: "ಮತ್ತಷ್ಟು ಪರಿಶೀಲನೆ ಅಗತ್ಯವಿದ್ದಲ್ಲಿ ನಮೂದಿಸಿ...",
     btn_scan_photo: "ಫೋಟೋ ಸ್ಕ್ಯಾನ್ ಮಾಡಿ",
     discussion_field_placeholder: "ಕಾರ್ಯವಿವರಗಳನ್ನು ನಮೂದಿಸಿ",
-    btn_get_feedback: "ನನ್ನ ಬರಹ ಪರಿಶೀಲಿಸಿ",
-    btn_save: "ಉಳಿಸಿ",
+    btn_get_feedback: "ನನ್ನ ಸಲ್ಲಿಕೆ ಪರಿಶೀಲಿಸಿ",
+    btn_save: "ಸಲ್ಲಿಸಿ",
 
     // --- Feedback Panel ---
     feedback_heading: "ಪ್ರತಿಕ್ರಿಯೆ",
@@ -1412,7 +1417,7 @@ export const translations = {
     // --- Simple feedback panel ---
     feedback_pointers_heading: "ಸುಧಾರಿಸಬಹುದಾದವು",
     feedback_rewrite_heading: "ಸೂಚಿತ ಆವೃತ್ತಿ",
-    feedback_rewrite_info: "ಮೇಲಿನ ಸಲಹೆ ಅಂಶಗಳ ಆಧಾರದ ಮೇಲೆ ಇದು ಸೂಚಿತ ಪುನರ್ಲೇಖನವಾಗಿದೆ. ನಿಮ್ಮ ನಮೂದನ್ನು ಬದಲಾಯಿಸಲು ಒಪ್ಪಿಕೊಳ್ಳಬಹುದು ಅಥವಾ ಕೈಯಾರೆ ಸಂಪಾದಿಸಬಹುದು.",
+    feedback_rewrite_info: "ಕೆಳಗೆ ಸೂಚಿಸಿದ ಪಠ್ಯವಿದೆ. ಅದನ್ನು ಸ್ವೀಕರಿಸಬಹುದು ಅಥವಾ ಬೇಕಾದಂತೆ ತಿದ್ದುಪಡಿ ಮಾಡಬಹುದು.",
     feedback_rewrite_accept: "ಸೂಚಿತ ಆವೃತ್ತಿ ಸ್ವೀಕರಿಸಿ",
     feedback_rewrite_accepted: "ಸ್ವೀಕರಿಸಲಾಗಿದೆ — ನಿಮ್ಮ ನಮೂದು ನವೀಕರಣಗೊಂಡಿದೆ",
     feedback_good_to_go: "ನಿಮ್ಮ ನಮೂದು ಚೆನ್ನಾಗಿದೆ — ಎಲ್ಲಾ ಮುಖ್ಯ ವಿವರಗಳು ಒಳಗೊಂಡಿವೆ.",
@@ -1637,8 +1642,8 @@ export const translations = {
     agenda_tips_example_1_desc: "ಶಾಲೆಯ ಬಳಿಯ ಮೇನ್ ರೋಡ್‌ನಲ್ಲಿ 3 ಬೀದಿ ದೀಪಗಳು 2 ತಿಂಗಳಿಂದ ಕೆಟ್ಟಿವೆ. ದುರಸ್ತಿ ಯೋಜನೆ ಚರ್ಚಿಸಿ ಜವಾಬ್ದಾರಿ ನಿರ್ಧರಿಸಿ.",
     agenda_tips_example_2_title: "ವಾರ್ಡ್ 7ಕ್ಕೆ ನೀರಿನ ಪಂಪ್ ಖರೀದಿ ಅನುಮೋದನೆ",
     agenda_tips_example_2_desc: "ವಾರ್ಡ್ 7ರ ಕೊಳವೆಬಾವಿಗಳಿಗೆ 2 ಸಬ್ಮರ್ಸಿಬಲ್ ಪಂಪ್ ಖರೀದಿ ಪ್ರಸ್ತಾವನೆ. ಅಂದಾಜು ವೆಚ್ಚ: ₹1.4 ಲಕ್ಷ. 15ನೇ ಹಣಕಾಸು ಆಯೋಗದ ಅನುದಾನದಿಂದ.",
-    btn_get_feedback: "ನನ್ನ ಬರಹ ಪರಿಶೀಲಿಸಿ",
-    btn_save: "ಉಳಿಸಿ",
+    btn_get_feedback: "ನನ್ನ ಸಲ್ಲಿಕೆ ಪರಿಶೀಲಿಸಿ",
+    btn_save: "ಸಲ್ಲಿಸಿ",
 
     // --- Upload Documents ---
     section_upload_docs: "ಸಂಬಂಧಿತ ದಾಖಲೆಗಳನ್ನು ಅಪ್ಲೋಡ್ ಮಾಡಿ",
@@ -1706,8 +1711,9 @@ export const translations = {
     upcoming_notice_sent: "ಸೂಚನೆ ಕಳುಹಿಸಲಾಗಿದೆ",
     upcoming_view_details: "ವಿವರ ವೀಕ್ಷಿಸಿ →",
     section_meeting_tracker: "ಸಭೆ ಟ್ರ್ಯಾಕರ್",
-    tracker_total_scheduled: "ನಿಗದಿಪಡಿಸಲಾಗಿದೆ",
-    tracker_completed: "ಪೂರ್ಣಗೊಂಡಿದೆ",
+    tracker_title: "11ನೇ ಪಂಚಾಯತ್ ಚುನಾಯಿತ ಸಂಸ್ಥೆ — ಸಭೆ ಸ್ಥಿತಿ",
+    tracker_total_scheduled: "ನಡೆಸಬೇಕಾದ ಒಟ್ಟು",
+    tracker_completed: "ನಡೆಸಲಾಗಿದೆ",
     tracker_pending: "ಬಾಕಿ",
     tracker_reminder: "ಈ ಹಣಕಾಸು ವರ್ಷದಲ್ಲಿ {n} ಸಭೆಗಳು ಇನ್ನೂ ಬಾಕಿ ಇವೆ",
     section_mandatory_meetings: "ನಡೆಸಬೇಕಾದ ಕಡ್ಡಾಯ ಸಭೆಗಳು",

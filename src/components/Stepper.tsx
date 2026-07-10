@@ -49,14 +49,17 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
       {steps.map((step, i) => (
         <>
           {/* Step pill — centred */}
-          <div key={`step-${i}`} className="flex items-center justify-center gap-2 p-1 min-w-0">
+          <div
+            key={`step-${i}`}
+            className={`flex items-center justify-center gap-2 p-1 min-w-0 rounded-[10px] ${
+              step.status === 'completed' && onStepClick ? 'cursor-pointer hover:bg-[#f5f5f5] transition-colors' : ''
+            }`}
+            onClick={step.status === 'completed' ? () => onStepClick?.(step.number) : undefined}
+            title={step.status === 'completed' && onStepClick ? `Go to step ${step.number}` : undefined}
+          >
             {/* Circle */}
             {step.status === 'completed' ? (
-              <div
-                className={`bg-[#3c9718] flex items-center justify-center rounded-full shrink-0 size-8 ${onStepClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                onClick={() => onStepClick?.(step.number)}
-                title={onStepClick ? `Go to step ${step.number}` : undefined}
-              >
+              <div className="bg-[#3c9718] flex items-center justify-center rounded-full shrink-0 size-8">
                 <Icon name="check" size="small" color="white" />
               </div>
             ) : step.status === 'active' ? (

@@ -165,6 +165,9 @@ export default function MoMEntrySimpleScreenV4() {
   const [rewriteAccepted,   setRewriteAccepted]   = useState(false);
   const [rewriteRejected,   setRewriteRejected]   = useState(false);
   const [goodToGo,          setGoodToGo]          = useState(false);
+  // Once feedback has been fetched, the right column hugs its own content height
+  // instead of being clamped to the viewport, and the left column grows to match.
+  const hasFeedbackContent = !!feedbackResult || goodToGo;
   const pcmRecorderRef = useRef<PcmAudioRecorder | null>(null);
   const audioCtxRef    = useRef<AudioContext | null>(null);
   const analyserRef    = useRef<AnalyserNode | null>(null);
@@ -173,15 +176,65 @@ export default function MoMEntrySimpleScreenV4() {
   const leftColRef     = useRef<HTMLDivElement>(null);
   const rightColRef    = useRef<HTMLDivElement>(null);
   const gridRef        = useRef<HTMLDivElement>(null);
+  // Everything in the left column above/below the textarea (heading, agenda
+  // card, labels, footer buttons) — measured so the textarea can be sized to
+  // exactly fill the remainder needed to match the feedback column's height.
+  const leftExtraTopRef    = useRef<HTMLDivElement>(null);
+  const leftExtraBottomRef = useRef<HTMLDivElement>(null);
+  // Post-feedback: the discussion textarea's height is set so the LEFT COLUMN'S
+  // TOTAL height (heading + agenda card + labels + textarea + footer buttons)
+  // matches the feedback column's natural content height — content beyond that
+  // scrolls inside the textarea rather than growing the page.
+  const [textareaHeight, setTextareaHeight] = useState<number | null>(null);
 
   useEffect(() => { updatedTextRef.current = discussionText; }, [discussionText]);
 
-  // Sync right column height to left column (same as simple screen)
+  // Before feedback: clamp both columns to fit the viewport (right column height
+  // driven by left, or by available viewport space, whichever is taller) — the
+  // discussion textarea fills that space, overflow scrolls inside it.
+  // After feedback: right column hugs its own natural content height instead;
+  // the discussion textarea's height is locked to match it (see textareaHeight).
   useEffect(() => {
     const left  = leftColRef.current;
     const right = rightColRef.current;
     const grid  = gridRef.current;
     if (!left || !right || !grid) return;
+
+    if (hasFeedbackContent) {
+      right.style.height = '';
+      left.style.minHeight = '';
+      const GAP = 20; // matches the left column's flex gap-[20px] on either side of the textarea
+      // Defer to the next frame — right.style.height was just cleared above,
+      // and the feedback cards may not have finished laying out yet this tick.
+      let raf = 0;
+      let raf2 = 0;
+      const sync = () => {
+        raf = requestAnimationFrame(() => {
+          const rightH = right.getBoundingClientRect().height;
+          const topH    = leftExtraTopRef.current?.getBoundingClientRect().height ?? 0;
+          const bottomH = leftExtraBottomRef.current?.getBoundingClientRect().height ?? 0;
+          setTextareaHeight(Math.max(100, rightH - topH - bottomH - GAP * 2));
+
+          // Self-correct: the estimate above can be off by a few px (borders,
+          // sub-pixel rounding). Measure the actual rendered left column after
+          // it applies and nudge the textarea by the leftover delta.
+          raf2 = requestAnimationFrame(() => {
+            const leftH = left.getBoundingClientRect().height;
+            const delta = rightH - leftH;
+            if (Math.abs(delta) >= 1) {
+              setTextareaHeight(prev => Math.max(100, (prev ?? 0) + delta));
+            }
+          });
+        });
+      };
+      const ro = new ResizeObserver(sync);
+      ro.observe(right);
+      window.addEventListener('resize', sync);
+      sync();
+      return () => { cancelAnimationFrame(raf); cancelAnimationFrame(raf2); ro.disconnect(); window.removeEventListener('resize', sync); };
+    }
+
+    setTextareaHeight(null);
     const sync = () => {
       const gridRect   = grid.getBoundingClientRect();
       const availableH = window.innerHeight - gridRect.top - 30 - 30 - 24;
@@ -195,7 +248,7 @@ export default function MoMEntrySimpleScreenV4() {
     window.addEventListener('resize', sync);
     sync();
     return () => { ro.disconnect(); window.removeEventListener('resize', sync); };
-  }, []);
+  }, [hasFeedbackContent]);
 
   useEffect(() => {
     return () => { wsClientRef.current?.close().catch(() => {}); };
@@ -408,41 +461,41 @@ export default function MoMEntrySimpleScreenV4() {
           {/* ── Left column ── */}
           <div ref={leftColRef} className="flex flex-col gap-[20px] min-w-0">
 
-            <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
+            <div ref={leftExtraTopRef} className="flex flex-col gap-[20px] w-full">
+              <SectionHeading text={t('mom_entry_heading')} className="shrink-0" />
 
-            <AgendaCard
-              stage="subpage"
-              agendaNumber={agenda ? String(agenda.id) : '1'}
-              agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
-              agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
-              className="shrink-0 w-full"
-            />
-
-            {/* Discussion field */}
-            <div className="flex flex-col gap-[6px] items-start w-full mt-[20px]">
-              <QuestionFieldsSmall type="mandatory" questionText={t('discussion_field_label')} className="shrink-0" />
-
-              <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
-
-
-
-              <TextAreaContainer
-                state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
-                placeholder={t('discussion_field_placeholder')}
-                value={discussionText}
-                onChange={v => { setDiscussionText(v); setRewriteAccepted(false); setGoodToGo(false); }}
-                onMicClick={handleMicClick}
-                onStopClick={handleStopRecording}
-                analyserNode={analyserRef.current ?? undefined}
-                isProcessing={isProcessing}
-                className="w-full"
-                style={{ minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
+              <AgendaCard
+                stage="subpage"
+                agendaNumber={agenda ? String(agenda.id) : '1'}
+                agendaHeading={agenda?.heading ?? 'Reading and reporting on the proceedings of the previous meeting'}
+                agendaDescription={agenda?.description ?? 'The decisions taken in the previous meeting are to be reviewed and the actions taken have to be discussed.'}
+                className="shrink-0 w-full"
               />
 
+              {/* Discussion field label + info */}
+              <div className="flex flex-col gap-[6px] items-start w-full mt-[20px]">
+                <QuestionFieldsSmall type="mandatory" questionText={t('discussion_field_label')} className="shrink-0" />
+                <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
+              </div>
             </div>
 
+            <TextAreaContainer
+              state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
+              placeholder={t('discussion_field_placeholder')}
+              value={discussionText}
+              onChange={v => { setDiscussionText(v); setRewriteAccepted(false); setGoodToGo(false); }}
+              onMicClick={handleMicClick}
+              onStopClick={handleStopRecording}
+              analyserNode={analyserRef.current ?? undefined}
+              isProcessing={isProcessing}
+              className="w-full"
+              style={textareaHeight != null
+                ? { height: `${textareaHeight}px`, maxHeight: `${textareaHeight}px` }
+                : { minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
+            />
+
             {/* Footer buttons */}
-            <div className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
+            <div ref={leftExtraBottomRef} className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">
               {isFeedbackApplicable && (
                 <Button
                   variant="outlined"
@@ -473,7 +526,7 @@ export default function MoMEntrySimpleScreenV4() {
 
           {/* ── Right: feedback panel — only for meeting types where AI feedback applies ── */}
           {isFeedbackApplicable && (
-          <div ref={rightColRef} className="bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] overflow-y-auto">
+          <div ref={rightColRef} className={`bg-[rgba(134,134,134,0.08)] flex flex-col gap-[20px] pb-[30px] pt-[20px] px-[20px] rounded-[15px] ${hasFeedbackContent ? '' : 'overflow-y-auto'}`}>
             <SectionHeading text={t('feedback_heading')} className="shrink-0" />
 
             {/* Status messages — loading, errors */}
@@ -514,7 +567,7 @@ export default function MoMEntrySimpleScreenV4() {
                               content = (
                                 <>
                                   {point.slice(0, idx)}
-                                  <strong style={{ fontFamily: 'Noto Sans' }}>
+                                  <strong style={{ fontFamily: 'Noto Sans', color: '#b7131a' }}>
                                     {point.slice(idx, idx + highlight.length)}
                                   </strong>
                                   {point.slice(idx + highlight.length)}

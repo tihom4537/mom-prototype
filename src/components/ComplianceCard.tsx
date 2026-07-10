@@ -62,15 +62,15 @@ export default function ComplianceCard({
     'on-track':        { badgeVariant: 'green'  as const, badgeLabel: badgeLabels.onTrack, numColor: 'text-[#2e7d32]', filledColor: 'bg-[#2e7d32]', dotColor: 'bg-[#2e7d32]' },
     'due-soon':        { badgeVariant: 'yellow' as const, badgeLabel: badgeLabels.dueSoon, numColor: 'text-[#f57f17]', filledColor: 'bg-[#f57f17]', dotColor: 'bg-[#f57f17]' },
     'overdue':         { badgeVariant: 'red'    as const, badgeLabel: badgeLabels.overdue, numColor: 'text-[#c62828]', filledColor: 'bg-[#c62828]', dotColor: 'bg-[#c62828]' },
-    'circle-on-track': { badgeVariant: 'green'  as const, badgeLabel: badgeLabels.onTrack, numColor: 'text-[#6a3e31]', filledColor: 'bg-[#ae6651]', dotColor: 'bg-[#2e7d32]' },
-    'circle-due-soon': { badgeVariant: 'yellow' as const, badgeLabel: badgeLabels.dueSoon, numColor: 'text-[#6a3e31]', filledColor: 'bg-[#ae6651]', dotColor: 'bg-[#f57f17]' },
-    'circle-overdue':  { badgeVariant: 'red'    as const, badgeLabel: badgeLabels.overdue, numColor: 'text-[#c62828]', filledColor: 'bg-[#ae6651]', dotColor: 'bg-[#b7131a]' },
+    'circle-on-track': { badgeVariant: 'green'  as const, badgeLabel: badgeLabels.onTrack, numColor: 'text-[#6a3e31]', filledColor: 'bg-[var(--success-500)]', dotColor: 'bg-[#2e7d32]' },
+    'circle-due-soon': { badgeVariant: 'yellow' as const, badgeLabel: badgeLabels.dueSoon, numColor: 'text-[#6a3e31]', filledColor: 'bg-[var(--success-500)]', dotColor: 'bg-[#f57f17]' },
+    'circle-overdue':  { badgeVariant: 'red'    as const, badgeLabel: badgeLabels.overdue, numColor: 'text-[#c62828]', filledColor: 'bg-[var(--success-500)]', dotColor: 'bg-[#b7131a]' },
   }[status];
 
   const cardBorder = isCircle ? 'border-[#ddd]' : 'border-[rgba(106,62,49,0.16)]';
 
   return (
-    <div className={`bg-white border ${cardBorder} rounded-[10px] p-[16px] flex flex-col items-start drop-shadow-[0px_2px_4px_rgba(0,0,0,0.05)] ${className ?? 'min-w-[240px] max-w-[280px]'}`}>
+    <div className={`bg-white border ${cardBorder} rounded-[10px] p-[16px] flex flex-col items-start drop-shadow-[0px_2px_4px_rgba(0,0,0,0.05)] ${className ?? 'w-[280px]'}`}>
 
       {/* Title row — circle variants: title left, badge right on same row */}
       {isCircle ? (
@@ -124,7 +124,7 @@ export default function ComplianceCard({
           isCircle ? (
             <div
               key={i}
-              className={`size-[10px] rounded-[5px] shrink-0 ${filled ? cfg.filledColor : 'bg-[#f3f3f3] border-[1.5px] border-[rgba(176,176,176,0.5)]'}`}
+              className={`size-[12px] rounded-full shrink-0 ${filled ? cfg.filledColor : 'bg-[#f3f3f3] border-[1.5px] border-[rgba(176,176,176,0.5)]'}`}
             />
           ) : (
             <div
