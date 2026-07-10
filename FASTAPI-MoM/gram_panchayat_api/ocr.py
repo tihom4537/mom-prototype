@@ -2,6 +2,7 @@
 OCR (Optical Character Recognition) via Google Gemini API.
 
 Extracts text from images (JPG, PNG) and detects language (English or Kannada).
+Uses Gemini 2.5 Flash model for fast, accurate text extraction.
 """
 
 import base64
@@ -23,7 +24,7 @@ def detect_language(text: str) -> str:
 
 async def process_image_ocr(image_base64: str, image_format: str) -> dict:
     """
-    Extract text from an image using Google Gemini API.
+    Extract text from an image using Google Gemini 2.5 Flash API.
 
     Args:
         image_base64: Base64-encoded image bytes.
@@ -98,7 +99,7 @@ async def process_image_ocr(image_base64: str, image_format: str) -> dict:
                 extracted_text = ""
 
             logger.info(
-                f"OCR processed image via Gemini: {len(extracted_text)} chars, "
+                f"OCR processed image via Gemini 2.5 Flash: {len(extracted_text)} chars, "
                 f"language={detect_language(extracted_text)}"
             )
 
