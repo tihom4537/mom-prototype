@@ -6,6 +6,7 @@ import { registerPageNarrator, unregisterPageNarrator } from '../data/pageSummar
 import { buildMeetingListNarrative } from '../utils/narratives';
 import {
   MeetingDetailsTag,
+  MeetingDetailsCard,
   SmallDetailsText,
   Button,
   Icon,
@@ -16,9 +17,11 @@ import {
   DropdownField,
   DatePicker,
 } from '../components';
+import TimePicker from '../components/TimePicker';
 import type { NumberCircleType } from '../components';
 import type { MeetingData, MeetingTab } from '../context/MeetingsContext';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+import ModalShell from '../components/ModalShell';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,7 +85,7 @@ function getActions(tab: MeetingTab): Array<{ key: string; disabled?: boolean }>
 export default function MeetingListScreen() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-  const { meetings } = useMeetings();
+  const { meetings, updateMeeting } = useMeetings();
 
   const [activeTab,      setActiveTab]      = useState<MeetingTab>('today');
   const [searchQuery,    setSearchQuery]    = useState('');
@@ -91,6 +94,20 @@ export default function MeetingListScreen() {
   const [filterStatus,   setFilterStatus]   = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo,   setFilterDateTo]   = useState('');
+
+  // Action modals
+  const [adjournModalMeeting, setAdjournModalMeeting] = useState<MeetingData | null>(null);
+  const [cancelModalMeeting,  setCancelModalMeeting]  = useState<MeetingData | null>(null);
+
+  function handleAction(meeting: MeetingData, key: string) {
+    if (key === 'action_view_notice' || key === 'action_view_meeting_notice') {
+      navigate(`/meetings/view-notice/${meeting.id}`);
+    } else if (key === 'action_adjourn_meeting') {
+      setAdjournModalMeeting(meeting);
+    } else if (key === 'action_cancel_meeting') {
+      setCancelModalMeeting(meeting);
+    }
+  }
 
   // Derive display status from stepsCompleted (used for filter matching)
   const deriveStatus = (m: MeetingData): string => {
@@ -205,7 +222,7 @@ export default function MeetingListScreen() {
                   options={meetingTypeOptions}
                 />
               </div>
-              {statusOptions && (
+              {statusOptions && activeTab !== 'upcoming' && activeTab !== 'past' && (
                 <div className="w-[160px] shrink-0">
                   <DropdownField
                     label={t('meeting_list_filter_status_label')}
@@ -284,7 +301,7 @@ export default function MeetingListScreen() {
                 stepKeys={stepKeys}
                 createStepKeys={createStepKeys}
                 t={t}
-                onCta={() => meeting.tab === 'past' ? navigate(`/meetings/view/${meeting.id}`) : navigate('/meetings/attendance', { state: { meetingId: meeting.id } })}
+                onCta={() => (meeting.tab === 'past' || meeting.stepsCompleted >= 5) ? navigate(`/meetings/view/${meeting.id}`) : navigate('/meetings/attendance', { state: { meetingId: meeting.id } })}
                 onDraftCta={() => navigate('/meetings/create')}
                 onEditAgenda={() => navigate('/meetings/create/agenda', {
                   state: {
@@ -298,6 +315,7 @@ export default function MeetingListScreen() {
                     description: meeting.description,
                   },
                 })}
+                onAction={(key) => handleAction(meeting, key)}
                 showStages={false}
               />
             ))}
@@ -305,6 +323,30 @@ export default function MeetingListScreen() {
         )}
       </SectionHolder>
       </div>
+
+      {/* Action modals */}
+      {adjournModalMeeting && (
+        <AdjournModal
+          meeting={adjournModalMeeting}
+          onClose={() => setAdjournModalMeeting(null)}
+          onConfirm={(date, time) => {
+            updateMeeting(adjournModalMeeting.id, { nextMeetingDate: date, nextMeetingTime: time });
+            setAdjournModalMeeting(null);
+          }}
+          t={t}
+        />
+      )}
+      {cancelModalMeeting && (
+        <CancelMeetingModal
+          meeting={cancelModalMeeting}
+          onClose={() => setCancelModalMeeting(null)}
+          onConfirm={() => {
+            updateMeeting(cancelModalMeeting.id, { tab: 'cancelled', status: 'cancelled' });
+            setCancelModalMeeting(null);
+          }}
+          t={t}
+        />
+      )}
     </MeetingShellLayout>
   );
 }
@@ -350,9 +392,10 @@ function StepCircle({ type, num, completed }: { type: NumberCircleType; num: num
 interface ActionsMenuProps {
   actions: Array<{ key: string; disabled?: boolean }>;
   t: (key: string) => string;
+  onAction: (key: string) => void;
 }
 
-function ActionsMenu({ actions, t }: ActionsMenuProps) {
+function ActionsMenu({ actions, t, onAction }: ActionsMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -383,7 +426,7 @@ function ActionsMenu({ actions, t }: ActionsMenuProps) {
             <button
               key={key}
               disabled={disabled}
-              onClick={() => setOpen(false)}
+              onClick={() => { setOpen(false); if (!disabled) onAction(key); }}
               className={`w-full text-left px-[16px] py-[10px] text-[13px] leading-5 transition-colors
                 ${disabled
                   ? 'text-[#bdbdbd] cursor-not-allowed'
@@ -400,6 +443,70 @@ function ActionsMenu({ actions, t }: ActionsMenuProps) {
   );
 }
 
+// ─── Modal shared NS ──────────────────────────────────────────────────────────
+
+const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
+
+// ─── Adjourn Modal ─────────────────────────────────────────────────────────────
+
+function AdjournModal({ meeting, onClose, onConfirm, t }: { meeting: MeetingData; onClose: () => void; onConfirm: (date: string, time: string) => void; t: (k: string) => string }) {
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
+  const name = meeting.nameKey ? t(meeting.nameKey) : meeting.name;
+
+  return (
+    <ModalShell title="Choose New Meeting Date" onClose={onClose}>
+      <div className="border border-[var(--neutral-200)] bg-[#fafafa] rounded-[12px] px-[16px] py-[14px] flex flex-col gap-[10px]">
+        <p className="text-[16px] font-semibold text-[#6a3e31] leading-[22px]" style={NS}>{name}</p>
+        <MeetingDetailsTag modeOfMeeting={meeting.mode === 'IN PERSON' ? t('meeting_mode_in_person') : t('meeting_mode_online')} date={meeting.date} time={meeting.time} />
+        <div className="flex flex-col gap-[2px]">
+          <SmallDetailsText text={`Venue: ${meeting.venue}`} />
+          <SmallDetailsText text={`${meeting.participants} ${t('meeting_participants_label')}`} />
+        </div>
+      </div>
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[13px] font-medium text-[#3b3b3b]" style={NS}>Date</span>
+        <DatePicker value={date} onChange={setDate} placeholder="Select date" />
+      </div>
+      <div className="flex flex-col gap-[8px]">
+        <span className="text-[13px] font-medium text-[#3b3b3b]" style={NS}>Time</span>
+        <TimePicker value={time} onChange={setTime} placeholder="Select time" opensUp />
+      </div>
+      <div className="flex gap-[10px] items-center justify-center w-full">
+        <Button variant="outlined" size="small" iconPlacement="none" text="Cancel" onClick={onClose} />
+        <Button variant="filled" size="small" iconPlacement="none" text="Confirm Adjournment" state={date && time ? 'default' : 'disabled'} onClick={date && time ? () => onConfirm(date, time) : undefined} />
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── Cancel Modal ─────────────────────────────────────────────────────────────
+
+function CancelMeetingModal({ meeting, onClose, onConfirm, t }: { meeting: MeetingData; onClose: () => void; onConfirm: () => void; t: (k: string) => string }) {
+  const name = meeting.nameKey ? t(meeting.nameKey) : meeting.name;
+  const modeLabel = meeting.mode === 'IN PERSON' ? t('meeting_mode_in_person') : t('meeting_mode_online');
+
+  return (
+    <ModalShell title="Cancel Meeting" titleColor="#c62828" onClose={onClose} width="w-[560px]">
+      <div className="border border-[var(--neutral-200)] bg-[#fafafa] rounded-[12px] px-[16px] py-[14px] flex flex-col gap-[10px]">
+        <p className="text-[16px] font-semibold text-[#6a3e31] leading-[22px]" style={NS}>{name}</p>
+        <MeetingDetailsTag modeOfMeeting={modeLabel} date={meeting.date} time={meeting.time} />
+        <div className="flex flex-col gap-[2px]">
+          <SmallDetailsText text={`Venue: ${meeting.venue}`} />
+          <SmallDetailsText text={`${meeting.participants} ${t('meeting_participants_label')}`} />
+        </div>
+      </div>
+      <p className="text-[14px] text-[#3b3b3b] leading-[22px]" style={NS}>
+        Are you sure you want to cancel this meeting? This action cannot be undone.
+      </p>
+      <div className="flex gap-[10px] items-center justify-center w-full">
+        <Button variant="outlined" size="small" iconPlacement="none" text="Go Back" onClick={onClose} />
+        <Button variant="filled" size="small" iconPlacement="none" text="Cancel Meeting" onClick={onConfirm} />
+      </div>
+    </ModalShell>
+  );
+}
+
 // ─── Meeting Card ─────────────────────────────────────────────────────────────
 
 interface MeetingCardProps {
@@ -410,10 +517,11 @@ interface MeetingCardProps {
   onCta: () => void;
   onDraftCta: () => void;
   onEditAgenda: () => void;
+  onAction: (key: string) => void;
   showStages?: boolean;
 }
 
-function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, onEditAgenda, showStages = true }: MeetingCardProps) {
+function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, onEditAgenda, onAction, showStages = true }: MeetingCardProps) {
   const modeLabel = meeting.mode === 'IN PERSON'
     ? t('meeting_mode_in_person')
     : t('meeting_mode_online');
@@ -423,9 +531,10 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, 
   const isDraft = meeting.tab === 'drafts';
 
   const isPast = meeting.tab === 'past';
+  const isToday = meeting.tab === 'today';
   const isPendingPresident = meeting.status === 'pending_president';
-  const badgeVariant = isCancelled ? 'red' : isDraft ? 'yellow' : isPast ? 'green' : isPendingPresident ? 'yellow' : 'blue';
-  const badgeLabel   = isCancelled ? t('meeting_badge_cancelled') : isDraft ? t('meeting_badge_draft') : isPast ? t('meeting_badge_completed') : isPendingPresident ? t('meeting_badge_president_pending') : t('meeting_badge_scheduled');
+  const badgeVariant = isCancelled ? 'red' : isDraft ? 'yellow' : isPast ? 'green' : isPendingPresident ? 'yellow' : isToday ? 'green' : 'blue';
+  const badgeLabel   = isCancelled ? t('meeting_badge_cancelled') : isDraft ? t('meeting_badge_draft') : isPast ? t('meeting_badge_completed') : isPendingPresident ? t('meeting_badge_president_pending') : isToday ? t('meeting_badge_today') : t('meeting_badge_scheduled');
 
   // Upcoming meetings that haven't started yet can have their details edited
   // for EDIT_WINDOW_DAYS days after scheduling, then the edit window closes.
@@ -438,12 +547,13 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, 
 
       {/* Status badge */}
       <div className="flex items-center gap-[8px] flex-wrap">
-        <StatusBadge variant={badgeVariant} label={badgeLabel} />
-        {isUpcomingUnstarted && (
+        {isUpcomingUnstarted ? (
           <StatusBadge
-            variant={editLocked ? 'red' : 'green'}
+            variant="blue"
             label={editLocked ? t('meeting_edit_locked') : `${t('meeting_edit_open')} · ${daysLeft}${t('meeting_edit_days_left_suffix')}`}
           />
+        ) : (
+          <StatusBadge variant={badgeVariant} label={badgeLabel} />
         )}
       </div>
 
@@ -525,7 +635,7 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, 
 
       {/* CTAs */}
       <div className={`flex gap-[10px] w-full justify-end items-center ${!showStages ? 'mt-[12px]' : ''}`}>
-        {actions.length > 0 && <ActionsMenu actions={actions} t={t} />}
+        {actions.length > 0 && <ActionsMenu actions={actions} t={t} onAction={onAction} />}
         {isDraft ? (
           <Button
             variant="filled"

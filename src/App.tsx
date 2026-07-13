@@ -32,6 +32,7 @@ import SendToPresidentScreen from './screens/SendToPresidentScreen';
 import MeetingCalendarScreen from './screens/MeetingCalendarScreen';
 import MeetingConclusionScreen from './screens/MeetingConclusionScreen';
 import ViewMeetingScreen from './screens/ViewMeetingScreen';
+import ViewNoticeScreen from './screens/ViewNoticeScreen';
 import OfficialHomeScreen from './screens/OfficialHomeScreen';
 import HelplinesScreen from './screens/HelplinesScreen';
 import DocumentsScreen from './screens/DocumentsScreen';
@@ -78,6 +79,7 @@ export default function App() {
       <Route path="/meetings/conclusion"          element={<MeetingConclusionScreen />} />
       <Route path="/meetings/calendar"           element={<MeetingCalendarScreen />} />
       <Route path="/meetings/view/:id"           element={<ViewMeetingScreen />} />
+      <Route path="/meetings/view-notice/:id"   element={<ViewNoticeScreen />} />
       <Route path="/agenda-list"              element={<AgendaListScreen />} />
       <Route path="/mom-entry"                element={<MoMEntryDefaultScreen />} />
       <Route path="/mom-entry/legacy"         element={<MoMEntryDefaultScreenLegacy />} />

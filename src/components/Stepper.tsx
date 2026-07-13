@@ -51,11 +51,10 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
           {/* Step pill — centred */}
           <div
             key={`step-${i}`}
-            className={`flex items-center justify-center gap-2 p-1 min-w-0 rounded-[10px] ${
-              step.status === 'completed' && onStepClick ? 'cursor-pointer hover:bg-[#f5f5f5] transition-colors' : ''
+            className={`group flex items-center justify-center gap-2 p-1 min-w-0 rounded-[10px] ${
+              step.status === 'completed' && onStepClick ? 'cursor-pointer' : ''
             }`}
             onClick={step.status === 'completed' ? () => onStepClick?.(step.number) : undefined}
-            title={step.status === 'completed' && onStepClick ? `Go to step ${step.number}` : undefined}
           >
             {/* Circle */}
             {step.status === 'completed' ? (
@@ -86,7 +85,7 @@ export default function Stepper({ activeState = 2, stepLabels, variant = 'mom-fl
               {step.label.split('\n').map((line, li) => (
                 <span
                   key={li}
-                  className="font-semibold text-[14px] text-[#212121] leading-5 tracking-[0.5px]"
+                  className={`font-semibold text-[14px] text-[#212121] leading-5 tracking-[0.5px] ${step.status === 'completed' && onStepClick ? 'group-hover:underline' : ''}`}
                   style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
                 >
                   {line}

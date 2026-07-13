@@ -52,7 +52,7 @@ export default function AgendaCard({
   const isCompact       = isInside || isSubpage;
 
   const containerCls = isSubpage
-    ? 'border border-[rgba(106,62,49,0.24)] px-[15px] pt-[8px] pb-[10px] rounded-[8px]'
+    ? 'border border-[rgba(106,62,49,0.24)] px-[15px] pt-[12px] pb-[15px] rounded-[8px]'
     : isInside
     ? 'bg-[#f7f0ee] px-[15px] pt-[8px] pb-[10px] rounded-[8px]'
     : 'bg-white border border-[rgba(106,62,49,0.32)] px-[25px] py-[20px] gap-[10px] rounded-[15px]';
@@ -67,20 +67,20 @@ export default function AgendaCard({
       <div className={`flex items-start shrink-0 w-full ${isCompact ? 'pt-[3px]' : 'justify-between'}`}>
 
         {/* Left: circle + text */}
-        <div className="flex gap-[15px] items-center flex-1 min-w-0">
+        <div className={`flex gap-[15px] ${isCompact ? 'items-start' : 'items-center'} flex-1 min-w-0`}>
 
           <NumberCircle type={circleType} number={agendaNumber} />
 
-          <div className={`flex flex-col items-start ${isCompact ? 'justify-center flex-1 min-w-0' : 'flex-1 min-w-0 justify-center gap-[5px] py-[3px]'}`}>
+          <div className={`flex flex-col items-start ${isCompact ? 'justify-center flex-1 min-w-0 gap-[3px]' : 'flex-1 min-w-0 justify-center gap-[5px] py-[3px]'}`}>
             <p
-              className={`font-medium w-full ${isCompact ? 'text-[14px] leading-[24px]' : 'text-[16px] leading-[24px] tracking-[0.15px]'} ${headingColor}`}
+              className={`font-medium w-full ${isCompact ? 'text-[15px] leading-[22px]' : 'text-[16px] leading-[24px] tracking-[0.15px]'} ${headingColor}`}
               style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
             >
               {agendaHeading}
             </p>
             {agendaDescription && (
               <p
-                className={`w-full text-[#3b3b3b] ${isCompact ? 'font-normal text-[12px] leading-[20px]' : 'font-normal text-[14px] leading-[20px] tracking-[0.1px]'}`}
+                className={`w-full text-[#3b3b3b] ${isCompact ? 'font-normal text-[13px] leading-[20px]' : 'font-normal text-[14px] leading-[20px] tracking-[0.1px]'}`}
                 style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
               >
                 {agendaDescription}

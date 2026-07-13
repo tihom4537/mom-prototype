@@ -473,13 +473,12 @@ export default function MoMEntrySimpleScreenV4() {
               />
 
               {/* Discussion field label + info */}
-              <div className="flex flex-col gap-[6px] items-start w-full mt-[20px]">
-                <QuestionFieldsSmall type="mandatory" questionText={t('discussion_field_label')} className="shrink-0" />
-                <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
-              </div>
-            </div>
-
-            <TextAreaContainer
+              <div className="flex flex-col gap-[8px] items-start w-full mt-[10px]">
+                <div className="flex flex-col gap-[6px] items-start w-full">
+                  <QuestionFieldsSmall type="mandatory" questionText={t('discussion_field_label')} className="shrink-0" />
+                  <InfoBox type="plain" text={t('discussion_field_info')} className="shrink-0 w-full" />
+                </div>
+                <TextAreaContainer
               state={isRecording ? 'recording' : (isProcessing ? 'recording' : 'default')}
               placeholder={t('discussion_field_placeholder')}
               value={discussionText}
@@ -493,6 +492,8 @@ export default function MoMEntrySimpleScreenV4() {
                 ? { height: `${textareaHeight}px`, maxHeight: `${textareaHeight}px` }
                 : { minHeight: 'clamp(100px, calc(100vh - 760px), 400px)', maxHeight: '400px' }}
             />
+              </div>
+            </div>
 
             {/* Footer buttons */}
             <div ref={leftExtraBottomRef} className="flex gap-[15px] items-start justify-end shrink-0 w-full mt-[10px]">

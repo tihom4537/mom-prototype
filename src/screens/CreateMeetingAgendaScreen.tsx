@@ -182,7 +182,7 @@ export default function CreateMeetingAgendaScreen() {
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
   const [templateTab,        setTemplateTab]        = useState<'paper' | 'word'>('paper');
 
-  // ── Paper template: single common 4-column layout for every agenda item ──
+  // ── Paper template: category-specific 4-column layout per agenda item ──
   type ColDef = { kn: string; en: string; width?: string };
 
   const COMMON_COLS: ColDef[] = [
@@ -191,6 +191,79 @@ export default function CreateMeetingAgendaScreen() {
     { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ', en: 'Responsible person / org', width: '22%' },
     { kn: 'ಕಾಲಾವಧಿ',                en: 'Timeline / Follow-up',     width: '14%' },
   ];
+
+  // Category col-sets, matching the source Notice/Proceedings sheets
+  const REVIEW_STATUS_COLS: ColDef[] = [
+    { kn: 'ನಡಾವಳಿ / ಎಟಿಆರ್ ಸಾರಾಂಶ',   en: 'Minutes / ATR summary' },
+    { kn: 'ದೃಢೀಕರಣ / ಕೈಗೊಂಡ ಕ್ರಮ',    en: 'Confirmation / action taken' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const INFO_INTIMATION_COLS: ColDef[] = [
+    { kn: 'ಸುತ್ತೋಲೆ ವಿವರಗಳು',         en: 'Circular details' },
+    { kn: 'ಮುಖ್ಯಾಂಶಗಳು / ಅಗತ್ಯ ಕ್ರಮ', en: 'Key points / action required' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const ISSUE_GRIEVANCE_COLS: ColDef[] = [
+    { kn: 'ಸಮಸ್ಯೆ / ಸ್ಥಳ',            en: 'Issue / location' },
+    { kn: 'ಕೈಗೊಂಡ ಕ್ರಮ',              en: 'Action decided' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const MULTI_TOPIC_COLS: ColDef[] = [
+    { kn: 'ವಿಷಯ / ಕಾರ್ಯ',            en: 'Matter / function' },
+    { kn: 'ಚರ್ಚೆ / ಕೈಗೊಂಡ ಕ್ರಮ',      en: 'Discussion / action taken' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+
+  // Special-cased columns for items 3 (approval, "amount/status"-style) and 5/6 differ slightly per sheet
+  const COLLECTION_COLS: ColDef[] = [
+    { kn: 'ಸಂಗ್ರಹ ವಿವರಗಳು',           en: 'Collection details' },
+    { kn: 'ಮೊತ್ತ / ಸ್ಥಿತಿ',           en: 'Amount / status' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const INCOME_EXPENDITURE_COLS: ColDef[] = [
+    { kn: 'ಯೋಜನೆ / ನಿಧಿ ಶೀರ್ಷಿಕೆ',    en: 'Scheme / fund head' },
+    { kn: 'ಆದಾಯ ಮತ್ತು ವೆಚ್ಚ',          en: 'Income & expenditure' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const PROCEEDINGS_APPROVAL_COLS: ColDef[] = [
+    { kn: 'ನಡಾವಳಿ ವಿವರಗಳು',          en: 'Proceedings details' },
+    { kn: 'ಅನುಮೋದನೆ / ಶಿಫಾರಸು',      en: 'Approval / recommendation' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const SCHEME_PROGRESS_COLS: ColDef[] = [
+    { kn: 'ಯೋಜನೆ ವಿವರಗಳು',           en: 'Scheme details' },
+    { kn: 'ಪ್ರಗತಿ / ಸ್ಥಿತಿ',          en: 'Progress / status' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+  const APPLICATION_GRIEVANCE_COLS: ColDef[] = [
+    { kn: 'ಅರ್ಜಿ / ದೂರು ವಿವರಗಳು',    en: 'Application / grievance details' },
+    { kn: 'ಪರಿಹಾರ / ಕೈಗೊಂಡ ಕ್ರಮ',    en: 'Resolution / action taken' },
+    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
+    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
+  ];
+
+  // Agenda id → column set, per source sheet categorisation (items 1-9 are the GP General Body defaults)
+  const COLS_BY_AGENDA_ID: Record<number, ColDef[]> = {
+    1: REVIEW_STATUS_COLS,           // Reading & confirmation of minutes
+    2: INFO_INTIMATION_COLS,         // Govt circulars
+    3: PROCEEDINGS_APPROVAL_COLS,    // Standing Committee proceedings approval
+    4: ISSUE_GRIEVANCE_COLS,         // Drinking water / sanitation / street lights
+    5: COLLECTION_COLS,              // Tax, rates, fees collection
+    6: INCOME_EXPENDITURE_COLS,      // Income & expenditure of schemes/funds
+    7: SCHEME_PROGRESS_COLS,         // Centrally/state sponsored schemes progress
+    8: APPLICATION_GRIEVANCE_COLS,   // Sakala / public grievance redressal
+    9: MULTI_TOPIC_COLS,             // Section 58 functions — multi-topic/misc
+  };
+
+  const colsForAgenda = (id: number): ColDef[] => COLS_BY_AGENDA_ID[id] ?? COMMON_COLS;
 
   // ── Build paper (print) HTML ──────────────────────────────────────────────
   function buildPaperHTML(items: AgendaItem[], meeting: Record<string, unknown>): string {
@@ -204,7 +277,7 @@ export default function CreateMeetingAgendaScreen() {
     const instructionText = `[ನಿರ್ದಿಷ್ಟ ವಾರ್ಡ್ / ಗ್ರಾಮ / ಪ್ರದೇಶ]ದಲ್ಲಿರುವ [ನಿರ್ದಿಷ್ಟ ಸಮಸ್ಯೆ]ಗೆ ಸಂಬಂಧಿಸಿದ ವಿಷಯವನ್ನು ಸಭೆಯಲ್ಲಿ [ಸದಸ್ಯರು / ನಾಗರಿಕರು / ನಿರ್ದಿಷ್ಟ ಗುಂಪು] ಮುಂದಿಟ್ಟರು. ಈ ವಿಷಯದ ಬಗ್ಗೆ ಚರ್ಚೆ ನಡೆಸಿದ ನಂತರ, ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲು [ಪ್ರಸ್ತಾವಿತ ಪರಿಹಾರ ಕ್ರಮ / ತಿದ್ದುಪಡಿ ಕ್ರಮ] ಕೈಗೊಳ್ಳಲು ತೀರ್ಮಾನಿಸಲಾಯಿತು.`;
 
     const agendaSections = items.map((a, i) => {
-      const cols = COMMON_COLS;
+      const cols = colsForAgenda(a.id);
 
       // Build colgroup widths
       const colgroup = cols.map(c => `<col style="width:${c.width ?? 'auto'}">`).join('');
@@ -279,7 +352,7 @@ export default function CreateMeetingAgendaScreen() {
     const participants = (meeting.participants as unknown[])?.length ?? 0;
 
     const agendaTables = items.map((a, i) => {
-      const cols = COMMON_COLS;
+      const cols = colsForAgenda(a.id);
       const fieldRows = cols.map(c => `
         <tr>
           <td style="width:32%;background:#f5f5f5;border:1px solid #C6C6C6;padding:7px 10px;vertical-align:top;">

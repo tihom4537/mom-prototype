@@ -2,14 +2,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
 import {
-  MeetingDetailsCard,
   SectionHolder,
   Button,
   QuorumBar,
   NumberCircle,
   Table,
 } from '../components';
+import MeetingDetailsTag from '../components/MeetingDetailsTag';
+import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import type { TableColumn } from '../components';
+import ProceedingsPreviewDocument from '../components/ProceedingsPreviewDocument';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
@@ -90,7 +92,7 @@ const MOCK_REVIEWS: Record<number, { agreed: ReviewParticipant[]; disagreed: Rev
 
 function AvatarGrid({ participants }: { participants: ReviewParticipant[] }) {
   return (
-    <div className="flex flex-wrap gap-x-[12px] gap-y-[10px] justify-center mx-auto" style={{ maxWidth: 'calc(4 * 52px + 3 * 12px)' }}>
+    <div className="flex flex-wrap gap-x-[12px] gap-y-[10px] justify-center mx-auto" style={{ maxWidth: 'calc(6 * 52px + 5 * 12px)' }}>
       {participants.map(p => (
         <div key={p.id} className="flex flex-col items-center gap-[4px] w-[52px]">
           <img
@@ -129,7 +131,7 @@ function ParticipantPercentageCard({
 
 function VoteTable({ participants, colName, colSl }: { participants: ReviewParticipant[]; colName: string; colSl: string; }) {
   return (
-    <div className="flex flex-col rounded-[6px] border border-[#c6c6c6] overflow-hidden w-full">
+    <div className="flex flex-col rounded-[6px] border border-[#c6c6c6] overflow-hidden" style={{ maxWidth: '320px', width: '100%' }}>
       <div className="flex bg-[#ddd] border-b border-[#c6c6c6] shrink-0">
         <div className="w-[44px] shrink-0 px-[10px] py-[8px] border-r border-[#c6c6c6]">
           <span className="text-[12px] text-[#4b4b4b] tracking-[0.4px]" style={NS}>{colSl}</span>
@@ -167,18 +169,18 @@ function ParticipantsTable({ t }: { t: (k: string) => string }) {
     {
       key: 'sl',
       label: t('view_meeting_col_sl'),
-      width: 'w-[52px] shrink-0',
+      width: 'w-[56px] shrink-0',
     },
     {
       key: 'name',
       label: t('view_meeting_col_name'),
-      width: 'w-[180px] shrink-0',
+      width: 'flex-1 min-w-[160px]',
       render: (_v, row) => (
-        <div className="flex flex-col justify-center py-[4px]">
-          <span className="text-[12px] font-medium text-[#212121] leading-5 truncate" style={NS}>
+        <div className="flex flex-col justify-center">
+          <span className="text-[13px] font-medium text-[#212121] leading-5 truncate" style={NS}>
             {row.name as string}
           </span>
-          <span className="text-[11px] text-[#727272] leading-4 truncate" style={NS}>
+          <span className="text-[12px] text-[#727272] leading-4 truncate" style={NS}>
             {row.designation as string}
           </span>
         </div>
@@ -197,15 +199,15 @@ function ParticipantsTable({ t }: { t: (k: string) => string }) {
     {
       key: 'email',
       label: t('attendance_col_email'),
-      width: 'flex-1 min-w-0',
+      width: 'flex-1 min-w-[160px]',
     },
     {
       key: 'status',
       label: t('view_meeting_col_status'),
-      width: 'w-[120px] shrink-0',
+      width: 'w-[100px] shrink-0',
       render: (_v, row) => (
         <span
-          className="text-[12px] font-medium"
+          className="text-[13px] font-medium"
           style={{ ...NS, color: row.status === 'present' ? '#2e7d32' : '#c62828' }}
         >
           {row.status === 'present' ? t('view_meeting_present') : t('view_meeting_absent')}
@@ -219,6 +221,7 @@ function ParticipantsTable({ t }: { t: (k: string) => string }) {
       columns={columns}
       rows={sorted as unknown as Record<string, unknown>[]}
       getRowId={row => row.id as number}
+      className="w-full"
     />
   );
 }
@@ -239,81 +242,73 @@ function AgendaReviewSection({ t }: { t: (k: string) => string }) {
         const othersCount     = all.filter(p => p.gender === 'other').length;
 
         return (
-          <div key={item.id} className="border border-[rgba(106,62,49,0.24)] rounded-[10px] flex flex-col gap-[20px] p-[20px]">
+          <div key={item.id} className="border border-[var(--neutral-200)] rounded-[10px] px-[15px] pt-[15px] pb-[20px] flex flex-col gap-[8px]">
 
-            {/* Heading */}
-            <div className="flex items-start gap-[14px]">
-              <NumberCircle type="subpage" number={String(item.id)} />
-              <div className="flex flex-col flex-1 min-w-0">
-                <span className="font-semibold text-[14px] text-[#212121] leading-[22px]" style={NS}>
-                  {t(item.headingKey)}
-                </span>
-                <span className="text-[12px] text-[#727272] leading-[20px]" style={NS}>
-                  {t(item.descriptionKey)}
-                </span>
+            {/* Heading row */}
+            <div className="flex items-center w-full">
+              <div className="flex flex-1 gap-[15px] items-center min-w-0">
+                <NumberCircle type="subpage" number={String(item.id)} />
+                <div className="flex flex-col flex-1 min-w-0">
+                  <span className="text-[15px] font-medium text-[#4b4b4b] leading-[24px]" style={NS}>{t(item.headingKey)}</span>
+                  <span className="text-[13px] text-[#727272] leading-[20px]" style={NS}>{t(item.descriptionKey)}</span>
+                </div>
               </div>
             </div>
 
-            {/* Proceedings */}
-            <div className="flex flex-col gap-[6px]">
-              <span className="text-[11px] font-semibold text-[#6a3e31] uppercase tracking-[0.5px]" style={NS}>
-                {t('view_meeting_proceedings_label')}
-              </span>
-              <div className="bg-[rgba(221,221,221,0.15)] border border-[rgba(106,62,49,0.16)] rounded-[8px] px-[15px] py-[10px]">
-                <p className="text-[12px] text-[#3b3b3b] leading-[20px]" style={NS}>
-                  {item.proceedings || (
-                    <span className="text-[#727272] italic">{t('view_meeting_no_proceedings')}</span>
-                  )}
+            {/* Proceedings box indented */}
+            <div className="ml-[47px] flex flex-col rounded-[8px] border border-[rgba(106,62,49,0.24)] overflow-hidden">
+              <div className="bg-[rgba(221,221,221,0.1)] px-[12px] py-[10px]">
+                <p className="text-[13px] font-normal text-[#3b3b3b] leading-[20px] whitespace-pre-wrap" style={NS}>
+                  {item.proceedings || <span className="text-[#727272] italic">{t('view_meeting_no_proceedings')}</span>}
                 </p>
               </div>
             </div>
 
-            {/* Divider */}
-            <div className="border-t border-[rgba(106,62,49,0.16)]" />
+            {/* Review viz — inside same box */}
+            <div className="flex flex-col gap-[16px] mt-[12px]">
+              {/* Summary bar */}
+              <div className="bg-[#f7f0ee] flex items-center justify-center px-[20px] py-[10px] rounded-[10px] w-full shrink-0">
+                <span className="font-semibold text-[14px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
+                  {t('review_viz_total')}: {total}&nbsp;&nbsp;|&nbsp;&nbsp;
+                  {t('review_viz_women')}: {womenCount}&nbsp;&nbsp;|&nbsp;&nbsp;
+                  {t('review_viz_men')}: {menCount}&nbsp;&nbsp;|&nbsp;&nbsp;
+                  {t('review_viz_others')}: {othersCount}
+                </span>
+              </div>
 
-            {/* Review viz */}
-            {/* Summary bar */}
-            <div className="bg-[#f7f0ee] flex items-center justify-center px-[20px] py-[10px] rounded-[10px] w-full shrink-0">
-              <span className="font-semibold text-[14px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
-                {t('review_viz_total')}: {total}&nbsp;&nbsp;|&nbsp;&nbsp;
-                {t('review_viz_women')}: {womenCount}&nbsp;&nbsp;|&nbsp;&nbsp;
-                {t('review_viz_men')}: {menCount}&nbsp;&nbsp;|&nbsp;&nbsp;
-                {t('review_viz_others')}: {othersCount}
-              </span>
-            </div>
-
-            {/* Two-column: avatars → ballots → % cards → tables */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gridTemplateRows: 'auto auto auto auto', columnGap: '24px', rowGap: '0px' }}>
-              <div style={{ gridColumn: 1, gridRow: 1, paddingBottom: '30px' }}>
-                <AvatarGrid participants={agreedList} />
-              </div>
-              <div style={{ gridColumn: 2, gridRow: '1 / 5', backgroundColor: 'rgba(106,62,49,0.40)' }} />
-              <div style={{ gridColumn: 3, gridRow: 1, paddingBottom: '30px' }}>
-                <AvatarGrid participants={disagreedList} />
-              </div>
-              <div style={{ gridColumn: 1, gridRow: 2, paddingBottom: '10px', display: 'flex', justifyContent: 'center' }}>
-                <img src="/Agree Ballot.PNG" alt="Agree ballot" style={{ height: '72px', objectFit: 'contain' }} />
-              </div>
-              <div style={{ gridColumn: 3, gridRow: 2, paddingBottom: '10px', display: 'flex', justifyContent: 'center' }}>
-                <img src="/Disagree Ballot.PNG" alt="Disagree ballot" style={{ height: '72px', objectFit: 'contain' }} />
-              </div>
-              <div style={{ gridColumn: 1, gridRow: 3, paddingBottom: '20px' }}>
-                <ParticipantPercentageCard
-                  percent={agreePercent} count={agreedList.length} total={total} type="agree"
-                  participantsLabel={t('review_viz_participants')} participantsOutOf={t('proceedings_review_count_out')} voteLabel={t('review_viz_agreed')}
-                />
-              </div>
-              <div style={{ gridColumn: 3, gridRow: 3, paddingBottom: '20px' }}>
-                <ParticipantPercentageCard
-                  percent={disagreePercent} count={disagreedList.length} total={total} type="disagree"
-                  participantsLabel={t('review_viz_participants')} participantsOutOf={t('proceedings_review_count_out')} voteLabel={t('review_viz_disagreed')}
-                />
-              </div>
-              <div style={{ gridColumn: 1, gridRow: 4 }}>
-                <VoteTable participants={agreedList}    colSl={t('review_col_sl')} colName={t('review_viz_col_name')} />
-              </div>
-              <div style={{ gridColumn: 3, gridRow: 4 }}>
-                <VoteTable participants={disagreedList} colSl={t('review_col_sl')} colName={t('review_viz_col_name')} />
+              {/* Two-column: avatars → ballots → % cards → tables */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gridTemplateRows: 'auto auto auto auto', columnGap: '24px' }}>
+                <div style={{ gridColumn: 1, gridRow: 1, paddingBottom: '30px' }}>
+                  <AvatarGrid participants={agreedList} />
+                </div>
+                <div style={{ gridColumn: 2, gridRow: '1 / 5', backgroundColor: 'rgba(106,62,49,0.40)' }} />
+                <div style={{ gridColumn: 3, gridRow: 1, paddingBottom: '30px' }}>
+                  <AvatarGrid participants={disagreedList} />
+                </div>
+                <div style={{ gridColumn: 1, gridRow: 2, paddingBottom: '10px', display: 'flex', justifyContent: 'center' }}>
+                  <img src="/Agree Ballot.PNG" alt="Agree ballot" style={{ height: '72px', objectFit: 'contain' }} />
+                </div>
+                <div style={{ gridColumn: 3, gridRow: 2, paddingBottom: '10px', display: 'flex', justifyContent: 'center' }}>
+                  <img src="/Disagree Ballot.PNG" alt="Disagree ballot" style={{ height: '72px', objectFit: 'contain' }} />
+                </div>
+                <div style={{ gridColumn: 1, gridRow: 3, paddingBottom: '20px' }}>
+                  <ParticipantPercentageCard
+                    percent={agreePercent} count={agreedList.length} total={total} type="agree"
+                    participantsLabel={t('review_viz_participants')} participantsOutOf={t('proceedings_review_count_out')} voteLabel={t('review_viz_agreed')}
+                  />
+                </div>
+                <div style={{ gridColumn: 3, gridRow: 3, paddingBottom: '20px' }}>
+                  <ParticipantPercentageCard
+                    percent={disagreePercent} count={disagreedList.length} total={total} type="disagree"
+                    participantsLabel={t('review_viz_participants')} participantsOutOf={t('proceedings_review_count_out')} voteLabel={t('review_viz_disagreed')}
+                  />
+                </div>
+                <div style={{ gridColumn: 1, gridRow: 4, display: 'flex', justifyContent: 'center' }}>
+                  <VoteTable participants={agreedList}    colSl={t('review_col_sl')} colName={t('review_viz_col_name')} />
+                </div>
+                <div style={{ gridColumn: 3, gridRow: 4, display: 'flex', justifyContent: 'center' }}>
+                  <VoteTable participants={disagreedList} colSl={t('review_col_sl')} colName={t('review_viz_col_name')} />
+                </div>
               </div>
             </div>
 
@@ -330,7 +325,7 @@ export default function ViewMeetingScreen() {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { meetings } = useMeetings();
+  const { meetings, meetingAgendas } = useMeetings();
   const meeting = meetings.find(m => m.id === Number(id));
 
   const presentCount = MOCK_PARTICIPANTS.filter(p => p.status === 'present').length;
@@ -340,6 +335,24 @@ export default function ViewMeetingScreen() {
 
   const meetingName = meeting?.nameKey ? t(meeting.nameKey) : (meeting?.name ?? t('mock_meeting_title'));
 
+  // Real agenda items from context if available, else fall back to mock
+  const contextAgendas = meeting ? meetingAgendas[meeting.id] : undefined;
+  const previewAgendaItems = contextAgendas && contextAgendas.length > 0
+    ? contextAgendas.map(a => ({
+        id: a.id,
+        heading: a.title,
+        description: a.description,
+        completed: a.completed,
+        proceedingsText: typeof a.proceedingsText === 'string' ? a.proceedingsText : undefined,
+      }))
+    : MOCK_AGENDA.map(a => ({
+        id: a.id,
+        heading: t(a.headingKey),
+        description: t(a.descriptionKey),
+        completed: true,
+        proceedingsText: a.proceedings,
+      }));
+
   return (
     <MeetingShellLayout
       stepperActiveState={1}
@@ -347,23 +360,59 @@ export default function ViewMeetingScreen() {
       showBack={false}
       breadcrumbItems={[t('breadcrumb_module'), t('breadcrumb_meetings'), t('breadcrumb_view_meeting')]}
     >
-              {/* Meeting details */}
-              <MeetingDetailsCard
-                variant="default"
-                meetingTitle={meetingName}
-                modeOfMeeting={t('meeting_mode_in_person')}
-                date={meeting?.date ?? '—'}
-                time={meeting?.time ?? '—'}
-                venue={meeting?.venue ?? '—'}
-                participants={`${meeting?.participants ?? total} ${t('meeting_participants_label')}`}
-              />
+              <GoBackToPreviousPage label={t('view_meeting_back_to_list')} onClick={() => navigate('/meetings/list')} />
+
+              {/* Meeting details + quorum */}
+              <div className="bg-white rounded-[15px] flex flex-col">
+                {/* Top row: title+tag left, venue+participants right */}
+                <div className="flex items-end justify-between gap-[20px] px-[20px] py-[15px]">
+                  <div className="flex flex-1 flex-col gap-[10px] items-start min-w-0">
+                    <span className="text-[18px] font-semibold text-[#6a3e31] leading-[24px]" style={NS}>{meetingName}</span>
+                    <MeetingDetailsTag
+                      modeOfMeeting={t('meeting_mode_in_person')}
+                      date={meeting?.date ?? '—'}
+                      time={meeting?.time ?? '—'}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-[4px] items-start shrink-0">
+                    <div className="flex items-center gap-[6px]">
+                      <span className="material-icons text-[15px] text-[#727272]">location_on</span>
+                      <span className="text-[12px] text-[#3b3b3b]" style={NS}>{meeting?.venue ?? '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-[6px]">
+                      <span className="material-icons text-[15px] text-[#727272]">people</span>
+                      <span className="text-[12px] text-[#3b3b3b]" style={NS}>{meeting?.participants ?? total} {t('meeting_participants_label')}</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Quorum strip */}
+                <div className="border-t border-[var(--neutral-100)] mx-[20px] pt-[10px] pb-[12px] flex flex-col gap-[4px]">
+                  <span className="text-[13px] text-[#3b3b3b]" style={NS}>
+                    <span className="font-semibold">Elected Representative Quorum Required:</span> {meeting?.electedQuorum ?? '51%'}
+                  </span>
+                  <span className="text-[13px] text-[#3b3b3b]" style={NS}>
+                    <span className="font-semibold">People Participants Attendance (%):</span> {meeting?.participantsQuorum ?? '10%'}
+                  </span>
+                </div>
+              </div>
+
+
+              {/* Agenda, Minutes & Review */}
+              <SectionHolder
+                variant="with-tag"
+                title={t('view_meeting_section_agenda')}
+                tagText={`${MOCK_AGENDA.length} ${t('proceedings_review_count_agendas')}`}
+                bodyClassName="px-[30px] pt-[30px] pb-[40px]"
+              >
+                <AgendaReviewSection t={t} />
+              </SectionHolder>
 
               {/* Quorum + Participants */}
               <SectionHolder
                 variant="with-tag"
                 title={t('view_meeting_section_participants')}
                 tagText={`${total} ${t('meeting_participants_label')}`}
-                bodyClassName="px-[25px] pt-[16px] pb-[25px] flex flex-col gap-[20px]"
+                bodyClassName="px-[30px] pt-[30px] pb-[40px] flex flex-col gap-[20px]"
               >
                 <QuorumBar
                   total={total}
@@ -375,18 +424,28 @@ export default function ViewMeetingScreen() {
                   quorumMet={quorumPct >= 51}
                   quorumRequired={51}
                   celebrationLocked
+                  staticQuorumText
                 />
                 <ParticipantsTable t={t} />
               </SectionHolder>
 
-              {/* Agenda, Minutes & Review */}
+              {/* Proceedings Preview — A4 format */}
               <SectionHolder
-                variant="with-tag"
-                title={t('view_meeting_section_agenda')}
-                tagText={`${MOCK_AGENDA.length} ${t('proceedings_review_count_agendas')}`}
-                bodyClassName="px-[25px] pt-[16px] pb-[25px]"
+                variant="default"
+                title={t('proceedings_preview_section_title')}
+                bodyClassName="px-[30px] pt-[30px] pb-[40px] flex flex-col gap-[16px]"
               >
-                <AgendaReviewSection t={t} />
+                <div className="max-w-[760px] mx-auto w-full shadow-[0_2px_12px_rgba(0,0,0,0.10)]">
+                  <ProceedingsPreviewDocument
+                    t={t}
+                    meeting={meeting}
+                    agendaItems={previewAgendaItems}
+                    summary=""
+                    nextMeetingDate={meeting?.nextMeetingDate ?? ''}
+                    nextMeetingType={meeting?.nextMeetingType ?? ''}
+                    page={1}
+                  />
+                </div>
               </SectionHolder>
 
               {/* Back button */}

@@ -55,6 +55,7 @@ export const translations = {
     quorum_stat_no_biometric: "No biometric",
     quorum_target_label: "Quorum target",
     quorum_met_message: "Congratulations, you have met the meeting Quorum! You may proceed with the meeting.",
+    quorum_met_closure_message: "Well done! You've made it to the final stage — just two more steps and the meeting is officially closed!",
     attendance_pill_present: "Present",
     attendance_pill_absent: "Absent",
     attendance_biometric_limit: "Max 2 participants without biometric",
@@ -259,8 +260,8 @@ export const translations = {
     meeting_gp_label: "Gram Panchayat:",
     btn_start_meeting: "Start Meeting",
     btn_edit_meeting: "Edit Meeting",
-    meeting_edit_open: "Open to edit",
-    meeting_edit_locked: "Edit locked",
+    meeting_edit_open: "Meeting Scheduled · Open to Edit",
+    meeting_edit_locked: "Meeting Scheduled",
     meeting_edit_days_left_suffix: "d left",
     btn_add_proceedings_list: "Add Proceedings",
     btn_review_proceedings: "Review Proceedings",
@@ -765,6 +766,7 @@ export const translations = {
 
     // --- Meeting List — status badge labels ---
     meeting_badge_scheduled: "Meeting Scheduled",
+    meeting_badge_today: "Scheduled for Today",
     meeting_badge_draft: "Draft",
     meeting_badge_completed: "Meeting Completed",
     meeting_badge_president_pending: "President Sign Pending",
@@ -1269,6 +1271,7 @@ export const translations = {
     quorum_stat_no_biometric: "ಬಯೋಮೆಟ್ರಿಕ್ ಇಲ್ಲ",
     quorum_target_label: "ಕೋರಮ್ ಗುರಿ",
     quorum_met_message: "ಅಭಿನಂದನೆಗಳು, ನೀವು ಸಭೆಯ ಕೋರಮ್ ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ! ಸಭೆಯನ್ನು ಮುಂದುವರಿಸಬಹುದು.",
+    quorum_met_closure_message: "ಶಾಭಾಸ್! ನೀವು ಈ ಸಭೆಯ ಕೊನೆಯವರೆಗೂ ಇದ್ದೀರಿ. ಸಭೆಯ ಅಧಿವೇಶನ ಪೂರ್ಣಗೊಂಡಿದೆ.",
     attendance_pill_present: "ಹಾಜರು",
     attendance_pill_absent: "ಗೈರು",
     attendance_biometric_limit: "ಬಯೋಮೆಟ್ರಿಕ್ ಇಲ್ಲದೆ ಗರಿಷ್ಠ 2 ಭಾಗವಹಿಸುವವರು",
@@ -1977,6 +1980,7 @@ export const translations = {
 
     // --- Meeting List — status badge labels ---
     meeting_badge_scheduled: "ಸಭೆ ನಿಗದಿಯಾಗಿದೆ",
+    meeting_badge_today: "ಇಂದು ನಿಗದಿಯಾಗಿದೆ",
     meeting_badge_draft: "ಕರಡು",
     meeting_badge_completed: "ಸಭೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
     meeting_badge_president_pending: "ಅಧ್ಯಕ್ಷರ ಸಹಿ ಬಾಕಿ",

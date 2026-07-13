@@ -29,10 +29,14 @@ export interface ProceedingsPreviewProps {
   page: 1 | 2;
 }
 
+// A4 at 760px wide → height = 760 * (297/210) ≈ 1075px
+const A4_HEIGHT = 1075;
+
 export default function ProceedingsPreviewDocument({ t, meeting, agendaItems, summary, nextMeetingDate, nextMeetingType, page: activePage }: ProceedingsPreviewProps) {
   const page: React.CSSProperties = {
     background: 'white',
-    minHeight: '1056px',
+    width: '100%',
+    height: `${A4_HEIGHT}px`,
     padding: '32px 40px',
     fontFamily: NS_FONT,
     fontSize: '12px',
@@ -40,7 +44,7 @@ export default function ProceedingsPreviewDocument({ t, meeting, agendaItems, su
     boxSizing: 'border-box',
     display: 'flex',
     flexDirection: 'column',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
+    overflow: 'hidden',
   };
 
   const cellLabel: React.CSSProperties = {

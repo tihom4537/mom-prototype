@@ -13,6 +13,7 @@ interface MeetingDetailsCardProps {
   participants?: string;
   variant?: MeetingDetailsCardVariant;
   className?: string;
+  hideVenueParticipants?: boolean;
 }
 
 export default function MeetingDetailsCard({
@@ -24,6 +25,7 @@ export default function MeetingDetailsCard({
   participants = '16 Participants',
   variant = 'default',
   className,
+  hideVenueParticipants = false,
 }: MeetingDetailsCardProps) {
   const isShortened = variant === 'default-shortened';
 
@@ -58,10 +60,12 @@ export default function MeetingDetailsCard({
           />
         </div>
         {/* Right: venue + participants */}
-        <div className="flex flex-col items-start shrink-0">
-          <SmallDetailsText text={`Venue: ${venue}`} />
-          <SmallDetailsText text={`Participants : ${participants}`} />
-        </div>
+        {!hideVenueParticipants && (
+          <div className="flex flex-col items-start shrink-0">
+            <SmallDetailsText text={`Venue: ${venue}`} />
+            <SmallDetailsText text={`Participants : ${participants}`} />
+          </div>
+        )}
       </div>
     </div>
   );

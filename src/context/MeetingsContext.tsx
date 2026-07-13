@@ -60,6 +60,7 @@ export interface MeetingData {
    *  forward to the Send to President proceedings preview. */
   nextMeetingType?: string;
   nextMeetingDate?: string;
+  nextMeetingTime?: string;
 }
 
 const DEMO_MEETING: MeetingData = {
@@ -76,6 +77,7 @@ const DEMO_MEETING: MeetingData = {
   participantsQuorum: '78%',
   stepsCompleted: 2,
   tab: 'today',
+  meetingType: 'GP General Body',
   description: 'Pre-populated demo meeting — all agenda proceedings already saved. Use this to walk through the full review flow without entering data.',
 };
 
@@ -95,6 +97,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 0,
     tab: 'today',
+    meetingType: 'GP General Body',
   },
   {
     id: 2,
@@ -110,6 +113,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 2,
     tab: 'today',
+    meetingType: 'GP General Body',
   },
   {
     id: 3,
@@ -125,6 +129,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'GP General Body',
   },
   {
     id: 7,
@@ -140,6 +145,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'GP General Body',
   },
   {
     id: 8,
@@ -155,6 +161,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'GP General Body',
   },
   {
     id: 9,
@@ -170,6 +177,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Grama Sabha',
   },
   {
     id: 10,
@@ -185,6 +193,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Grama Sabha',
   },
   {
     id: 11,
@@ -200,6 +209,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Finance Committee',
   },
   {
     id: 12,
@@ -215,6 +225,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Finance Committee',
   },
   {
     id: 13,
@@ -230,6 +241,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'GP General Body',
   },
   {
     id: 14,
@@ -245,6 +257,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Grama Sabha',
   },
   {
     id: 15,
@@ -260,6 +273,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 4,
     tab: 'past',
+    meetingType: 'Finance Committee',
   },
   {
     id: 4,
@@ -275,6 +289,23 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 0,
     tab: 'upcoming',
+    meetingType: 'GP General Body',
+  },
+  {
+    id: 1783886124706,
+    name: '5th GP General Body Meeting 2026',
+    nameKey: 'meeting_name_5',
+    mode: 'IN PERSON',
+    date: '20/08/2026',
+    time: '10:00 a.m',
+    venue: 'Kakanur GP Office (1501001003)',
+    participants: 12,
+    gpName: 'Kakanur Gram Panchayat',
+    electedQuorum: '51%',
+    participantsQuorum: '10%',
+    stepsCompleted: 0,
+    tab: 'upcoming' as const,
+    meetingType: 'Grama Sabha',
   },
   {
     id: 5,
@@ -290,6 +321,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 0,
     tab: 'drafts',
+    meetingType: 'GP General Body',
   },
   {
     id: 6,
@@ -305,6 +337,7 @@ const INITIAL_MEETINGS: MeetingData[] = [
     participantsQuorum: '10%',
     stepsCompleted: 0,
     tab: 'cancelled',
+    meetingType: 'Finance Committee',
   },
 ];
 

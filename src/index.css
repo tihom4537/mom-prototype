@@ -4,6 +4,33 @@
 
 
 
+/* Rotating border animation */
+@keyframes spin-border {
+  to { --border-angle: 360deg; }
+}
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+.animate-spin-border {
+  background:
+    linear-gradient(var(--danger-50), var(--danger-50)) padding-box,
+    conic-gradient(from var(--border-angle), var(--danger-100) 0%, var(--danger-300) 40%, var(--danger-500) 50%, var(--danger-300) 60%, var(--danger-100) 100%) border-box;
+  border: 1.5px solid transparent !important;
+  animation: spin-border 2.5s linear infinite;
+}
+
+/* Breathe scale animation */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.03); }
+}
+.animate-breathe {
+  animation: breathe 2s ease-in-out infinite;
+  display: inline-block;
+}
+
 /* Scroll reveal */
 .reveal {
   opacity: 0;
@@ -232,8 +259,11 @@
 }
 
 /* MoM table textareas and TextAreaContainer: suppress global outline — row border-l accent is the focus indicator */
-textarea:focus-visible {
+textarea:focus-visible,
+input:focus-visible,
+input:focus {
   outline: none !important;
+  box-shadow: none !important;
 }
 
 body {

@@ -29,18 +29,18 @@ const isElected = (designation: string) =>
   ELECTED_DESIGNATIONS.some(d => designation.toLowerCase().startsWith(d.toLowerCase()));
 
 const INITIAL: ClosureRow[] = [
-  { id: 1,  name: 'Ramesh Kumar',  designation: 'PDO',            gpName: 'Kakanur GP',  phone: '9876543210', email: 'ramesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 2,  name: 'Savitha Gowda', designation: 'Secretary',      gpName: 'Kakanur GP',  phone: '9845123456', email: 'savitha@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 3,  name: 'Manjunath B.',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9741230987', email: 'manju@kgp.gov.in',    status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 4,  name: 'Lakshmi Devi',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9632014785', email: 'lakshmi@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 5,  name: 'Suresh Patil',  designation: 'President',      gpName: 'Kakanur GP',  phone: '9512345678', email: 'suresh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 6,  name: 'Anitha Rao',    designation: 'Vice President', gpName: 'Kakanur GP',  phone: '9423567890', email: 'anitha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 7,  name: 'Prakash Hegde', designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9334512678', email: 'prakash@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 8,  name: 'Kaveri S.',     designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9245631089', email: 'kaveri@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 9,  name: 'Nagesh M.',     designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '9156789023', email: 'nagesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 10, name: 'Bhavana Naik',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9067891234', email: 'bhavana@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 11, name: 'Raju Chandra',  designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '8978012345', email: 'raju@kgp.gov.in',     status: 'unmarked', biometric: 'none', reason: '' },
-  { id: 12, name: 'Geetha Kumari', designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '8889123456', email: 'geetha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '' },
+  { id: 1,  name: 'Ramesh Kumar',  designation: 'PDO',            gpName: 'Kakanur GP',  phone: '9876543210', email: 'ramesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 2,  name: 'Savitha Gowda', designation: 'Secretary',      gpName: 'Kakanur GP',  phone: '9845123456', email: 'savitha@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
+  { id: 3,  name: 'Manjunath B.',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9741230987', email: 'manju@kgp.gov.in',    status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 4,  name: 'Lakshmi Devi',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9632014785', email: 'lakshmi@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
+  { id: 5,  name: 'Suresh Patil',  designation: 'President',      gpName: 'Kakanur GP',  phone: '9512345678', email: 'suresh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 6,  name: 'Anitha Rao',    designation: 'Vice President', gpName: 'Kakanur GP',  phone: '9423567890', email: 'anitha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
+  { id: 7,  name: 'Prakash Hegde', designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9334512678', email: 'prakash@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 8,  name: 'Kaveri S.',     designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9245631089', email: 'kaveri@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
+  { id: 9,  name: 'Nagesh M.',     designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '9156789023', email: 'nagesh@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 10, name: 'Bhavana Naik',  designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '9067891234', email: 'bhavana@kgp.gov.in',  status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
+  { id: 11, name: 'Raju Chandra',  designation: 'Ward Member',    gpName: 'Kakanur GP',  phone: '8978012345', email: 'raju@kgp.gov.in',     status: 'unmarked', biometric: 'none', reason: '', gender: 'man' },
+  { id: 12, name: 'Geetha Kumari', designation: 'Ward Member',    gpName: 'Hosakote GP', phone: '8889123456', email: 'geetha@kgp.gov.in',   status: 'unmarked', biometric: 'none', reason: '', gender: 'woman' },
 ];
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
@@ -121,7 +121,7 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
 
   useEffect(() => {
     if (!isTaken) return;
-    const timer = setTimeout(onClose, 1500);
+    const timer = setTimeout(onClose, 1200);
     return () => clearTimeout(timer);
   }, [isTaken, onClose]);
   const isFailed = row.biometric === 'failed';
@@ -144,7 +144,11 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
         <div className="bg-white flex-1 overflow-y-auto px-[30px] py-[25px] flex flex-col gap-[0px]">
           {/* Member identity box */}
           <div className="flex items-center gap-[14px] bg-[#f5f5f5] rounded-[10px] px-[18px] py-[14px] mb-[24px]">
-            <Icon name="person" size="large" color="#9e9e9e" />
+            <img
+              src={(row as any).gender === 'woman' ? '/avatar-woman.PNG' : '/avatar-man.PNG'}
+              alt={row.name}
+              className="size-[50px] object-contain shrink-0"
+            />
             <div className="flex flex-col">
               <span className="text-[17px] font-semibold text-[#6a3e31] leading-[22px]" style={NS}>{row.name}</span>
               <span className="text-[13px] text-[#4b4b4b] leading-[18px]" style={NS}>{tDesignation(row.designation)}</span>
@@ -214,7 +218,7 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
           {/* CTA row */}
           <div className="flex flex-col items-center gap-[8px]">
             <div className="flex items-center justify-center gap-[10px]">
-              <Button variant="grey-outlined" text={t('btn_close')} onClick={onClose} />
+              <Button variant="outlined" text={t('btn_close')} onClick={onClose} />
               <Button
                 variant="filled"
                 iconPlacement="left"
@@ -477,6 +481,7 @@ export default function AttendanceScreenV2() {
                   noBiometricCount={noBiometricCount} quorumPct={quorumPct} quorumMet={quorumMet}
                   quorumRequired={QUORUM_PERCENT}
                   celebrationLocked={celebrationLocked}
+                  celebrationMessage={isClosureRoute ? t('quorum_met_closure_message') : undefined}
                 />
 
                 {/* Search + filter */}
@@ -492,14 +497,24 @@ export default function AttendanceScreenV2() {
                 <div className="rounded-[6px] border border-[#c6c6c6] overflow-hidden">
                 <table
                   className="w-full"
-                  style={{ borderCollapse: 'collapse', tableLayout: 'auto' }}
+                  style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}
                 >
+                  <colgroup>
+                    <col style={{ width: '40px' }} />
+                    <col style={{ width: showWideColumns ? '150px' : '130px' }} />
+                    {showWideColumns && <col style={{ width: '120px' }} />}
+                    <col style={{ width: showWideColumns ? '120px' : '110px' }} />
+                    {showWideColumns && <col style={{ width: '160px' }} />}
+                    <col style={{ width: showWideColumns ? '220px' : '190px' }} />
+                    <col style={{ width: showWideColumns ? '200px' : '170px' }} />
+                    <col style={{ width: showWideColumns ? '260px' : '180px' }} />
+                  </colgroup>
                   <thead>
                     <tr className="bg-[#ddd]">
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle whitespace-nowrap" style={{ borderLeftWidth: '5px', borderLeftStyle: 'solid', borderLeftColor: '#dddddd' }}>
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_sl')}</span>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle" style={{ width: '150px' }}>
+                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_name_designation')}</span>
                       </th>
                       {showWideColumns && (
@@ -516,8 +531,8 @@ export default function AttendanceScreenV2() {
                         </th>
                       )}
                       <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <div className="flex flex-col items-start gap-[6px]">
-                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_attendance')}</span>
+                        <div className="flex items-center gap-[8px] flex-wrap">
+                          <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_attendance')}</span>
                           <button
                             type="button"
                             onClick={allPresent ? unmarkAll : markAllPresent}
@@ -532,7 +547,7 @@ export default function AttendanceScreenV2() {
                       <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <div className="flex flex-col gap-[2px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_biometric')}</span>
-                          <span className={`text-[10px] leading-[13px] whitespace-nowrap font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
+                          <span className={`text-[10px] leading-[13px] font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
                         </div>
                       </th>
                       <th className="px-[12px] h-[43px] text-left border-b border-[#c6c6c6] align-middle w-full">
@@ -560,7 +575,7 @@ export default function AttendanceScreenV2() {
                         >
                           <span className="text-[12px] text-[#4b4b4b]" style={NS}>{row.id}</span>
                         </td>
-                        <td className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle transition-colors ${hoverCls} ${bb}`} style={{ width: '150px' }}>
+                        <td className={`px-[12px] py-[8px] border-r border-[#e8e8e8] align-middle transition-colors ${hoverCls} ${bb}`}>
                           <span className="text-[12px] font-medium text-[#212121] leading-5 block" style={NS}>{row.name}</span>
                           <span className="text-[11px] text-[#727272] leading-4 block" style={NS}>{tDesignation(row.designation)}</span>
                         </td>

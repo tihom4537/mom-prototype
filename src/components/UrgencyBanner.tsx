@@ -74,21 +74,23 @@ export default function UrgencyBanner({
           <p className={`font-medium text-[12px] leading-[16px] tracking-[1.5px] ${cfg.labelColor}`} style={NS}>
             {resolvedLabel}
           </p>
-          <p className={`font-semibold text-[14px] leading-[20px] tracking-[0.1px] ${cfg.nameColor}`} style={NS}>
-            {meetingName}
-          </p>
-          {stagePill && (
-            <div className="bg-[#dfc2b9] self-start flex items-center px-[10px] py-[3px] rounded-full mt-[2px]">
-              <p className="font-medium text-[12px] leading-[16px] text-[#6a3e31] tracking-[0.3px] whitespace-nowrap" style={NS}>
-                {stagePill}
-              </p>
-            </div>
-          )}
-          {meta && (
-            <p className="font-normal text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.25px]" style={NS}>
-              {meta}
+          <div className="flex items-center gap-[8px] flex-wrap min-w-0">
+            <p className={`font-semibold text-[13px] leading-[20px] tracking-[0.1px] ${cfg.nameColor}`} style={NS}>
+              {meetingName}
             </p>
-          )}
+            {stagePill && (
+              <div className="bg-[#dfc2b9] flex items-center px-[10px] py-[3px] rounded-full">
+                <p className="font-medium text-[12px] leading-[16px] text-[#6a3e31] tracking-[0.3px] whitespace-nowrap" style={NS}>
+                  {stagePill}
+                </p>
+              </div>
+            )}
+            {meta && (
+              <p className="font-normal text-[12px] leading-[20px] text-[#6a3e31] tracking-[0.25px] whitespace-nowrap" style={NS}>
+                {meta}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 

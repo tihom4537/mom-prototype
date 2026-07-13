@@ -154,7 +154,7 @@ export default function DropdownField({
             position: 'fixed',
             top: actuallyOpensUp ? undefined : listPos.top,
             bottom: actuallyOpensUp ? window.innerHeight - listPos.top : undefined,
-            right: listPos.right,
+            left: listPos.left,
             minWidth: listPos.width,
             width: 'max-content',
             maxWidth: '280px',

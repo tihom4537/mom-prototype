@@ -220,7 +220,17 @@ export default function AttendanceScreen() {
 
                 {/* Table */}
                 <div className="rounded-[6px] border border-[#c6c6c6] overflow-hidden">
-                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'auto' }}>
+                <table className="w-full" style={{ borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                  <colgroup>
+                    <col style={{ width: '40px' }} />                                          {/* Sl. */}
+                    <col style={{ width: showWideColumns ? '150px' : '130px' }} />             {/* Name */}
+                    {showWideColumns && <col style={{ width: '120px' }} />}                    {/* GP */}
+                    <col style={{ width: showWideColumns ? '120px' : '110px' }} />             {/* Phone */}
+                    {showWideColumns && <col style={{ width: '160px' }} />}                    {/* Email */}
+                    <col style={{ width: showWideColumns ? '220px' : '190px' }} />             {/* Attendance */}
+                    <col style={{ width: showWideColumns ? '200px' : '170px' }} />             {/* Biometric */}
+                    <col style={{ width: showWideColumns ? '260px' : '180px' }} />             {/* Reason */}
+                  </colgroup>
 
                   <thead>
                     <tr className="bg-[#ddd]">
@@ -243,8 +253,8 @@ export default function AttendanceScreen() {
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal whitespace-nowrap" style={NS}>{t('attendance_col_email')}</span>
                         </th>
                       )}
-                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
-                        <div className="flex flex-col items-start gap-[6px]">
+                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle" style={{ width: '220px' }}>
+                        <div className="flex items-center gap-[8px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_attendance')}</span>
                           <button
                             type="button"
@@ -257,10 +267,10 @@ export default function AttendanceScreen() {
                           </button>
                         </div>
                       </th>
-                      <th className="px-[12px] h-[43px] text-left border-b border-r border-[#c6c6c6] align-middle">
+                      <th className="px-[12px] py-[8px] text-left border-b border-r border-[#c6c6c6] align-middle">
                         <div className="flex flex-col gap-[2px]">
                           <span className="text-[12px] leading-[16px] text-[#4b4b4b] tracking-[0.4px] font-normal" style={NS}>{t('attendance_col_biometric')}</span>
-                          <span className={`text-[10px] leading-[13px] whitespace-nowrap font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
+                          <span className={`text-[10px] leading-[13px] font-normal ${atBiometricLimit ? 'text-[#c62828]' : 'text-[#727272]'}`} style={NS}>{t('attendance_biometric_limit')}</span>
                         </div>
                       </th>
                       <th className="px-[12px] h-[43px] text-left border-b border-[#c6c6c6] align-middle w-full">
@@ -301,7 +311,7 @@ export default function AttendanceScreen() {
                             <span className="text-[12px] text-[#4b4b4b] truncate block w-full overflow-hidden" style={NS}>{row.email}</span>
                           </td>
                         )}
-                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`}>
+                        <td className={`px-[12px] h-[50px] border-r border-[#e8e8e8] align-middle ${bb}`} style={{ width: '220px' }}>
                           <AttendancePill
                             status={row.status === 'absent' ? 'absent' : row.status === 'present' ? 'present' : 'unmarked'}
                             onMark={(s) => markStatus(row.id, s)}

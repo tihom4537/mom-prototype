@@ -43,7 +43,7 @@ export default function SearchInput({
         disabled={disabled}
         placeholder={placeholder}
         className="flex-1 min-w-0 bg-transparent py-[10px] px-2 text-sm text-[#212121] placeholder-[#9e9e9e] outline-none"
-        style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}
+        style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100", outline: 'none' }}
       />
       {value && (
         <button

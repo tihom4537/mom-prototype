@@ -16,10 +16,7 @@ export default function AgendaListScreen() {
   const navigate = useNavigate();
   const location = useLocation();
   const meetingId: number | undefined = (location.state as { meetingId?: number } | null)?.meetingId;
-  const meetingType: string | undefined = meetingId != null ? meetings.find(m => m.id === meetingId)?.meetingType : undefined;
-  // AI feedback is only meaningful for GP General Body Meeting proceedings — other meeting
-  // types (Gram Sabha, standing committees, etc.) skip the feedback step entirely.
-  const isFeedbackApplicable = meetingType ? meetingType.includes('GP General Body Meeting') || meetingType.includes('ಜಿಪಿ ಸಾಮಾನ್ಯ ಸಭೆ') : true;
+  const isFeedbackApplicable = true;
 
   // Use per-meeting agendas if this is a user-created meeting; fall back to demo AgendaContext
   const userAgendas: MeetingAgendaItem[] | null = meetingId != null ? (meetingAgendas[meetingId] ?? null) : null;

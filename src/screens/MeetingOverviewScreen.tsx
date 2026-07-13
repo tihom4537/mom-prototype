@@ -151,7 +151,7 @@ export default function MeetingOverviewScreen() {
               <div className="flex items-stretch gap-[20px] flex-wrap">
 
                 {/* Quick Actions */}
-                <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden w-fit">
+                <div className="flex flex-col gap-[3px] rounded-[20px] overflow-hidden flex-1 basis-0 min-w-[280px]">
                   {/* Header */}
                   <div className="bg-white flex items-center px-[25px] py-[20px] rounded-tl-[20px] rounded-tr-[20px] shrink-0">
                     <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31] whitespace-nowrap" style={NS}>
@@ -172,12 +172,14 @@ export default function MeetingOverviewScreen() {
                         icon="format_list_bulleted"
                         onClick={() => navigate('/meetings/list')}
                       />
+                      {/* Calendar card hidden for now
                       <QuickActionCard
                         title={t('quick_action_calendar_title')}
                         description={t('quick_action_calendar_desc')}
                         icon="calendar_month"
                         onClick={() => navigate('/meetings/calendar')}
                       />
+                      */}
                     </div>
                   </div>
                 </div>
@@ -201,7 +203,7 @@ export default function MeetingOverviewScreen() {
                   ];
 
                   return (
-                    <div className="bg-[#FFEEEA] border border-[#FF8B78] rounded-[16px] px-[25px] pt-[20px] pb-[25px] flex flex-col gap-[20px] flex-1 min-w-[380px]">
+                    <div className="bg-white rounded-[16px] px-[25px] pt-[20px] pb-[25px] flex flex-col gap-[20px] flex-1 min-w-[380px]">
                       {/* Title */}
                       <div className="flex items-center gap-[10px]">
                         <span className="font-semibold text-[18px] leading-[22px] text-[#6a3e31]" style={NS}>
@@ -211,20 +213,18 @@ export default function MeetingOverviewScreen() {
                       </div>
 
                       {/* Summary row */}
-                      <div className="flex items-center gap-[20px]">
-                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
-                          <span className="font-bold text-[28px] leading-none text-[#6a3e31]" style={NS}>{totalScheduled}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_total_scheduled')}</span>
+                      <div className="flex items-stretch gap-[12px]">
+                        <div className="flex flex-col items-start gap-[4px] flex-1 rounded-[10px] px-[14px] py-[12px]" style={{ backgroundColor: 'var(--neutral-50)' }}>
+                          <span className="font-bold text-[26px] leading-none" style={{ ...NS, color: 'var(--neutral-800)' }}>{totalScheduled}</span>
+                          <span className="font-medium text-[13px]" style={{ ...NS, color: 'var(--neutral-600)' }}>{t('tracker_total_scheduled')}</span>
                         </div>
-                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.2)]" />
-                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
-                          <span className="font-bold text-[28px] leading-none" style={{ ...NS, color: 'var(--success-500)' }}>{totalCompleted}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_completed')}</span>
+                        <div className="flex flex-col items-start gap-[4px] flex-1 rounded-[10px] px-[14px] py-[12px]" style={{ backgroundColor: 'var(--success-50)' }}>
+                          <span className="font-bold text-[26px] leading-none" style={{ ...NS, color: 'var(--neutral-800)' }}>{totalCompleted}</span>
+                          <span className="font-medium text-[13px]" style={{ ...NS, color: 'var(--neutral-600)' }}>{t('tracker_completed')}</span>
                         </div>
-                        <div className="w-px h-[40px] bg-[rgba(106,62,49,0.2)]" />
-                        <div className="flex flex-col items-center gap-[2px] min-w-[64px]">
-                          <span className="font-bold text-[28px] leading-none text-[#c62828]" style={NS}>{totalPending}</span>
-                          <span className="font-medium text-[14px] text-[#727272]" style={NS}>{t('tracker_pending')}</span>
+                        <div className="flex flex-col items-start gap-[4px] flex-1 rounded-[10px] px-[14px] py-[12px]" style={{ backgroundColor: 'var(--danger-50)' }}>
+                          <span className="font-bold text-[26px] leading-none" style={{ ...NS, color: 'var(--neutral-800)' }}>{totalPending}</span>
+                          <span className="font-medium text-[13px]" style={{ ...NS, color: 'var(--neutral-600)' }}>{t('tracker_pending')}</span>
                         </div>
                       </div>
 
@@ -260,9 +260,9 @@ export default function MeetingOverviewScreen() {
 
                       {/* Pulsing pending reminder */}
                       {totalPending > 0 && (
-                        <div className="flex items-center gap-[10px] bg-white border border-[#FFCDC0] rounded-[10px] px-[14px] py-[10px]">
-                          <span className="animate-pulse text-[18px] leading-none shrink-0">⏰</span>
-                          <span className="font-semibold text-[14px] text-[#c62828]" style={NS}>
+                        <div className="animate-spin-border flex items-center gap-[10px] rounded-[10px] px-[14px] py-[10px]">
+                          <span className="text-[18px] leading-none shrink-0">⏰</span>
+                          <span className="font-semibold text-[14px]" style={{ ...NS, color: 'var(--danger-500)' }}>
                             {t('tracker_reminder').replace('{n}', String(totalPending))}
                           </span>
                         </div>
