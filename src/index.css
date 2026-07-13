@@ -15,7 +15,7 @@
 }
 .animate-spin-border {
   background:
-    linear-gradient(var(--danger-50), var(--danger-50)) padding-box,
+    linear-gradient(var(--neutral-50), var(--neutral-50)) padding-box,
     conic-gradient(from var(--border-angle), var(--danger-100) 0%, var(--danger-300) 40%, var(--danger-500) 50%, var(--danger-300) 60%, var(--danger-100) 100%) border-box;
   border: 1.5px solid transparent !important;
   animation: spin-border 2.5s linear infinite;
