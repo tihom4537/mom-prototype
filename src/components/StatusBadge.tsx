@@ -1,4 +1,4 @@
-export type StatusBadgeVariant = 'green' | 'yellow' | 'red' | 'blue' | 'brown';
+export type StatusBadgeVariant = 'green' | 'teal' | 'yellow' | 'red' | 'blue' | 'brown';
 
 interface StatusBadgeProps {
   label: string;
@@ -8,6 +8,7 @@ interface StatusBadgeProps {
 
 const STYLES: Record<StatusBadgeVariant, { bg: string; dot: string; text: string; hasDot: boolean }> = {
   green:  { bg: 'bg-[#e8f5e9]',  dot: 'bg-[#2e7d32]', text: 'text-[#2e7d32]', hasDot: true  },
+  teal:   { bg: 'bg-[#e0f2f1]',  dot: 'bg-[#00796b]', text: 'text-[#00796b]', hasDot: true  },
   yellow: { bg: 'bg-[#fff8e1]',  dot: 'bg-[#f57f17]', text: 'text-[#f57f17]', hasDot: true  },
   red:    { bg: 'bg-[#ffebee]',  dot: 'bg-[#c62828]', text: 'text-[#c62828]', hasDot: true  },
   blue:   { bg: 'bg-[#e3f2fd]',  dot: 'bg-[#1976d2]', text: 'text-[#1976d2]', hasDot: true  },

@@ -20,6 +20,7 @@ import {
   Table,
   Pagination,
 } from '../components';
+import GoBackToPreviousPage from '../components/GoBackToPreviousPage';
 import type { TableColumn } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { getNoticePeriod, getEarliestDate } from '../utils/meetingNoticePeriods';
@@ -435,6 +436,7 @@ export default function CreateMeetingScreen() {
     >
       <div role="main" className="flex flex-col gap-[15px]">
         <h1 className="sr-only">Create Meeting</h1>
+        <GoBackToPreviousPage label={t('view_meeting_back_to_list')} onClick={() => navigate('/meetings/list')} />
         <Stepper
           activeState={1}
           stepLabels={[t('stepper_step1'), t('stepper_step2'), t('stepper_step3')]}

@@ -533,7 +533,7 @@ function MeetingCard({ meeting, stepKeys, createStepKeys, t, onCta, onDraftCta, 
   const isPast = meeting.tab === 'past';
   const isToday = meeting.tab === 'today';
   const isPendingPresident = meeting.status === 'pending_president';
-  const badgeVariant = isCancelled ? 'red' : isDraft ? 'yellow' : isPast ? 'green' : isPendingPresident ? 'yellow' : isToday ? 'green' : 'blue';
+  const badgeVariant = isCancelled ? 'red' : isDraft ? 'yellow' : isPast ? 'teal' : isPendingPresident ? 'yellow' : isToday ? 'green' : 'blue';
   const badgeLabel   = isCancelled ? t('meeting_badge_cancelled') : isDraft ? t('meeting_badge_draft') : isPast ? t('meeting_badge_completed') : isPendingPresident ? t('meeting_badge_president_pending') : isToday ? t('meeting_badge_today') : t('meeting_badge_scheduled');
 
   // Upcoming meetings that haven't started yet can have their details edited

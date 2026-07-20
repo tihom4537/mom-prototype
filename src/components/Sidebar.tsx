@@ -48,7 +48,6 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
       id: 'meetings',
       label: t('nav_meetings'),
       icon: 'people_alt',
-      onParentClick: () => navigate('/meetings/overview'),
       subItems: [
         {
           label: t('nav_meeting_module_overview'),
@@ -96,11 +95,15 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
   const handleNavClick = (id: NavId) => {
     const item = NAV_ITEMS.find(n => n.id === id);
     item?.onParentClick?.();
-    setOpenItem(prev => (prev === id ? null : id));
+    // Don't collapse the active group — only toggle non-active groups
+    setOpenItem(prev => {
+      if (prev === id && activeNavId === id) return id; // keep open if active
+      return prev === id ? null : id;
+    });
   };
 
-  // A nav group is open if the user explicitly opened it
-  const isEffectivelyOpen = (id: NavId) => openItem === id;
+  // Open if explicitly opened OR if it contains the active route
+  const isEffectivelyOpen = (id: NavId) => openItem === id || activeNavId === id;
 
   return (
     <div
@@ -145,7 +148,7 @@ export default function Sidebar({ state = 'full', onMenuClick, className }: Side
               return (
                 <div key={item.id} className="flex flex-col items-center shrink-0">
                   <button
-                    onClick={() => handleNavClick(item.id)}
+                    onClick={onMenuClick}
                     title={item.label}
                     className={`flex items-center justify-center px-3 py-[9px] rounded-2xl shrink-0 border-none cursor-pointer transition-colors
                       ${isActive ? 'bg-[#efe0dc]' : 'bg-transparent hover:bg-[#efe0dc]'}`}
