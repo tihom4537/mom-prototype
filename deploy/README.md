@@ -37,8 +37,22 @@ HTTPS on a hostname. Live at `https://mom.monitoringandautomationsolution.site` 
 Push to `main`, wait for the "Build and push Docker images" workflow to go
 green, then on the VM run `/opt/mom/deploy.sh` (pull + up + prune).
 
+## Database
+
+`docker-compose.yml` runs `postgres:17-alpine` on the named volume `mom_mom-pgdata`
+(survives `down`, upgrades and reboots; only `down -v` deletes it). The backend
+creates/upgrades the audit tables `ai_feedback` and `stt_sessions` at startup.
+`POSTGRES_PASSWORD` must be in `/opt/mom/.env`. Useful commands on the VM:
+
+```bash
+docker exec mom-postgres-1 psql -U mom -d mom -c 'select count(*) from ai_feedback'
+docker exec mom-postgres-1 pg_dump -U mom -d mom | gzip > /opt/mom/backup-$(date +%F).sql.gz   # manual backup
+```
+
+Nightly `pg_dump` to S3 is planned (needs a bucket and an instance IAM role).
+
 ## Memory/disk budget
 
 Backend (uvicorn + sarvamai + google-generativeai) ≈ 150 MiB, frontend Nginx
-< 10 MiB; images ≈ 500 MB + 50 MB. The existing stack uses ≈ 470 MiB, so
-this fits with headroom and 1 GiB of swap for spikes.
+< 10 MiB; images ≈ 500 MB + 50 MB. Postgres idles at ≈ 56 MiB. Measured on 27 Oct 2026 with all three
+containers up: 423 MB RAM available, 1 GiB swap mostly free.
