@@ -7,7 +7,7 @@ Actions (`.github/workflows/build-and-push.yml`) builds and pushes
 public) on every push to `main`; the VM only pulls.
 
 Microphone capture needs a secure context, so the app must be served over
-HTTPS on a hostname. Default: `mom.monitoringandautomationsolution.site`.
+HTTPS on a hostname. Live at `https://mom.monitoringandautomationsolution.site` (Let's Encrypt, auto-renews via certbot) and, with a self-signed warning, `https://13.127.29.249`.
 
 ## One-time setup
 
