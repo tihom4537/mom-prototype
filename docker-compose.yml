@@ -10,7 +10,8 @@ services:
   frontend:
     image: ghcr.io/tihom4537/mom-frontend:latest
     ports:
-      - "80:80"
+      # Host Nginx terminates TLS and proxies to this port (see deploy notes)
+      - "127.0.0.1:8081:80"
     depends_on:
       - backend
     restart: unless-stopped
