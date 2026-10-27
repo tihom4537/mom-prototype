@@ -7,7 +7,9 @@ class FeedbackRequest(BaseModel):
     agenda_id: str
     agenda_subject: str
     mom_discussion: str
-    feedback_language: str = 'en'
+    feedback_language: Literal["en", "kn"] = "en"
+    # Ignore any earlier feedback stored for this agenda_id and start a fresh round.
+    reset: bool = False
 
     @field_validator("agenda_id", "agenda_subject", "mom_discussion")
     @classmethod
@@ -19,15 +21,27 @@ class FeedbackRequest(BaseModel):
         return value
 
 
+class FeedbackItem(BaseModel):
+    """One feedback point. `highlight` is a verbatim substring of `text` (or null)."""
+
+    text: str
+    highlight: Optional[str] = None
+
+
 class FeedbackResult(BaseModel):
-    category: str
-    category_reason: str
-    feedback: List[str]
-    spans: List[Optional[str]] = []
-    modes: List[str] = []
-    flag: Optional[str] = None
-    flag_message: Optional[str] = None
-    rewrite: Optional[str] = None  # Complete rewrite of entire minutes with blanks
+    """
+    Client-facing feedback contract.
+
+    `status` is "feedback" when there are points to act on and "good_to_go" when
+    the minutes are complete (or the previous round's feedback was addressed).
+    Classification (category / reason) is recorded in the audit table only.
+    """
+
+    status: Literal["feedback", "good_to_go"]
+    message: Optional[str] = None
+    feedback: List[FeedbackItem] = []
+    rewrite: Optional[str] = None
+    round: int = 1
 
 
 class SpeechToTextRequest(BaseModel):

@@ -12,14 +12,23 @@ curl -X POST "http://localhost:8000/feedback" \
 
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from .db import close_db_pool, init_db_pool, insert_ai_feedback
-from .feedback import get_feedback as run_feedback
+from .db import (
+    close_db_pool,
+    fetch_last_feedback,
+    init_db_pool,
+    insert_ai_feedback,
+    insert_stt_session,
+)
+from .feedback import GOOD_TO_GO_MESSAGE, get_feedback as run_feedback
 from .models import (
+    FeedbackItem,
     FeedbackRequest,
     FeedbackResult,
     OCRRequest,
@@ -32,11 +41,7 @@ from .models import (
 from .ocr import process_image_ocr
 from .speech_to_text import transcribe_audio_data_uri
 from .speech_to_text import _LANGUAGE_CODE_MAP
-from .speech_to_text_streaming import (
-    DEFAULT_STREAM_MODEL,
-    STREAM_MODELS,
-    relay_realtime_transcription,
-)
+from .speech_to_text_streaming import DEFAULT_STREAM_MODEL, relay_realtime_transcription
 from .translate import translate_text
 
 
@@ -74,76 +79,75 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
+# After this many rounds for one agenda item the backend answers good_to_go
+# regardless, so the loop always terminates.
+MAX_FEEDBACK_ROUNDS = 3
+
+
 @app.post("/feedback", response_model=FeedbackResult)
 async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
     """
-    Generate AI feedback for a single Gram Panchayat meeting item using
-    a single LLM prompt that both categorizes and provides feedback.
+    AI feedback on one agenda item's minutes.
 
-    Current schema (experimental, may evolve):
-    - Input JSON:
-      {
-        "agenda_id": "string (required, non-empty)",
-        "agenda_subject": "string (required, non-empty)",
-        "mom_discussion": "string (required, non-empty)"
-      }
-    - Output JSON:
-      {
-        "category": "string",
-        "category_reason": "string",
-        "feedback": ["string"]
-      }
+    Round one classifies the item and reviews it against the category checklist.
+    If feedback was already stored for this `agenda_id` (and `reset` is false),
+    the call becomes a follow-up round: the model checks which earlier points
+    the updated minutes address and returns only what is still open, or
+    `status: "good_to_go"` once roughly 70% has been addressed. After
+    MAX_FEEDBACK_ROUNDS the backend returns good_to_go unconditionally.
+
+    Classification (category, reason) is kept in the audit table, not returned.
     """
-    (
-        category,
-        reason,
-        feedback,
-        _feedback_raw,
-        failed,
-        spans,
-        modes,
-        flag,
-        flag_message,
-        rewrite,
-    ) = await run_feedback(
+    previous = None if body.reset else await fetch_last_feedback(body.agenda_id)
+    if previous and previous["status"] == "feedback" and previous["feedback"]:
+        round_no = int(previous["round"]) + 1
+        previous_points = previous["feedback"]
+    else:
+        round_no = 1
+        previous_points = None
+
+    outcome = await run_feedback(
         body.agenda_subject,
         body.mom_discussion,
         body.feedback_language,
+        previous_feedback=previous_points,
+    )
+
+    good_to_go = outcome.good_to_go or (round_no >= MAX_FEEDBACK_ROUNDS and not outcome.failed)
+    if good_to_go and not outcome.message:
+        outcome.message = GOOD_TO_GO_MESSAGE.get(body.feedback_language, GOOD_TO_GO_MESSAGE["en"])
+
+    result = FeedbackResult(
+        status="good_to_go" if good_to_go else "feedback",
+        message=outcome.message if good_to_go else None,
+        feedback=[] if good_to_go else [FeedbackItem(text=t, highlight=h) for t, h in outcome.items],
+        rewrite=outcome.rewrite,
+        round=round_no,
     )
 
     logger.info(
-        "Agenda '%s' (%s) categorized as '%s'%s",
-        body.agenda_subject,
-        body.agenda_id,
-        category,
-        f" [flag={flag}]" if flag else "",
+        "Agenda %r (%s) round %d -> %s, category %r%s",
+        body.agenda_subject, body.agenda_id, round_no, result.status, outcome.category,
+        " [LLM FAILED]" if outcome.failed else "",
     )
 
-    result = FeedbackResult(
-        category=category,
-        category_reason=reason,
-        feedback=feedback,
-        spans=spans,
-        modes=modes,
-        flag=flag,
-        flag_message=flag_message,
-        rewrite=rewrite,
-    )
-
-    # Only persist when LLM processing succeeded.
-    if not failed:
+    # Only persist when the model call succeeded; a failed call must not become
+    # the "previous feedback" of the next round.
+    if not outcome.failed:
         try:
             await insert_ai_feedback(
                 agenda_id=body.agenda_id,
                 input_payload=body.model_dump(),
                 output_payload=result.model_dump(),
+                category=outcome.category,
+                category_reason=outcome.reason,
+                status=result.status,
+                round_no=round_no,
+                model=outcome.model,
+                latency_ms=outcome.latency_ms,
             )
-        except Exception as exc:  # pragma: no cover - best-effort logging
-            logger.exception(
-                "Failed to insert ai_feedback for agenda_id=%s: %s",
-                body.agenda_id,
-                exc,
-            )
+        except Exception as exc:  # pragma: no cover - best-effort audit
+            logger.exception("Failed to insert ai_feedback for agenda_id=%s: %s", body.agenda_id, exc)
 
     return result
 
@@ -190,8 +194,7 @@ async def ocr(body: OCRRequest) -> OCRResponse:
 async def websocket_speech_to_text(
     websocket: WebSocket,
     locale: str = "kn",
-    model: str = DEFAULT_STREAM_MODEL,
-    keyterms: str = "",
+    agenda_id: Optional[str] = None,
 ) -> None:
     """
     Real-time transcription over a WebSocket, relayed to Sarvam AI's realtime
@@ -200,8 +203,8 @@ async def websocket_speech_to_text(
 
     Query params:
     - `locale`: "kn" (default) or "en".
-    - `model`: "saaras:v3-realtime" (default) or "saaras:v4".
-    - `keyterms`: comma-separated domain terms to bias recognition (saaras:v4 only).
+    - `agenda_id`: optional; recorded in the audit row so a transcript can be
+      traced to the agenda item it was dictated for.
 
     Client -> server: binary frames of raw 16 kHz mono 16-bit PCM, then a text
     frame `{"type": "end"}`.
@@ -209,16 +212,10 @@ async def websocket_speech_to_text(
     Server -> client (JSON text frames): `ready`, `partial`, `final`, `error`, `end`.
     """
     await websocket.accept()
+    started_at = datetime.now(timezone.utc)
 
-    terms = [term.strip() for term in keyterms.split(",") if term.strip()]
-    problem = None
     if locale not in _LANGUAGE_CODE_MAP:
         problem = f"Unsupported locale {locale!r}; expected one of {sorted(_LANGUAGE_CODE_MAP)}"
-    elif model not in STREAM_MODELS:
-        problem = f"Unsupported model {model!r}; expected one of {list(STREAM_MODELS)}"
-    elif terms and model != "saaras:v4":
-        problem = "keyterms are only supported with model saaras:v4"
-    if problem:
         try:
             await websocket.send_json(
                 {"type": "error", "code": "invalid_start", "message": problem, "fatal": True}
@@ -228,14 +225,30 @@ async def websocket_speech_to_text(
             pass
         return
 
-    await relay_realtime_transcription(
-        websocket, locale=locale, model=model, keyterms=terms
+    summary = await relay_realtime_transcription(
+        websocket, locale=locale, model=DEFAULT_STREAM_MODEL, keyterms=[]
     )
 
     try:
         await websocket.close()
     except (WebSocketDisconnect, RuntimeError):
         pass  # client already gone
+
+    try:
+        await insert_stt_session(
+            request_id=summary.request_id,
+            agenda_id=agenda_id,
+            locale=locale,
+            model=DEFAULT_STREAM_MODEL,
+            utterances=summary.utterances,
+            audio_duration_s=summary.audio_duration_s,
+            total_utterances=summary.total_utterances,
+            outcome=summary.outcome,
+            error_code=summary.error_code,
+            started_at=started_at,
+        )
+    except Exception as exc:  # pragma: no cover - best-effort audit
+        logger.exception("Failed to insert stt_session: %s", exc)
 
 
 # If you want to run with: `python -m gram_panchayat_api.main`

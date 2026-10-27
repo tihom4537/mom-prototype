@@ -15,23 +15,13 @@ import {
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { FEEDBACK_API } from '../config/api';
+import type { FeedbackResult } from '../types/feedback';
 import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 
 type EntryState = 'idle' | 'recording' | 'processing';
 
-export interface FeedbackResult {
-  category: string;
-  category_reason: string;
-  feedback: string[];
-  /** Parallel array: the exact phrase in discussionText each feedback item refers to (null if no span) */
-  spans?: (string | null)[];
-  /** Parallel array: mode for each feedback item — REPLACE | APPEND | REPHRASE */
-  modes?: string[];
-  /** Special flag when minutes need no changes or are invalid */
-  flag?: 'good_to_go' | 'poor_quality' | 'agenda_copy' | 'mismatch' | string | null;
-  /** Human-readable message to show when flag is set */
-  flag_message?: string | null;
-}
+// Re-exported for the screens that historically imported the type from here.
+export type { FeedbackResult } from '../types/feedback';
 
 export default function MoMEntryPostRecordingScreen() {
   const { lang, t } = useLanguage();
@@ -252,27 +242,21 @@ export default function MoMEntryPostRecordingScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (discussionText.trim() === MOCK_TEXT) {
       const feedbackResult: FeedbackResult = {
-        category: 'Public Health & Sanitation',
-        category_reason: 'The agenda covers sanitation activities, public health observances, and disease precautionary measures.',
+        status: 'feedback',
+        message: null,
         feedback: [
-          'The following information was given about Swachh Saturday —',
-          'The following information was given about Village Sanitation —',
-          'The following information was given about Onagalu Day —',
-          'The following information was given about COVID JN.1 —',
-          'The following information was given about precautionary measures —',
-          'The meeting discussed the following key topics:',
+          { text: 'Add the date, location and number of participants of the Swachh Saturday village cleanliness activities.', highlight: 'date, location and number of participants' },
+          { text: 'Mention what village sanitation work was carried out and who was responsible.', highlight: 'who was responsible' },
+          { text: 'Record the date of the Onagalu Day observance and the activities conducted.', highlight: 'date of the Onagalu Day observance' },
+          { text: 'Name the authority or circular that issued the COVID-19 JN.1 advisory.', highlight: 'authority or circular' },
+          { text: 'List the specific precautionary measures that were communicated to members.', highlight: 'specific precautionary measures' },
+          { text: 'Good detail on the range of topics covered in the meeting.', highlight: null },
         ],
-        spans: [
-          'Swachh Saturday village cleanliness activities',
-          null,
-          'Onagalu Day observance',
-          'COVID-19 JN.1 precautionary measures',
-          null,
-          'Information was provided regarding',
-        ],
+        rewrite: 'Information was provided regarding the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward] with [number of participants] participants, the Onagalu Day observance held on [date], and the COVID-19 JN.1 precautionary measures advised by [name of authority/circular].',
+        round: 1,
       };
       setIsFetchingFeedback(false);
-      navigate('/mom-entry/feedback', { state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId } });
+      navigate('/mom-entry/simple-v4', { state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId } });
       return;
     }
     // END MOCK INTERCEPT
@@ -295,7 +279,7 @@ export default function MoMEntryPostRecordingScreen() {
       }
 
       const feedbackResult: FeedbackResult = await res.json();
-      navigate('/mom-entry/feedback', {
+      navigate('/mom-entry/simple-v4', {
         state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId },
       });
     } catch (err) {

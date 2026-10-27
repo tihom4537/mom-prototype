@@ -1,17 +1,41 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_DB=mom
+      - POSTGRES_USER=mom
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      # Named volume: survives `docker compose down`, image upgrades and reboots.
+      # Only `down -v` or `docker volume rm` deletes it.
+      - mom-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mom -d mom"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     image: ghcr.io/tihom4537/mom-backend:latest
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-2.0-flash}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-2.5-flash}
       - SARVAMAI_API_KEY=${SARVAMAI_API_KEY}
+      - DATABASE_URL=postgresql://mom:${POSTGRES_PASSWORD}@postgres:5432/mom
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
     image: ghcr.io/tihom4537/mom-frontend:latest
     ports:
-      # Host Nginx terminates TLS and proxies to this port (see deploy notes)
+      # Host Nginx terminates TLS and proxies to this port (see deploy/README.md)
       - "127.0.0.1:8081:80"
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  mom-pgdata:

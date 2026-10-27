@@ -1,4 +1,5 @@
 from textwrap import dedent
+from typing import List
 
 
 CATEGORIES = [
@@ -120,6 +121,12 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
         Key Instructions:
         - Provide feedback as a list of separate points — each point is one item in the
           feedback array. Keep each point a short, actionable suggestion — no long paragraphs.
+        - HIGHLIGHT MARKER: inside each point, wrap the specific missing or unclear detail
+          you are asking for in double curly braces, exactly once, e.g.
+          "Could you specify the {{{{month and year}}}} this expenditure relates to?" or
+          "If a {{{{timeline}}}} was decided, it may be worth adding it here."
+          Wrap only the detail being asked for (2–6 words), never the whole sentence.
+          Positive-reinforcement points carry no marker.
         - If the text is good, provide positive reinforcement.
         - CRITICAL: This app is for a single, specific Panchayat. If the user mentions
           "the panchayat," do not ask them to specify which one. Assume it is the correct
@@ -215,13 +222,104 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
         Agenda Subject: {agenda_subject}
         Minutes Discussion: {mom_discussion}
 
+        GOOD TO GO: if, after applying every rule above, there is no meaningful gap to
+        flag, set "good_to_go" to true, put only positive points (if any) in "feedback",
+        and still provide the rewrite.
+
         Respond in exactly this JSON format (no extra text, no markdown):
         {{
           "category": "<one exact label from the six categories above>",
           "reason": "<one short sentence explaining the classification>",
-          "feedback": ["<point 1>", "<point 2>", "..."],
+          "good_to_go": <true or false>,
+          "feedback": ["<point 1 with one {{{{marker}}}}>", "<point 2>", "..."],
           "rewrite": "<suggested rewrite as official-record prose with [[placeholder]] markers>"
         }}
+        """
+    ).strip()
+
+
+def build_refeedback_prompt(
+    agenda_subject: str,
+    mom_discussion: str,
+    previous_feedback: List[str],
+    feedback_language: str = 'en',
+) -> str:
+    """
+    Second and later rounds: the user was given `previous_feedback`, edited the
+    minutes, and is asking again. The model checks which earlier points are now
+    addressed and returns only what is still open — or good_to_go when roughly
+    70% or more has been addressed. Classification and rewrite are produced as
+    in the first round so the audit row and the UI stay complete.
+    """
+    if feedback_language.lower() == 'kn':
+        lang_prefix = "🌐 CRITICAL INSTRUCTION: You MUST respond ENTIRELY IN KANNADA (ಕನ್ನಡ). Every single word, including feedback points, the message and the rewrite, must be in Kannada script. Only the JSON keys and the category label stay in English.\n\n"
+    else:
+        lang_prefix = "🌐 LANGUAGE: Respond in English.\n\n"
+
+    previous_block = "\n".join(f"- {point}" for point in previous_feedback) or "- (none)"
+
+    return dedent(
+        f"""
+        {lang_prefix}You are an AI assistant that reviews Gram Panchayat meeting minutes. The user was
+        previously given feedback, has updated the minutes, and is asking again.
+
+        PREVIOUS FEEDBACK:
+        {previous_block}
+
+        STEP 1 — CLASSIFY: assign the SINGLE best category from this fixed list (exact label):
+        - Issue / Grievance
+        - Review / Status
+        - Planning / Preparatory
+        - Information / Intimation
+        - Multi-Topic / Miscellaneous
+        - Other / Can't Categorize
+
+        STEP 2 — CHECK THE PREVIOUS FEEDBACK against the UPDATED MINUTES below.
+        - If the previous feedback has been mostly addressed (about 70% or more of the
+          points), set "good_to_go" to true, set "message" to a short friendly confirmation
+          such as "Great, you are good to go!", and leave "feedback" empty.
+        - Otherwise set "good_to_go" to false and return a NEW concise list of points
+          covering ONLY what is still missing or incomplete. Do not repeat points that
+          have been addressed. Do not raise new topics that were not in the previous
+          feedback unless something in the update is now genuinely unclear or wrong.
+        - A point counts as addressed when the specific detail it asked for is now present
+          in any form, even briefly. Fill-in placeholders such as [[date]] or ______ that
+          are still unfilled do NOT count as addressed.
+
+        Feedback Guidelines for any remaining points:
+        - CLARIFYING QUESTIONS (Direct) only for things the user mentioned but left vague.
+          Do NOT start with "You mentioned...".
+        - SUGGESTIVE PROMPTS (Gentle, "If ... it may be worth adding") only for things
+          completely absent.
+        - HIGHLIGHT MARKER: wrap the specific missing detail in double curly braces exactly
+          once per point, e.g. "Could you specify the {{{{month and year}}}}?". 2–6 words,
+          never the whole sentence.
+        - COMPREHENSION RULE: re-read the full text first; do not ask about anything
+          already answered.
+        - RESPONSIBILITY RULE: do not ask who is responsible when it is clearly the Gram
+          Panchayat as a body.
+        - META-COMMENTARY RULE: no announcements about the text's structure; just the points.
+        - This app is for one specific Panchayat; never ask which Panchayat.
+
+        STEP 3 — REWRITE: produce a suggested rewrite of the updated minutes that applies
+        any remaining feedback. Keep every fact already recorded; invent nothing. Where a
+        detail is still missing, insert a double-square-bracket placeholder with a short
+        label, e.g. [[date of previous meeting]]. If good_to_go is true, the rewrite is a
+        clean official-record version of the minutes with no placeholders unless the user
+        left some.
+
+        Agenda Subject: {agenda_subject}
+        UPDATED MINUTES: {mom_discussion}
+
+        Respond in exactly this JSON format (no extra text, no markdown):
+        {{{{
+          "category": "<one exact label from the six categories above>",
+          "reason": "<one short sentence explaining the classification>",
+          "good_to_go": <true or false>,
+          "message": "<short confirmation when good_to_go is true, else empty string>",
+          "feedback": ["<remaining point 1 with one {{{{marker}}}}>", "..."],
+          "rewrite": "<suggested rewrite as official-record prose>"
+        }}}}
         """
     ).strip()
 

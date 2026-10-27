@@ -24,7 +24,7 @@ import base64
 import json
 import logging
 import os
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from fastapi import WebSocket, WebSocketDisconnect
 from sarvamai import AsyncSarvamAI, RealtimeAudioInput, RealtimeEnd
@@ -88,12 +88,29 @@ async def _forward_audio(websocket: WebSocket, sarvam) -> bool:
             return True
 
 
-async def _forward_transcripts(sarvam, websocket: WebSocket) -> None:
+class SessionSummary:
+    """What happened in one relay session, for the audit row."""
+
+    def __init__(self) -> None:
+        self.request_id: Optional[str] = None
+        self.finals: Dict[int, str] = {}
+        self.audio_duration_s: Optional[float] = None
+        self.total_utterances: Optional[int] = None
+        self.outcome: str = "client_disconnected"
+        self.error_code: Optional[str] = None
+
+    @property
+    def utterances(self) -> List[Dict[str, Any]]:
+        return [{"idx": idx, "text": text} for idx, text in sorted(self.finals.items())]
+
+
+async def _forward_transcripts(sarvam, websocket: WebSocket, summary: SessionSummary) -> None:
     """Sarvam -> client. Runs until Sarvam ends the session or reports a fatal error."""
     async for message in sarvam:
         event = getattr(message, "event", None)
 
         if event == "session.begin":
+            summary.request_id = message.request_id
             await _send(websocket, {"type": "ready", "request_id": message.request_id})
         elif event == "transcript.partial":
             await _send(
@@ -105,6 +122,7 @@ async def _forward_transcripts(sarvam, websocket: WebSocket) -> None:
                 },
             )
         elif event == "transcript.final":
+            summary.finals[message.utterance_idx] = message.text
             await _send(
                 websocket,
                 {
@@ -130,8 +148,13 @@ async def _forward_transcripts(sarvam, websocket: WebSocket) -> None:
                 },
             )
             if message.is_fatal:
+                summary.outcome = "provider_error"
+                summary.error_code = str(message.code)
                 return
         elif event == "session.end":
+            summary.audio_duration_s = message.audio_duration_s
+            summary.total_utterances = message.total_utterances
+            summary.outcome = "completed"
             await _send(
                 websocket,
                 {
@@ -143,9 +166,9 @@ async def _forward_transcripts(sarvam, websocket: WebSocket) -> None:
             return
 
 
-async def _relay(websocket: WebSocket, sarvam) -> None:
+async def _relay(websocket: WebSocket, sarvam, summary: SessionSummary) -> None:
     uplink = asyncio.create_task(_forward_audio(websocket, sarvam))
-    downlink = asyncio.create_task(_forward_transcripts(sarvam, websocket))
+    downlink = asyncio.create_task(_forward_transcripts(sarvam, websocket, summary))
     try:
         await asyncio.wait({uplink, downlink}, return_when=asyncio.FIRST_COMPLETED)
         client_ended = (
@@ -170,9 +193,10 @@ async def relay_realtime_transcription(
     locale: str,
     model: str = DEFAULT_STREAM_MODEL,
     keyterms: List[str] = (),
-) -> None:
+) -> SessionSummary:
     """
     Bridge an accepted client WebSocket to Sarvam's realtime STT WebSocket.
+    Returns a SessionSummary describing what happened (for the audit row).
 
     Unlike the REST path in ``speech_to_text.py`` there is no clip-length limit:
     audio is forwarded as it arrives and transcripts come back per utterance
@@ -181,9 +205,11 @@ async def relay_realtime_transcription(
     Never raises: failures are reported to the client as ``{"type": "error"}``.
     """
     # Read at call time (not import time) so a root .env loaded by main.py works.
+    summary = SessionSummary()
     api_key = os.getenv("SARVAMAI_API_KEY")
     if not api_key:
         logger.error("SarvamAI API key is not set.")
+        summary.outcome, summary.error_code = "server_error", "server_misconfigured"
         await _send(
             websocket,
             {
@@ -193,7 +219,7 @@ async def relay_realtime_transcription(
                 "fatal": True,
             },
         )
-        return
+        return summary
 
     client = AsyncSarvamAI(api_subscription_key=api_key)
     logger.info("Realtime STT session: locale=%s model=%s", locale, model)
@@ -208,8 +234,9 @@ async def relay_realtime_transcription(
             # keyterms is a JSON-encoded array on the wire (saaras:v4 only).
             keyterms=json.dumps(list(keyterms), ensure_ascii=False) if keyterms else None,
         ) as sarvam:
-            await _relay(websocket, sarvam)
+            await _relay(websocket, sarvam, summary)
     except ApiError as exc:
+        summary.outcome, summary.error_code = "provider_error", "provider_unavailable"
         logger.error(
             "Could not open Sarvam realtime STT session (status %s): %s",
             exc.status_code,
@@ -225,6 +252,7 @@ async def relay_realtime_transcription(
             },
         )
     except Exception as exc:
+        summary.outcome, summary.error_code = "provider_error", "provider_failed"
         logger.exception("Realtime speech-to-text relay failed: %s", exc)
         await _send(
             websocket,
@@ -235,3 +263,4 @@ async def relay_realtime_transcription(
                 "fatal": True,
             },
         )
+    return summary

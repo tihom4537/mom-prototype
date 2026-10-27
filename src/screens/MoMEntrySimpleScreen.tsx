@@ -17,6 +17,7 @@ import {
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { FEEDBACK_API } from '../config/api';
+import { splitHighlight, type FeedbackResult } from '../types/feedback';
 import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
@@ -32,15 +33,6 @@ function parseSegments(text: string): import('../components/FeedbackCard').Segme
   }
   if (last < text.length) segs.push({ kind: 'text', content: text.slice(last) });
   return segs;
-}
-
-interface SimpleFeedbackResult {
-  category: string;
-  category_reason: string;
-  feedback: string[];
-  highlights?: string[]; // parallel to feedback[], phrase to bold+highlight in each pointer
-  rewrite?: string;
-  flag_message?: string | null;
 }
 
 type EntryState = 'idle' | 'recording' | 'processing';
@@ -63,7 +55,7 @@ export default function MoMEntrySimpleScreen() {
   const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [isFetchingFeedback, setIsFetchingFeedback] = useState(false);
   const [feedbackCompleted, setFeedbackCompleted] = useState(routeState?.feedbackCompleted ?? false);
-  const [feedbackResult, setFeedbackResult] = useState<SimpleFeedbackResult | null>(null);
+  const [feedbackResult, setFeedbackResult] = useState<FeedbackResult | null>(null);
   const [rewriteAccepted, setRewriteAccepted] = useState(false);
 
   const sessionRef     = useRef<LiveTranscriptionSession | null>(null);
@@ -172,41 +164,29 @@ export default function MoMEntrySimpleScreen() {
       await new Promise(r => setTimeout(r, 800));
       if (lang === 'kn') {
         setFeedbackResult({
-          category: 'ಮೂಲಸೌಕರ್ಯ',
-          category_reason: 'ಕಾರ್ಯಸೂಚಿ ಭೌತಿಕ ಮೂಲಸೌಕರ್ಯ ಅಭಿವೃದ್ಧಿಗೆ ಸಂಬಂಧಿಸಿದೆ.',
+          status: 'feedback',
+          message: null,
           feedback: [
-            'ಜಿಲ್ಲಾ ಕಚೇರಿಗೆ ಅಂದಾಜು ಸಲ್ಲಿಸಲು ನಿಖರವಾದ ಕಾಲಮಿತಿಯನ್ನು ನಿರ್ದಿಷ್ಟಪಡಿಸಿ.',
-            'ಅಂದಾಜು ತಯಾರಿಸಲು ನಿಯೋಜಿಸಲಾದ ಸದಸ್ಯರ ಹೆಸರುಗಳನ್ನು ದಾಖಲಿಸಿ.',
-            'ಸಭೆಯಲ್ಲಿ ಚರ್ಚಿಸಿದ್ದರೆ ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿಯನ್ನು ಸೇರಿಸಿ.',
-            'ದುರಸ್ತಿ ಅಗತ್ಯವಿರುವ ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು ನಮೂದಿಸಿ.',
-          ],
-          highlights: [
-            'ನಿಖರವಾದ ಕಾಲಮಿತಿಯನ್ನು',
-            'ಸದಸ್ಯರ ಹೆಸರುಗಳನ್ನು',
-            'ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿಯನ್ನು',
-            'ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು',
+            { text: 'ಜಿಲ್ಲಾ ಕಚೇರಿಗೆ ಅಂದಾಜು ಸಲ್ಲಿಸಲು ನಿಖರವಾದ ಕಾಲಮಿತಿಯನ್ನು ನಿರ್ದಿಷ್ಟಪಡಿಸಿ.', highlight: 'ನಿಖರವಾದ ಕಾಲಮಿತಿಯನ್ನು' },
+            { text: 'ಅಂದಾಜು ತಯಾರಿಸಲು ನಿಯೋಜಿಸಲಾದ ಸದಸ್ಯರ ಹೆಸರುಗಳನ್ನು ದಾಖಲಿಸಿ.', highlight: 'ಸದಸ್ಯರ ಹೆಸರುಗಳನ್ನು' },
+            { text: 'ಸಭೆಯಲ್ಲಿ ಚರ್ಚಿಸಿದ್ದರೆ ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿಯನ್ನು ಸೇರಿಸಿ.', highlight: 'ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿಯನ್ನು' },
+            { text: 'ದುರಸ್ತಿ ಅಗತ್ಯವಿರುವ ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು ನಮೂದಿಸಿ.', highlight: 'ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು' },
           ],
           rewrite: '[ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳ]ದ ಮುಖ್ಯ ರಸ್ತೆಯಲ್ಲಿ ಗುಂಡಿಗಳ ಸಮಸ್ಯೆಯನ್ನು ಸದಸ್ಯರು ಚರ್ಚಿಸಿದರು. ರಸ್ತೆ ದುರಸ್ತಿಗಾಗಿ ಅಂದಾಜು ತಯಾರಿಸಿ ಜಿಲ್ಲಾ ಕಚೇರಿಗೆ [ಕಾಲಮಿತಿ]ರ ವೇಳೆಗೆ ಪ್ರಸ್ತಾವನೆ ಸಲ್ಲಿಸಲು ತೀರ್ಮಾನಿಸಲಾಯಿತು. [ನಿಯೋಜಿತ ಸದಸ್ಯರ ಹೆಸರು] ಅವರನ್ನು ಅಂದಾಜು ತಯಾರಿಸಲು ನಿಯೋಜಿಸಲಾಯಿತು. ಅಂದಾಜು ವೆಚ್ಚ [ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿ] ಎಂದು ಚರ್ಚಿಸಲಾಯಿತು, ದೃಢೀಕರಣಕ್ಕೆ ಒಳಪಟ್ಟಿದೆ.',
-          flag_message: null,
+          round: 1,
         });
       } else {
         setFeedbackResult({
-          category: 'Infrastructure',
-          category_reason: 'Agenda pertains to physical infrastructure development.',
+          status: 'feedback',
+          message: null,
           feedback: [
-            'Specify a concrete timeline for submitting the estimate to the district office.',
-            'Document the names of members assigned to prepare the estimate.',
-            'Include the estimated cost range if discussed during the meeting.',
-            'Mention the ward number or location where the repair is needed.',
-          ],
-          highlights: [
-            'concrete timeline',
-            'names of members assigned',
-            'estimated cost range',
-            'ward number or location',
+            { text: 'Specify a concrete timeline for submitting the estimate to the district office.', highlight: 'concrete timeline' },
+            { text: 'Document the names of members assigned to prepare the estimate.', highlight: 'names of members assigned' },
+            { text: 'Include the estimated cost range if discussed during the meeting.', highlight: 'estimated cost range' },
+            { text: 'Mention the ward number or location where the repair is needed.', highlight: 'ward number or location' },
           ],
           rewrite: 'Members discussed the issue of potholes on the main street in [ward number or location]. It was resolved to prepare an estimate for road repair and submit a proposal to the district office by [concrete timeline]. [Names of members assigned] were assigned to prepare the estimate. The approximate cost was discussed as [estimated cost range], subject to confirmation.',
-          flag_message: null,
+          round: 1,
         });
       }
       setFeedbackCompleted(true);
@@ -230,7 +210,7 @@ export default function MoMEntrySimpleScreen() {
         const detail = await res.text().catch(() => '');
         throw new Error(`Feedback API returned ${res.status}${detail ? `: ${detail}` : ''}`);
       }
-      const result: SimpleFeedbackResult = await res.json();
+      const result: FeedbackResult = await res.json();
       setFeedbackResult(result);
       setFeedbackCompleted(true);
     } catch (err) {
@@ -347,9 +327,9 @@ export default function MoMEntrySimpleScreen() {
               <SmallDetailsText text={t('feedback_empty_state')} className="shrink-0" />
             ) : (
               <>
-                {/* Flag message if present */}
-                {feedbackResult.flag_message && (
-                  <InfoBox type="default" text={feedbackResult.flag_message} className="shrink-0 w-full" />
+                {/* Good-to-go message from the backend */}
+                {feedbackResult.status === 'good_to_go' && feedbackResult.message && (
+                  <InfoBox type="default" text={feedbackResult.message} className="shrink-0 w-full" />
                 )}
 
                 {/* Pointer list */}
@@ -359,23 +339,8 @@ export default function MoMEntrySimpleScreen() {
                       {t('feedback_pointers_heading')}
                     </span>
                     <ol className="flex flex-col gap-[10px] list-none m-0 p-0">
-                      {feedbackResult.feedback.map((point, i) => {
-                        const highlight = feedbackResult.highlights?.[i];
-                        let content: React.ReactNode = point;
-                        if (highlight) {
-                          const idx = point.toLowerCase().indexOf(highlight.toLowerCase());
-                          if (idx !== -1) {
-                            content = (
-                              <>
-                                {point.slice(0, idx)}
-                                <strong style={{ fontFamily: 'Noto Sans' }}>
-                                  {point.slice(idx, idx + highlight.length)}
-                                </strong>
-                                {point.slice(idx + highlight.length)}
-                              </>
-                            );
-                          }
-                        }
+                      {feedbackResult.feedback.map((item, i) => {
+                        const { before, highlight, after } = splitHighlight(item);
                         return (
                           <li key={i} className="flex gap-[10px] items-start">
                             <span
@@ -385,7 +350,11 @@ export default function MoMEntrySimpleScreen() {
                               {i + 1}
                             </span>
                             <span className="text-[13px] text-[#212121] leading-[20px]" style={NS}>
-                              {content}
+                              {before}
+                              {highlight && (
+                                <mark className="bg-[#fff3cd] rounded-[3px] px-[2px] font-semibold text-inherit" style={NS}>{highlight}</mark>
+                              )}
+                              {after}
                             </span>
                           </li>
                         );

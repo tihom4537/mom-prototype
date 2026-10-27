@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
 import { useMeetings } from '../context/MeetingsContext';
-import type { FeedbackResult } from './MoMEntryPostRecordingScreen';
+import type { FeedbackResult } from '../types/feedback';
 import {
   GoBackToPreviousPage,
   SectionHeading,
@@ -151,21 +151,20 @@ export default function MoMEntryDefaultScreen() {
     const MOCK_TEXT = 'Information was provided regarding Swachh Saturday village cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.';
     if (flatText.trim() === MOCK_TEXT || Object.values(fieldValues).join(' ').includes('Swachh Saturday')) {
       const feedbackResult: FeedbackResult = {
-        category: 'Information / Intimation',
-        category_reason: 'The agenda item shares updates on sanitation activities, a civic observance, and a health precautionary measure.',
+        status: 'feedback',
+        message: null,
         feedback: [
-          'Information was provided regarding the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward], involving [number of participants] participants.',
-          'Information was provided regarding the Onagalu Day observance held on [date], including the activities conducted and [number of participants] who participated.',
-          'Information was provided regarding COVID-19 JN.1 precautionary measures, including the source of the advisory — [name of authority/circular] — and the specific measures communicated.',
-          'The secretary informed members about Swachh Saturday cleanliness activities, Onagalu Day observance, and COVID-19 JN.1 precautionary measures.',
+          { text: 'Add the date, location/ward and number of participants of the Swachh Saturday village cleanliness activities.', highlight: 'date, location/ward and number of participants' },
+          { text: 'Record the date of the Onagalu Day observance and the activities conducted.', highlight: 'date of the Onagalu Day observance' },
+          { text: 'Name the authority or circular that issued the COVID-19 JN.1 advisory and the specific measures communicated.', highlight: 'authority or circular' },
+          { text: 'Good detail on the range of topics the secretary informed members about.', highlight: null },
         ],
-        spans: ['Swachh Saturday village cleanliness activities', 'Onagalu Day observance', 'COVID-19 JN.1 precautionary measures', 'Information was provided regarding'],
-        modes: ['APPEND', 'APPEND', 'APPEND', 'REPHRASE'],
-        flag_message: null,
+        rewrite: 'The secretary informed members about the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward] with [number of participants] participants, the Onagalu Day observance held on [date], and the COVID-19 JN.1 precautionary measures advised by [name of authority/circular].',
+        round: 1,
       };
       setIsFetchingFeedback(false);
-      navigate('/mom-entry/feedback', {
-        state: { agenda, discussionText: flatText, structuredProceedings: fieldValues, feedbackResult, feedbackCompleted: true, meetingId },
+      navigate('/mom-entry/simple-v4', {
+        state: { agenda, discussionText: flatText, feedbackResult, feedbackCompleted: true, meetingId },
       });
       return;
     }
@@ -186,8 +185,8 @@ export default function MoMEntryDefaultScreen() {
         throw new Error(`Feedback API returned ${res.status}${detail ? `: ${detail}` : ''}`);
       }
       const feedbackResult: FeedbackResult = await res.json();
-      navigate('/mom-entry/feedback', {
-        state: { agenda, discussionText: flatText, structuredProceedings: fieldValues, feedbackResult, feedbackCompleted: true, meetingId },
+      navigate('/mom-entry/simple-v4', {
+        state: { agenda, discussionText: flatText, feedbackResult, feedbackCompleted: true, meetingId },
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
