@@ -234,7 +234,7 @@ async def websocket_speech_to_text(
 
     try:
         await websocket.close()
-    except RuntimeError:
+    except (WebSocketDisconnect, RuntimeError):
         pass  # client already gone
 
 
