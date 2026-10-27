@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -17,8 +17,7 @@ import {
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { FEEDBACK_API } from '../config/api';
-import { WebSocketSTTClient } from '../utils/websocketSttClient';
-import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
+import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 
 // ── PREVIEW ONLY — not wired into the live meeting flow. ──────────────────────
 // Duplicate of MoMEntrySimpleScreenV4 with a Decision Point field added below
@@ -175,15 +174,11 @@ export default function MoMEntrySimpleScreenV5() {
   // Once feedback has been fetched, the right column hugs its own content height
   // instead of being clamped to the viewport, and the left column grows to match.
   const hasFeedbackContent = !!feedbackResult || goodToGo;
-  const pcmRecorderRef = useRef<PcmAudioRecorder | null>(null);
-  const audioCtxRef    = useRef<AudioContext | null>(null);
+  const sessionRef     = useRef<LiveTranscriptionSession | null>(null);
   const analyserRef    = useRef<AnalyserNode | null>(null);
-  const wsClientRef    = useRef<WebSocketSTTClient | null>(null);
   const updatedTextRef = useRef<string>(discussionText);
-  const decisionPcmRecorderRef = useRef<PcmAudioRecorder | null>(null);
-  const decisionAudioCtxRef    = useRef<AudioContext | null>(null);
+  const decisionSessionRef     = useRef<LiveTranscriptionSession | null>(null);
   const decisionAnalyserRef    = useRef<AnalyserNode | null>(null);
-  const decisionWsClientRef    = useRef<WebSocketSTTClient | null>(null);
   const updatedDecisionTextRef = useRef<string>(decisionText);
   const leftColRef     = useRef<HTMLDivElement>(null);
   const rightColRef    = useRef<HTMLDivElement>(null);
@@ -263,23 +258,12 @@ export default function MoMEntrySimpleScreenV5() {
     return () => { ro.disconnect(); window.removeEventListener('resize', sync); };
   }, [hasFeedbackContent]);
 
+  // Abort any live session when leaving the screen
   useEffect(() => {
     return () => {
-      wsClientRef.current?.close().catch(() => {});
-      decisionWsClientRef.current?.close().catch(() => {});
+      sessionRef.current?.cancel();
+      decisionSessionRef.current?.cancel();
     };
-  }, []);
-
-  const teardownAudio = useCallback(() => {
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    analyserRef.current = null;
-  }, []);
-
-  const teardownDecisionAudio = useCallback(() => {
-    decisionAudioCtxRef.current?.close();
-    decisionAudioCtxRef.current = null;
-    decisionAnalyserRef.current = null;
   }, []);
 
   const isRecording  = entryState === 'recording';
@@ -297,137 +281,79 @@ export default function MoMEntrySimpleScreenV5() {
   const handleMicClick = async () => {
     if (entryState !== 'idle') return;
     setSttError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
-      return;
+    // Text already in the field stays; the live transcript is appended after it.
+    const base = updatedTextRef.current;
+    try {
+      const session = await startLiveTranscription({
+        locale: lang,
+        onText: (committed, partial) => {
+          const next = joinText(base, committed, partial);
+          updatedTextRef.current = next;
+          setDiscussionText(next);
+        },
+        onError: msg => setSttError(`Speech recognition error — ${msg}`),
+      });
+      sessionRef.current = session;
+      analyserRef.current = session.analyser;
+      setEntryState('recording');
+    } catch (err) {
+      setSttError(microphoneErrorMessage(err));
     }
-    try { await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (err) {
-      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
-      setSttError(isNotAllowed
-        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
-        : 'Could not access the microphone. Please check your browser permissions and try again.'
-      );
-      return;
-    }
-    const pcmRecorder = new PcmAudioRecorder();
-    pcmRecorderRef.current = pcmRecorder;
-    try { await pcmRecorder.start(); setEntryState('recording'); }
-    catch { setSttError('Failed to initialize audio recorder.'); pcmRecorderRef.current = null; }
   };
 
   const handleStopRecording = async () => {
-    const recorder = pcmRecorderRef.current;
-    if (!recorder) return;
+    const session = sessionRef.current;
+    if (!session) return;
     setEntryState('processing');
     setSttError(null);
-    let wsClient: WebSocketSTTClient | null = null;
     try {
-      wsClient = new WebSocketSTTClient(lang);
-      wsClientRef.current = wsClient;
-      await wsClient.connect();
-      const audioData = recorder.stop();
-      pcmRecorderRef.current = null;
-      teardownAudio();
-      if (audioData.length === 0) throw new Error('No audio data captured');
-      let resolved = false;
-      let resolvePromise: (() => void) | null = null;
-      const transcriptPromise = new Promise<void>(res => { resolvePromise = res; });
-      wsClient.on('transcript', (text: string) => {
-        resolved = true;
-        if (text.trim()) {
-          const cur = updatedTextRef.current;
-          const next = cur + (cur.trim() ? ' ' : '') + text;
-          updatedTextRef.current = next;
-          setDiscussionText(next);
-        }
-        resolvePromise?.();
-      });
-      wsClient.on('error', (msg: string) => { setSttError(`Speech recognition error: ${msg}`); });
-      await wsClient.send(audioData);
-      await wsClient.end();
-      await Promise.race([
-        transcriptPromise,
-        new Promise<void>((_, rej) => setTimeout(() => { if (!resolved) rej(new Error('Timeout')); }, 60000)),
-      ]);
-      await wsClient.close();
+      await session.stop();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-      if (wsClient) { try { await wsClient.close(); } catch {} }
-      const rec = pcmRecorderRef.current;
-      if (rec) { rec.stop(); pcmRecorderRef.current = null; teardownAudio(); }
     }
-    wsClientRef.current = null;
+    sessionRef.current = null;
+    analyserRef.current = null;
     setEntryState('idle');
   };
 
-  // ── Mic (Decision Point) ─────────────────────────────────────────────────
+  // ── Mic (Decision) ───────────────────────────────────────────────────────
   const handleDecisionMicClick = async () => {
     if (decisionEntryState !== 'idle') return;
     setDecisionSttError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setDecisionSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
-      return;
+    // Text already in the field stays; the live transcript is appended after it.
+    const base = updatedDecisionTextRef.current;
+    try {
+      const session = await startLiveTranscription({
+        locale: lang,
+        onText: (committed, partial) => {
+          const next = joinText(base, committed, partial);
+          updatedDecisionTextRef.current = next;
+          setDecisionText(next);
+        },
+        onError: msg => setDecisionSttError(`Speech recognition error — ${msg}`),
+      });
+      decisionSessionRef.current = session;
+      decisionAnalyserRef.current = session.analyser;
+      setDecisionEntryState('recording');
+    } catch (err) {
+      setDecisionSttError(microphoneErrorMessage(err));
     }
-    try { await navigator.mediaDevices.getUserMedia({ audio: true }); }
-    catch (err) {
-      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
-      setDecisionSttError(isNotAllowed
-        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
-        : 'Could not access the microphone. Please check your browser permissions and try again.'
-      );
-      return;
-    }
-    const pcmRecorder = new PcmAudioRecorder();
-    decisionPcmRecorderRef.current = pcmRecorder;
-    try { await pcmRecorder.start(); setDecisionEntryState('recording'); }
-    catch { setDecisionSttError('Failed to initialize audio recorder.'); decisionPcmRecorderRef.current = null; }
   };
 
   const handleDecisionStopRecording = async () => {
-    const recorder = decisionPcmRecorderRef.current;
-    if (!recorder) return;
+    const session = decisionSessionRef.current;
+    if (!session) return;
     setDecisionEntryState('processing');
     setDecisionSttError(null);
-    let wsClient: WebSocketSTTClient | null = null;
     try {
-      wsClient = new WebSocketSTTClient(lang);
-      decisionWsClientRef.current = wsClient;
-      await wsClient.connect();
-      const audioData = recorder.stop();
-      decisionPcmRecorderRef.current = null;
-      teardownDecisionAudio();
-      if (audioData.length === 0) throw new Error('No audio data captured');
-      let resolved = false;
-      let resolvePromise: (() => void) | null = null;
-      const transcriptPromise = new Promise<void>(res => { resolvePromise = res; });
-      wsClient.on('transcript', (text: string) => {
-        resolved = true;
-        if (text.trim()) {
-          const cur = updatedDecisionTextRef.current;
-          const next = cur + (cur.trim() ? ' ' : '') + text;
-          updatedDecisionTextRef.current = next;
-          setDecisionText(next);
-        }
-        resolvePromise?.();
-      });
-      wsClient.on('error', (msg: string) => { setDecisionSttError(`Speech recognition error: ${msg}`); });
-      await wsClient.send(audioData);
-      await wsClient.end();
-      await Promise.race([
-        transcriptPromise,
-        new Promise<void>((_, rej) => setTimeout(() => { if (!resolved) rej(new Error('Timeout')); }, 60000)),
-      ]);
-      await wsClient.close();
+      await session.stop();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setDecisionSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-      if (wsClient) { try { await wsClient.close(); } catch {} }
-      const rec = decisionPcmRecorderRef.current;
-      if (rec) { rec.stop(); decisionPcmRecorderRef.current = null; teardownDecisionAudio(); }
     }
-    decisionWsClientRef.current = null;
+    decisionSessionRef.current = null;
+    decisionAnalyserRef.current = null;
     setDecisionEntryState('idle');
   };
 

@@ -8,6 +8,8 @@ export default defineConfig({
       '/feedback': 'http://localhost:8000',
       '/speech-to-text': 'http://localhost:8000',
       '/translate': 'http://localhost:8000',
+      '/ocr': 'http://localhost:8000',
+      '/ws': { target: 'ws://localhost:8000', ws: true },
     },
   },
 })

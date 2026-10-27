@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useMeetings } from '../context/MeetingsContext';
@@ -13,6 +13,7 @@ import {
   InfoBox,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
+import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -98,7 +99,7 @@ function buildDefaultAgendas(meetingType: string, prevMeetingDate: string | unde
 }
 
 export default function CreateMeetingAgendaScreen() {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { meetingAgendas, setMeetingAgendas } = useMeetings();
@@ -119,58 +120,45 @@ export default function CreateMeetingAgendaScreen() {
   // ── Per-agenda mic state ──
   const [agendaRecording, setAgendaRecording] = useState<Record<number, boolean>>({});
   const [agendaSttError,  setAgendaSttError]  = useState<Record<number, string>>({});
-  const agendaMediaRefs    = useRef<Record<number, MediaRecorder | null>>({});
-  const agendaChunksRefs   = useRef<Record<number, Blob[]>>({});
-  const agendaAudioCtxRefs = useRef<Record<number, AudioContext | null>>({});
+  const agendaSttSessions  = useRef<Record<number, LiveTranscriptionSession | null>>({});
   const agendaAnalyserRefs = useRef<Record<number, AnalyserNode | null>>({});
 
+  // Abort any live sessions when leaving the screen
+  useEffect(() => {
+    return () => {
+      Object.values(agendaSttSessions.current).forEach(s => s?.cancel());
+      agendaSttSessions.current = {};
+    };
+  }, []);
+
   async function handleAgendaMicClick(id: number) {
-    if (agendaRecording[id]) {
-      agendaMediaRefs.current[id]?.stop();
+    const active = agendaSttSessions.current[id];
+    if (active) {
+      agendaSttSessions.current[id] = null;
+      agendaAnalyserRefs.current[id] = null;
+      try {
+        await active.stop();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setAgendaSttError(prev => ({ ...prev, [id]: `Speech-to-text failed — ${msg}` }));
+      }
+      setAgendaRecording(prev => ({ ...prev, [id]: false }));
       return;
     }
     setAgendaSttError(prev => ({ ...prev, [id]: '' }));
+    // Text already in the field stays; the live transcript is appended after it.
+    const base = agendas.find(a => a.id === id)?.description ?? '';
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const audioCtx = new AudioContext();
-      agendaAudioCtxRefs.current[id] = audioCtx;
-      const source = audioCtx.createMediaStreamSource(stream);
-      const analyser = audioCtx.createAnalyser();
-      analyser.fftSize = 64;
-      source.connect(analyser);
-      agendaAnalyserRefs.current[id] = analyser;
-      const mr = new MediaRecorder(stream);
-      agendaChunksRefs.current[id] = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) agendaChunksRefs.current[id].push(e.data); };
-      mr.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        agendaAudioCtxRefs.current[id]?.close(); agendaAudioCtxRefs.current[id] = null;
-        agendaAnalyserRefs.current[id] = null;
-        setAgendaRecording(prev => ({ ...prev, [id]: false }));
-        const blob = new Blob(agendaChunksRefs.current[id], { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const res = await fetch('http://localhost:8000/speech-to-text', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ audioDataUri: reader.result, locale: 'en' }),
-            });
-            const data = await res.json();
-            if (data.transcription) {
-              updateAgenda(id, 'description', (agendas.find(a => a.id === id)?.description ?? '') + (agendas.find(a => a.id === id)?.description ? ' ' : '') + data.transcription);
-            }
-          } catch {
-            setAgendaSttError(prev => ({ ...prev, [id]: 'Speech-to-text failed.' }));
-          }
-        };
-        reader.readAsDataURL(blob);
-      };
-      mr.start();
-      agendaMediaRefs.current[id] = mr;
+      const session = await startLiveTranscription({
+        locale: lang,
+        onText: (committed, partial) => updateAgenda(id, 'description', joinText(base, committed, partial)),
+        onError: msg => setAgendaSttError(prev => ({ ...prev, [id]: `Speech recognition error — ${msg}` })),
+      });
+      agendaSttSessions.current[id] = session;
+      agendaAnalyserRefs.current[id] = session.analyser;
       setAgendaRecording(prev => ({ ...prev, [id]: true }));
-    } catch {
-      setAgendaSttError(prev => ({ ...prev, [id]: 'Microphone access denied.' }));
+    } catch (err) {
+      setAgendaSttError(prev => ({ ...prev, [id]: microphoneErrorMessage(err) }));
     }
   }
 
@@ -619,7 +607,8 @@ export default function CreateMeetingAgendaScreen() {
                   text={isEditMode ? t('btn_save_agenda_changes') : t('btn_submit_generate_notice')}
                   onClick={() => {
                     if (!canSubmit) return;
-                    Object.values(agendaMediaRefs.current).forEach(mr => mr?.stop());
+                    Object.values(agendaSttSessions.current).forEach(s => s?.cancel());
+                    agendaSttSessions.current = {};
                     if (isEditMode) {
                       setMeetingAgendas(editMeetingId, agendas.map(a => ({
                         id: a.id,

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -16,9 +16,8 @@ import {
   FeedbackCard,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API } from '../config/api';
-import { WebSocketSTTClient } from '../utils/websocketSttClient';
-import { PcmAudioRecorder } from '../utils/pcmAudioRecorder';
+import { FEEDBACK_API } from '../config/api';
+import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" } as const;
 
@@ -68,10 +67,8 @@ export default function MoMEntrySimpleScreenV2() {
   const [rewriteAccepted, setRewriteAccepted] = useState(false);
   const [rewriteSegments, setRewriteSegments] = useState<import('../components/FeedbackCard').Segment[]>([]);
 
-  const pcmRecorderRef  = useRef<PcmAudioRecorder | null>(null);
-  const audioCtxRef     = useRef<AudioContext | null>(null);
+  const sessionRef     = useRef<LiveTranscriptionSession | null>(null);
   const analyserRef     = useRef<AnalyserNode | null>(null);
-  const wsClientRef     = useRef<WebSocketSTTClient | null>(null);
   const updatedTextRef  = useRef<string>(discussionText);
   const leftColRef      = useRef<HTMLDivElement>(null);
   const rightColRef     = useRef<HTMLDivElement>(null);
@@ -101,18 +98,9 @@ export default function MoMEntrySimpleScreenV2() {
     return () => { ro.disconnect(); window.removeEventListener('resize', sync); };
   }, []);
 
-  // Cleanup WebSocket on unmount
+  // Abort any live session when leaving the screen
   useEffect(() => {
-    return () => {
-      const ws = wsClientRef.current;
-      if (ws) ws.close().catch(() => {});
-    };
-  }, []);
-
-  const teardownAudio = useCallback(() => {
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
-    analyserRef.current = null;
+    return () => { sessionRef.current?.cancel(); };
   }, []);
 
   const isRecording  = entryState === 'recording';
@@ -125,91 +113,51 @@ export default function MoMEntrySimpleScreenV2() {
   const handleMicClick = async () => {
     if (entryState !== 'idle') return;
     setSttError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setSttError('Microphone is not available. This feature requires a secure (HTTPS) connection.');
-      return;
-    }
+    // Text already in the field stays; the live transcript is appended after it.
+    const base = updatedTextRef.current;
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (err) {
-      const isNotAllowed = err instanceof DOMException && err.name === 'NotAllowedError';
-      setSttError(isNotAllowed
-        ? 'Microphone access was denied. Please allow microphone access in your browser settings and try again.'
-        : 'Could not access the microphone. Please check your browser permissions and try again.'
-      );
-      return;
-    }
-    const pcmRecorder = new PcmAudioRecorder();
-    pcmRecorderRef.current = pcmRecorder;
-    try {
-      await pcmRecorder.start();
+      const session = await startLiveTranscription({
+        locale: lang,
+        onText: (committed, partial) => {
+          const next = joinText(base, committed, partial);
+          updatedTextRef.current = next;
+          setDiscussionText(next);
+        },
+        onError: msg => setSttError(`Speech recognition error — ${msg}`),
+      });
+      sessionRef.current = session;
+      analyserRef.current = session.analyser;
       setEntryState('recording');
-    } catch {
-      setSttError('Failed to initialize audio recorder. Please check microphone access.');
-      pcmRecorderRef.current = null;
+    } catch (err) {
+      setSttError(microphoneErrorMessage(err));
     }
   };
 
   // ── Cancel recording ───────────────────────────────────────────────────────
-  const handleCancelRecording = async () => {
-    const recorder = pcmRecorderRef.current;
-    if (!recorder) return;
-    recorder.stop();
-    pcmRecorderRef.current = null;
-    teardownAudio();
-    const ws = wsClientRef.current;
-    if (ws) { try { await ws.close(); } catch {} wsClientRef.current = null; }
+  const handleCancelRecording = () => {
+    const session = sessionRef.current;
+    if (!session) return;
+    session.cancel();
+    sessionRef.current = null;
+    analyserRef.current = null;
     setEntryState('idle');
     setSttError(null);
   };
 
   // ── Stop / confirm recording ───────────────────────────────────────────────
   const handleStopRecording = async () => {
-    const recorder = pcmRecorderRef.current;
-    if (!recorder) return;
+    const session = sessionRef.current;
+    if (!session) return;
     setEntryState('processing');
     setSttError(null);
-    let wsClient: WebSocketSTTClient | null = null;
     try {
-      wsClient = new WebSocketSTTClient(lang);
-      wsClientRef.current = wsClient;
-      await wsClient.connect();
-      const audioData = recorder.stop();
-      pcmRecorderRef.current = null;
-      teardownAudio();
-      if (audioData.length === 0) throw new Error('No audio data captured');
-
-      let resolved = false;
-      let resolvePromise: (() => void) | null = null;
-      const transcriptPromise = new Promise<void>(res => { resolvePromise = res; });
-
-      wsClient.on('transcript', (text: string) => {
-        resolved = true;
-        if (text.trim()) {
-          const cur = updatedTextRef.current;
-          const next = cur + (cur.trim() ? ' ' : '') + text;
-          updatedTextRef.current = next;
-          setDiscussionText(next);
-        }
-        resolvePromise?.();
-      });
-      wsClient.on('error', (msg: string) => { setSttError(`Speech recognition error: ${msg}`); });
-
-      await wsClient.send(audioData);
-      await wsClient.end();
-      await Promise.race([
-        transcriptPromise,
-        new Promise<void>((_, rej) => setTimeout(() => { if (!resolved) rej(new Error('Transcript response timeout')); }, 60000)),
-      ]);
-      await wsClient.close();
+      await session.stop();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setSttError(`Speech recognition failed — ${msg}. Please try again or type your notes.`);
-      if (wsClient) { try { await wsClient.close(); } catch {} }
-      const rec = pcmRecorderRef.current;
-      if (rec) { rec.stop(); pcmRecorderRef.current = null; teardownAudio(); }
     }
-    wsClientRef.current = null;
+    sessionRef.current = null;
+    analyserRef.current = null;
     setEntryState('idle');
   };
 

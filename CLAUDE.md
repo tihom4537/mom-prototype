@@ -132,7 +132,7 @@ Always pass state as a prop, never manage visual states with local Tailwind cond
 ### MoM Entry Sub Page — While Recording
 - `TextAreaContainer` switches to `recording` state
 - Visual recording indicator active
-- STT API is called with audio stream
+- Audio is streamed live to `WS /ws/speech-to-text` (via `startLiveTranscription()` in `src/utils/liveTranscription.ts`); transcript text appears in the field **while the user is speaking** — finished utterances are committed, the current one is shown provisionally and may be revised
 
 ### MoM Entry Sub Page — Post Recording
 - `TextAreaContainer` switches to `filled` state
@@ -273,9 +273,11 @@ Both `en` and `kn` keys added to `translations.js`:
 
 Behaviour requirements:
 - User clicks mic button → recording starts → `TextAreaContainer` enters `recording` state
-- Audio is captured and sent to the STT API
-- On response, transcript text is **appended** to whatever is already in the text field (never replaces)
+- Audio is captured as 16 kHz PCM (`src/utils/pcmAudioRecorder.ts`) and streamed over `WS /ws/speech-to-text?locale=kn|en` (`src/utils/websocketSttClient.ts`); the backend relays it to Sarvam's realtime STT. Server events: `ready`, `partial`, `final`, `error`, `end`
+- Every screen uses `startLiveTranscription({ locale, onText, onError })` from `src/utils/liveTranscription.ts`; `onText(committed, partial)` fires on every change and the screen renders `joinText(base, committed, partial)` where `base` is the text that was already in the field when recording started
+- Transcript text is therefore **appended live** to whatever is already in the text field (never replaces); stop/confirm calls `session.stop()` which flushes the last utterance; cancel calls `session.cancel()` and restores the original text
 - Field returns to `filled` state
+- The old `POST /speech-to-text` (whole-clip) endpoint still exists on the backend but no screen uses it any more
 - If STT call fails, show an error using `InfoBox` (variant: `outlined`) — do not silently fail
 
 ---

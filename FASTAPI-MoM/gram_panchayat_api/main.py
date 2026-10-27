@@ -14,7 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import close_db_pool, init_db_pool, insert_ai_feedback
@@ -31,7 +31,12 @@ from .models import (
 )
 from .ocr import process_image_ocr
 from .speech_to_text import transcribe_audio_data_uri
-from .speech_to_text_streaming import handle_streaming_stt
+from .speech_to_text import _LANGUAGE_CODE_MAP
+from .speech_to_text_streaming import (
+    DEFAULT_STREAM_MODEL,
+    STREAM_MODELS,
+    relay_realtime_transcription,
+)
 from .translate import translate_text
 
 
@@ -182,14 +187,55 @@ async def ocr(body: OCRRequest) -> OCRResponse:
 
 
 @app.websocket("/ws/speech-to-text")
-async def websocket_speech_to_text(websocket: WebSocket, locale: str = "kn") -> None:
+async def websocket_speech_to_text(
+    websocket: WebSocket,
+    locale: str = "kn",
+    model: str = DEFAULT_STREAM_MODEL,
+    keyterms: str = "",
+) -> None:
     """
-    WebSocket endpoint for real-time Speech-to-Text streaming.
+    Real-time transcription over a WebSocket, relayed to Sarvam AI's realtime
+    Speech-to-Text API. No clip-length limit (POST /speech-to-text is for
+    short clips).
 
-    Expects query parameter: locale (e.g., "en", "kn", "hi")
-    Accumulates audio chunks and calls Sarvam REST API on "end" signal.
+    Query params:
+    - `locale`: "kn" (default) or "en".
+    - `model`: "saaras:v3-realtime" (default) or "saaras:v4".
+    - `keyterms`: comma-separated domain terms to bias recognition (saaras:v4 only).
+
+    Client -> server: binary frames of raw 16 kHz mono 16-bit PCM, then a text
+    frame `{"type": "end"}`.
+
+    Server -> client (JSON text frames): `ready`, `partial`, `final`, `error`, `end`.
     """
-    await handle_streaming_stt(websocket, locale)
+    await websocket.accept()
+
+    terms = [term.strip() for term in keyterms.split(",") if term.strip()]
+    problem = None
+    if locale not in _LANGUAGE_CODE_MAP:
+        problem = f"Unsupported locale {locale!r}; expected one of {sorted(_LANGUAGE_CODE_MAP)}"
+    elif model not in STREAM_MODELS:
+        problem = f"Unsupported model {model!r}; expected one of {list(STREAM_MODELS)}"
+    elif terms and model != "saaras:v4":
+        problem = "keyterms are only supported with model saaras:v4"
+    if problem:
+        try:
+            await websocket.send_json(
+                {"type": "error", "code": "invalid_start", "message": problem, "fatal": True}
+            )
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        return
+
+    await relay_realtime_transcription(
+        websocket, locale=locale, model=model, keyterms=terms
+    )
+
+    try:
+        await websocket.close()
+    except RuntimeError:
+        pass  # client already gone
 
 
 # If you want to run with: `python -m gram_panchayat_api.main`

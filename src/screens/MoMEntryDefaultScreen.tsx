@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAgenda, type AgendaItem } from '../context/AgendaContext';
@@ -16,7 +16,8 @@ import {
   MicButton,
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
-import { STT_API, FEEDBACK_API } from '../config/api';
+import { FEEDBACK_API } from '../config/api';
+import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
 import {
   classifyAgenda,
   CATEGORY_FIELDS,
@@ -64,11 +65,8 @@ export default function MoMEntryDefaultScreen() {
   const [fieldRecState, setFieldRecState] = useState<Record<string, FieldRecordingState>>({});
   const [fieldSttError, setFieldSttError] = useState<Record<string, string | null>>({});
 
-  // Per-field audio refs keyed by field name
-  const mediaRecordersRef = useRef<Record<string, MediaRecorder>>({});
-  const audioChunksRef    = useRef<Record<string, Blob[]>>({});
-  const audioCtxRef       = useRef<Record<string, AudioContext>>({});
-  const analyserRef       = useRef<Record<string, AnalyserNode>>({});
+  // Per-field live transcription sessions keyed by field name
+  const sttSessionsRef = useRef<Record<string, LiveTranscriptionSession>>({});
   const [analyserNodes, setAnalyserNodes] = useState<Record<string, AnalyserNode | null>>({});
   const [speakingField, setSpeakingField] = useState<string | null>(null);
 
@@ -83,11 +81,12 @@ export default function MoMEntryDefaultScreen() {
     setFieldValues(prev => ({ ...prev, [field]: value }));
   };
 
-  const teardownFieldAudio = useCallback((field: string) => {
-    audioCtxRef.current[field]?.close();
-    delete audioCtxRef.current[field];
-    delete analyserRef.current[field];
-    setAnalyserNodes(prev => { const n = { ...prev }; delete n[field]; return n; });
+  // Abort any live session when leaving the screen
+  useEffect(() => {
+    return () => {
+      Object.values(sttSessionsRef.current).forEach(s => s.cancel());
+      sttSessionsRef.current = {};
+    };
   }, []);
 
   const handleReadAloud = (field: string) => {
@@ -109,73 +108,35 @@ export default function MoMEntryDefaultScreen() {
     setFieldSttError(prev => ({ ...prev, [field]: null }));
     setActiveField(field);
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setFieldSttError(prev => ({ ...prev, [field]: 'Microphone not available on this connection.' }));
-      return;
-    }
-    let stream: MediaStream;
+    // Text already in the field stays; the live transcript is appended after it.
+    const base = fieldValues[field] ?? '';
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const session = await startLiveTranscription({
+        locale: lang,
+        onText: (committed, partial) => updateField(field, joinText(base, committed, partial)),
+        onError: msg => setFieldSttError(prev => ({ ...prev, [field]: `Speech recognition error — ${msg}` })),
+      });
+      sttSessionsRef.current[field] = session;
+      setAnalyserNodes(prev => ({ ...prev, [field]: session.analyser }));
+      setFieldRecState(prev => ({ ...prev, [field]: 'recording' }));
     } catch (err) {
-      const denied = err instanceof DOMException && err.name === 'NotAllowedError';
-      setFieldSttError(prev => ({ ...prev, [field]: denied ? 'Microphone access denied.' : 'Could not access microphone.' }));
-      return;
+      setFieldSttError(prev => ({ ...prev, [field]: microphoneErrorMessage(err) }));
     }
-
-    const audioCtx = new AudioContext();
-    audioCtxRef.current[field] = audioCtx;
-    const source = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-    source.connect(analyser);
-    analyserRef.current[field] = analyser;
-    setAnalyserNodes(prev => ({ ...prev, [field]: analyser }));
-
-    const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-    const mr = new MediaRecorder(stream, { mimeType });
-    mediaRecordersRef.current[field] = mr;
-    audioChunksRef.current[field] = [];
-    mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current[field]?.push(e.data); };
-    mr.start();
-    setFieldRecState(prev => ({ ...prev, [field]: 'recording' }));
   };
 
-  const handleMicConfirm = (field: string) => {
-    const mr = mediaRecordersRef.current[field];
-    if (!mr) return;
+  const handleMicConfirm = async (field: string) => {
+    const session = sttSessionsRef.current[field];
+    if (!session) return;
     setFieldRecState(prev => ({ ...prev, [field]: 'processing' }));
-    const existingText = fieldValues[field] ?? '';
-
-    mr.onstop = async () => {
-      mr.stream.getTracks().forEach(t => t.stop());
-      delete mediaRecordersRef.current[field];
-      teardownFieldAudio(field);
-      const chunks = audioChunksRef.current[field] ?? [];
-      audioChunksRef.current[field] = [];
-      const mimeType = chunks[0]?.type ?? 'audio/webm';
-      const blob = new Blob(chunks, { type: mimeType });
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const res = await fetch(STT_API, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioDataUri: reader.result as string, locale: lang }),
-          });
-          if (!res.ok) throw new Error(`STT API ${res.status}`);
-          const data: { transcription: string } = await res.json();
-          const sep = existingText.trim() ? ' ' : '';
-          updateField(field, existingText + sep + data.transcription);
-          setFieldRecState(prev => ({ ...prev, [field]: 'idle' }));
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Unknown error';
-          setFieldSttError(prev => ({ ...prev, [field]: `Speech recognition failed — ${msg}` }));
-          setFieldRecState(prev => ({ ...prev, [field]: 'idle' }));
-        }
-      };
-      reader.readAsDataURL(blob);
-    };
-    mr.stop();
+    setAnalyserNodes(prev => { const n = { ...prev }; delete n[field]; return n; });
+    try {
+      await session.stop();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setFieldSttError(prev => ({ ...prev, [field]: `Speech recognition failed — ${msg}` }));
+    }
+    delete sttSessionsRef.current[field];
+    setFieldRecState(prev => ({ ...prev, [field]: 'idle' }));
   };
 
   // ── Get Feedback ──────────────────────────────────────────────────────────

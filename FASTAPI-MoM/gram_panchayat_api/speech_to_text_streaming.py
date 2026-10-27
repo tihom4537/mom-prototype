@@ -1,131 +1,237 @@
 """
-Speech-to-Text via WebSocket using Sarvam AI REST API.
+Real-time Speech-to-Text over WebSocket, relayed to Sarvam AI's realtime
+streaming API through the ``sarvamai`` SDK.
 
-WebSocket bridge:
-    browser  ←→  /ws/speech-to-text  ←→  Sarvam REST API
+    browser  <->  WS /ws/speech-to-text  <->  Sarvam realtime STT
 
-Client → Server messages:
-  - binary frame : raw audio bytes (WebM/Opus chunks)
-  - JSON text    : {"type": "end"} to signal end of audio
+Client -> server:
+  - binary frames : raw 16 kHz mono 16-bit little-endian PCM (no container)
+  - text frame    : {"type": "end"} when the user stops recording
 
-Server → Client messages:
-  - {"type": "transcript", "text": "..."}
-  - {"type": "error", "message": "..."}
+Server -> client (JSON text frames):
+  - {"type": "ready",   "request_id": "..."}
+  - {"type": "partial", "utterance": 0, "text": "..."}   (while speaking)
+  - {"type": "final",   "utterance": 0, "text": "..."}   (after a pause)
+  - {"type": "error",   "code": "...", "message": "...", "fatal": bool}
+  - {"type": "end",     "audio_duration_s": 1.2, "total_utterances": 3}
 
-Note: Uses REST API (proven working) instead of streaming API (broken).
-Accumulates audio chunks and transcribes on "end" signal.
+Utterance boundaries come from Sarvam's voice-activity detection (default
+sensitivity), so there is no clip-length limit and no flush signal to send.
 """
 
+import asyncio
 import base64
 import json
 import logging
 import os
-from typing import Optional
+from typing import List
 
 from fastapi import WebSocket, WebSocketDisconnect
+from sarvamai import AsyncSarvamAI, RealtimeAudioInput, RealtimeEnd
+from sarvamai.core.api_error import ApiError
 
-from .speech_to_text import transcribe_audio_data_uri
+from .speech_to_text import _LANGUAGE_CODE_MAP
+
 
 logger = logging.getLogger(__name__)
 
-_LANGUAGE_CODE_MAP = {
-    "en": "en-IN",
-    "kn": "kn-IN",
-    "hi": "hi-IN",
-}
 
-_DEFAULT_LANGUAGE = "kn-IN"
+# Audio format the client must send as binary frames (raw PCM, no container).
+STREAM_ENCODING = "linear16"
+STREAM_SAMPLE_RATE = 16000
+
+# Models Sarvam accepts on the realtime endpoint; keyterms only work on v4.
+STREAM_MODELS = ("saaras:v3-realtime", "saaras:v4")
+DEFAULT_STREAM_MODEL = "saaras:v3-realtime"
+
+# After the client says "end", how long to wait for Sarvam to finalize the last
+# utterance and close the session before we give up.
+_FINAL_FLUSH_TIMEOUT = 15.0
 
 
-async def handle_streaming_stt(websocket: WebSocket, locale: str) -> None:
+async def _send(websocket: WebSocket, payload: dict) -> None:
+    """Send a JSON event to the client, ignoring a client that already left."""
+    try:
+        await websocket.send_json(payload)
+    except (WebSocketDisconnect, RuntimeError):
+        pass
+
+
+async def _forward_audio(websocket: WebSocket, sarvam) -> bool:
     """
-    Accept a browser WebSocket connection and provide STT via REST API.
+    Client -> Sarvam. Binary frames are PCM audio; a ``{"type": "end"}`` text
+    frame ends the session gracefully.
 
-    Accumulates audio chunks from browser, calls REST API on "end" signal,
-    and returns transcript via WebSocket.
-
-    Args:
-        websocket: The FastAPI WebSocket instance (not yet accepted).
-        locale:    Two-letter locale from the query param ("en", "kn", "hi").
+    Returns True if the client ended the session, False if it just disconnected.
     """
-    await websocket.accept()
-    logger.info("STT session started: locale=%s", locale)
+    while True:
+        message = await websocket.receive()
+        if message["type"] == "websocket.disconnect":
+            return False
 
-    audio_chunks = bytearray()
+        chunk = message.get("bytes")
+        if chunk:
+            await sarvam.send_realtime_audio_input(
+                RealtimeAudioInput(audio=base64.b64encode(chunk).decode("ascii"))
+            )
+            continue
+
+        text = message.get("text")
+        if not text:
+            continue
+        try:
+            control = json.loads(text)
+        except ValueError:
+            continue
+        if isinstance(control, dict) and control.get("type") == "end":
+            await sarvam.send_realtime_end(RealtimeEnd())
+            return True
+
+
+async def _forward_transcripts(sarvam, websocket: WebSocket) -> None:
+    """Sarvam -> client. Runs until Sarvam ends the session or reports a fatal error."""
+    async for message in sarvam:
+        event = getattr(message, "event", None)
+
+        if event == "session.begin":
+            await _send(websocket, {"type": "ready", "request_id": message.request_id})
+        elif event == "transcript.partial":
+            await _send(
+                websocket,
+                {
+                    "type": "partial",
+                    "utterance": message.utterance_idx,
+                    "text": message.text,
+                },
+            )
+        elif event == "transcript.final":
+            await _send(
+                websocket,
+                {
+                    "type": "final",
+                    "utterance": message.utterance_idx,
+                    "text": message.text,
+                },
+            )
+        elif event == "error":
+            logger.error(
+                "Sarvam realtime STT error (%s, fatal=%s): %s",
+                message.code,
+                message.is_fatal,
+                message.message,
+            )
+            await _send(
+                websocket,
+                {
+                    "type": "error",
+                    "code": message.code,
+                    "message": message.message,
+                    "fatal": message.is_fatal,
+                },
+            )
+            if message.is_fatal:
+                return
+        elif event == "session.end":
+            await _send(
+                websocket,
+                {
+                    "type": "end",
+                    "audio_duration_s": message.audio_duration_s,
+                    "total_utterances": message.total_utterances,
+                },
+            )
+            return
+
+
+async def _relay(websocket: WebSocket, sarvam) -> None:
+    uplink = asyncio.create_task(_forward_audio(websocket, sarvam))
+    downlink = asyncio.create_task(_forward_transcripts(sarvam, websocket))
+    try:
+        await asyncio.wait({uplink, downlink}, return_when=asyncio.FIRST_COMPLETED)
+        client_ended = (
+            uplink.done() and uplink.exception() is None and uplink.result()
+        )
+        if client_ended and not downlink.done():
+            # Let Sarvam flush the final transcript of the last utterance.
+            await asyncio.wait({downlink}, timeout=_FINAL_FLUSH_TIMEOUT)
+    finally:
+        uplink.cancel()
+        downlink.cancel()
+        results = await asyncio.gather(uplink, downlink, return_exceptions=True)
+
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
+
+
+async def relay_realtime_transcription(
+    websocket: WebSocket,
+    *,
+    locale: str,
+    model: str = DEFAULT_STREAM_MODEL,
+    keyterms: List[str] = (),
+) -> None:
+    """
+    Bridge an accepted client WebSocket to Sarvam's realtime STT WebSocket.
+
+    Unlike the REST path in ``speech_to_text.py`` there is no clip-length limit:
+    audio is forwarded as it arrives and transcripts come back per utterance
+    (partials while speaking, a final when the speaker pauses).
+
+    Never raises: failures are reported to the client as ``{"type": "error"}``.
+    """
+    # Read at call time (not import time) so a root .env loaded by main.py works.
+    api_key = os.getenv("SARVAMAI_API_KEY")
+    if not api_key:
+        logger.error("SarvamAI API key is not set.")
+        await _send(
+            websocket,
+            {
+                "type": "error",
+                "code": "server_misconfigured",
+                "message": "Server configuration error: Missing API key.",
+                "fatal": True,
+            },
+        )
+        return
+
+    client = AsyncSarvamAI(api_subscription_key=api_key)
+    logger.info("Realtime STT session: locale=%s model=%s", locale, model)
 
     try:
-        while True:
-            message = await websocket.receive()
-
-            if "bytes" in message and message["bytes"] is not None:
-                chunk: bytes = message["bytes"]
-                logger.debug(f"Received audio chunk: {len(chunk)} bytes")
-                audio_chunks.extend(chunk)
-
-            elif "text" in message and message["text"] is not None:
-                try:
-                    ctrl = json.loads(message["text"])
-                except json.JSONDecodeError:
-                    logger.warning("Non-JSON text frame received; ignoring.")
-                    continue
-
-                if ctrl.get("type") == "end":
-                    logger.info(f"Client signalled end of audio. Total: {len(audio_chunks)} bytes")
-
-                    if not audio_chunks:
-                        logger.warning("Received 'end' but no audio data")
-                        await websocket.send_text(
-                            json.dumps({"type": "error", "message": "No audio data received."})
-                        )
-                        break
-
-                    try:
-                        # Convert audio bytes to data URI format for REST API
-                        audio_b64 = base64.b64encode(bytes(audio_chunks)).decode('utf-8')
-                        # Detect format from magic bytes or default to WAV
-                        audio_format = "audio/wav"
-                        if bytes(audio_chunks).startswith(b'ID3') or bytes(audio_chunks).startswith(b'\xff\xfb'):
-                            audio_format = "audio/mpeg"
-                        audio_data_uri = f"data:{audio_format};base64,{audio_b64}"
-
-                        logger.info(f"Calling REST API for transcription... Format: {audio_format}, Size: {len(audio_chunks)} bytes")
-                        transcript = await transcribe_audio_data_uri(audio_data_uri, locale)
-
-                        logger.info(f"Sending transcript to client: {transcript}")
-                        await websocket.send_text(
-                            json.dumps({"type": "transcript", "text": transcript})
-                        )
-
-                    except Exception as e:
-                        logger.exception(f"Error during transcription: {e}")
-                        await websocket.send_text(
-                            json.dumps({"type": "error", "message": f"Transcription failed: {str(e)}"})
-                        )
-
-                    break
-
-                else:
-                    logger.debug(f"Unknown control message: {ctrl}")
-
-            elif message.get("type") == "websocket.disconnect":
-                logger.info("Client disconnected.")
-                break
-
-    except WebSocketDisconnect:
-        logger.info("WebSocket disconnected.")
-
+        async with client.speech_to_text_realtime_streaming.connect(
+            language_code=_LANGUAGE_CODE_MAP[locale],
+            model=model,
+            stream_type="fast",
+            encoding=STREAM_ENCODING,
+            sample_rate=str(STREAM_SAMPLE_RATE),
+            # keyterms is a JSON-encoded array on the wire (saaras:v4 only).
+            keyterms=json.dumps(list(keyterms), ensure_ascii=False) if keyterms else None,
+        ) as sarvam:
+            await _relay(websocket, sarvam)
+    except ApiError as exc:
+        logger.error(
+            "Could not open Sarvam realtime STT session (status %s): %s",
+            exc.status_code,
+            exc.body,
+        )
+        await _send(
+            websocket,
+            {
+                "type": "error",
+                "code": "provider_unavailable",
+                "message": "Speech-to-text provider rejected the connection",
+                "fatal": True,
+            },
+        )
     except Exception as exc:
-        logger.exception(f"Error: {exc}")
-        try:
-            await websocket.send_text(
-                json.dumps({"type": "error", "message": str(exc)})
-            )
-        except Exception:
-            pass
-
-    finally:
-        try:
-            await websocket.close(code=1000)
-        except Exception:
-            pass
-        logger.info("STT session closed.")
+        logger.exception("Realtime speech-to-text relay failed: %s", exc)
+        await _send(
+            websocket,
+            {
+                "type": "error",
+                "code": "provider_failed",
+                "message": "Speech-to-text provider failed",
+                "fatal": True,
+            },
+        )

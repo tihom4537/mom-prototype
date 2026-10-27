@@ -4,6 +4,6 @@ httpx
 python-dotenv
 pydantic>=2,<3
 asyncpg
-sarvamai
+sarvamai>=0.1.35
 google-generativeai
 

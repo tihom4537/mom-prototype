@@ -1,46 +1,81 @@
 /**
- * WebSocket client for real-time Speech-to-Text streaming via Sarvam AI.
+ * WebSocket client for real-time Speech-to-Text (`WS /ws/speech-to-text`),
+ * which the backend relays to Sarvam AI's realtime streaming API.
+ *
+ * Wire protocol:
+ *   client -> server : binary frames of raw 16 kHz mono 16-bit PCM,
+ *                      then a text frame {"type":"end"}.
+ *   server -> client : {"type":"ready"}
+ *                      {"type":"partial","utterance":n,"text":"..."}  (live, revisable)
+ *                      {"type":"final","utterance":n,"text":"..."}    (utterance done)
+ *                      {"type":"error","code":"...","message":"...","fatal":bool}
+ *                      {"type":"end","audio_duration_s":..,"total_utterances":..}
  *
  * Usage:
- *   const client = new WebSocketSTTClient('en');
- *
- *   client.on('transcript', (text: string) => console.log('Transcript:', text));
- *   client.on('speech_start', () => console.log('Speech detected'));
- *   client.on('speech_end', () => console.log('Speech ended'));
- *   client.on('error', (msg: string) => console.error('Error:', msg));
- *
+ *   const client = new WebSocketSTTClient('kn');
+ *   client.on('partial', ({ text }) => showProvisional(text));
+ *   client.on('final',   ({ text }) => commit(text));
+ *   client.on('error',   (msg) => showError(msg));
  *   await client.connect();
- *   await client.send(audioChunk1);
- *   await client.send(audioChunk2);
- *   await client.end(); // Send end signal
- *   await client.close(); // Close connection
+ *   recorder.start(chunk => client.send(chunk));
+ *   ...
+ *   await client.end();    // sends {"type":"end"} and waits for the last final
+ *   await client.close();
+ *
+ * Most screens should use `startLiveTranscription()` from `liveTranscription.ts`
+ * instead of driving this class directly.
  */
 
-type EventType = 'transcript' | 'speech_start' | 'speech_end' | 'error' | 'connected' | 'closed';
-type EventCallback = (data: any) => void;
+export type SttTranscriptEvent = { utterance: number; text: string };
+export type SttEndEvent = { audio_duration_s?: number; total_utterances?: number };
+
+type EventMap = {
+  connected: null;
+  ready: { request_id?: string };
+  partial: SttTranscriptEvent;
+  final: SttTranscriptEvent;
+  /** Back-compat alias of `final`: receives the final text as a string. */
+  transcript: string;
+  error: string;
+  end: SttEndEvent;
+  closed: null;
+};
+export type EventType = keyof EventMap;
+type EventCallback<K extends EventType = EventType> = (data: EventMap[K]) => void;
+
+export type SttModel = 'saaras:v3-realtime' | 'saaras:v4';
+
+export interface WebSocketSTTClientOptions {
+  model?: SttModel;
+  /** Domain terms to bias recognition toward (saaras:v4 only). */
+  keyterms?: string[];
+}
+
+/** How long `end()` waits for the server to flush the last utterance. */
+const END_TIMEOUT_MS = 20000;
 
 export class WebSocketSTTClient {
   private ws: WebSocket | null = null;
   private locale: string;
-  private listeners: Map<EventType, EventCallback[]> = new Map();
+  private options: WebSocketSTTClientOptions;
+  private listeners: Map<EventType, EventCallback<any>[]> = new Map();
   private isConnected = false;
-  private messageBuffer: (string | Uint8Array)[] = [];
+  private ended = false;
 
-  constructor(locale: string = 'en') {
+  constructor(locale: string = 'kn', options: WebSocketSTTClientOptions = {}) {
     this.locale = locale;
+    this.options = options;
   }
 
-  /**
-   * Connect to the WebSocket endpoint.
-   * Throws an error if connection fails.
-   */
+  /** Open the WebSocket. Resolves once the socket is open; rejects on failure. */
   async connect(): Promise<void> {
     if (this.isConnected) {
-      console.warn('WebSocketSTTClient already connected');
+      console.warn('[STT WS] already connected');
       return;
     }
 
     return new Promise((resolve, reject) => {
+      let settled = false;
       try {
         const wsUrl = this.buildWebSocketUrl();
         console.log(`[STT WS] Connecting to ${wsUrl}`);
@@ -49,220 +84,187 @@ export class WebSocketSTTClient {
         this.ws.binaryType = 'arraybuffer';
 
         this.ws.onopen = () => {
-          console.log('[STT WS] Connected');
           this.isConnected = true;
           this.emit('connected', null);
+          settled = true;
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event.data);
+        this.ws.onmessage = (event) => this.handleMessage(event.data);
+
+        this.ws.onerror = () => {
+          // The browser gives no detail here; the matching `close` follows.
+          if (!settled) {
+            settled = true;
+            reject(new Error('Could not reach the speech-to-text service'));
+          }
         };
 
-        this.ws.onerror = (event) => {
-          console.error('[STT WS] WebSocket error:', event);
-          const msg = 'WebSocket connection error';
-          this.emit('error', msg);
-          reject(new Error(msg));
-        };
-
-        this.ws.onclose = () => {
-          console.log('[STT WS] Connection closed');
+        this.ws.onclose = (event) => {
+          const wasConnected = this.isConnected;
           this.isConnected = false;
+          if (wasConnected && !this.ended && event.code !== 1000) {
+            this.emit('error', `Connection closed unexpectedly (${event.code})`);
+          }
           this.emit('closed', null);
+          if (!settled) {
+            settled = true;
+            reject(new Error('Speech-to-text connection was refused'));
+          }
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        console.error('[STT WS] Connection error:', msg);
         reject(new Error(`Failed to connect: ${msg}`));
       }
     });
   }
 
-  /**
-   * Send an audio chunk to the server.
-   * Automatically converts Blob to Uint8Array if needed.
-   */
-  async send(chunk: Uint8Array | Blob): Promise<void> {
-    if (!this.isConnected || !this.ws) {
-      throw new Error('WebSocket not connected');
-    }
-
-    let data: Uint8Array;
-    if (chunk instanceof Blob) {
-      data = new Uint8Array(await chunk.arrayBuffer());
-    } else {
-      data = chunk;
-    }
-
+  /** Send one chunk of 16 kHz mono 16-bit PCM. Silently drops if not connected. */
+  send(chunk: Uint8Array | ArrayBuffer): void {
+    if (!this.isConnected || !this.ws || this.ws.readyState !== WebSocket.OPEN || this.ended) return;
     try {
-      this.ws.send(data);
+      this.ws.send(chunk);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[STT WS] Send error:', msg);
       this.emit('error', `Failed to send audio: ${msg}`);
-      throw err;
     }
   }
 
   /**
-   * Signal end of audio stream.
-   * Server will finalize transcription and close connection.
+   * Signal end of audio and wait for the server to flush the last utterance
+   * (resolves on the server's `end` frame, on close, or after a timeout).
    */
   async end(): Promise<void> {
-    if (!this.isConnected || !this.ws) {
-      throw new Error('WebSocket not connected');
-    }
+    if (!this.isConnected || !this.ws || this.ended) return;
+    this.ended = true;
+
+    const done = new Promise<void>(resolve => {
+      const finish = () => {
+        this.off('end', finish);
+        this.off('closed', finish);
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(finish, END_TIMEOUT_MS);
+      this.on('end', finish);
+      this.on('closed', finish);
+    });
 
     try {
-      const endMessage = JSON.stringify({ type: 'end' });
-      this.ws.send(endMessage);
-      console.log('[STT WS] Sent end signal');
+      this.ws.send(JSON.stringify({ type: 'end' }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('[STT WS] End signal error:', msg);
       this.emit('error', `Failed to send end signal: ${msg}`);
-      throw err;
     }
+    await done;
   }
 
-  /**
-   * Close the WebSocket connection.
-   */
+  /** Close the socket (no-op if already closed). */
   async close(): Promise<void> {
-    return new Promise((resolve) => {
-      if (!this.ws) {
-        console.warn('[STT WS] close called but ws is null');
-        resolve();
-        return;
-      }
-
-      if (this.isConnected) {
-        const onClose = () => {
-          this.ws?.removeEventListener('close', onClose);
-          resolve();
-        };
-        this.ws.addEventListener('close', onClose);
-        this.ws.close(1000, 'Normal closure');
-      } else {
-        this.ws = null;
-        resolve();
-      }
+    const ws = this.ws;
+    if (!ws) return;
+    this.ws = null;
+    if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      this.isConnected = false;
+      return;
+    }
+    await new Promise<void>(resolve => {
+      const onClose = () => { ws.removeEventListener('close', onClose); resolve(); };
+      ws.addEventListener('close', onClose);
+      try { ws.close(1000, 'Normal closure'); } catch { onClose(); }
     });
   }
 
-  /**
-   * Register a listener for an event type.
-   * Can register multiple listeners for the same event.
-   */
-  on(event: EventType, callback: EventCallback): void {
-    if (!this.listeners.has(event)) {
-      this.listeners.set(event, []);
-    }
+  on<K extends EventType>(event: K, callback: EventCallback<K>): void {
+    if (!this.listeners.has(event)) this.listeners.set(event, []);
     this.listeners.get(event)!.push(callback);
   }
 
-  /**
-   * Unregister a listener.
-   */
-  off(event: EventType, callback: EventCallback): void {
+  off<K extends EventType>(event: K, callback: EventCallback<K>): void {
     const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      const idx = callbacks.indexOf(callback);
-      if (idx !== -1) {
-        callbacks.splice(idx, 1);
-      }
-    }
+    if (!callbacks) return;
+    const idx = callbacks.indexOf(callback);
+    if (idx !== -1) callbacks.splice(idx, 1);
   }
 
-  /**
-   * Check if the WebSocket is currently connected.
-   */
   connected(): boolean {
     return this.isConnected;
   }
 
-  /**
-   * Get the current locale.
-   */
   getLocale(): string {
     return this.locale;
   }
 
-  // ── Private methods ────────────────────────────────────────────────────────
+  // ── Private ────────────────────────────────────────────────────────────────
 
   /**
-   * Build the WebSocket URL from the current API base.
-   * Handles both dev (localhost:8000) and prod (https://domain) setups.
+   * WebSocket URL for the streaming endpoint.
+   * - If VITE_API_BASE_URL is set, the socket goes to that host.
+   * - Otherwise same-origin (Vite dev proxy / Nginx both forward `/ws/`).
    */
   private buildWebSocketUrl(): string {
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host = window.location.host;
-
-    // In dev, Vite proxies HTTP but WebSocket needs explicit localhost:8000
-    // In prod, WebSocket goes to the same domain
-    const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-      ? 'localhost:8000'
-      : host;
-
-    return `${protocol}://${wsHost}/ws/speech-to-text?locale=${this.locale}`;
+    const base = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+    let origin: string;
+    if (base) {
+      const u = new URL(base, window.location.href);
+      u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+      origin = u.origin;
+    } else {
+      origin = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`;
+    }
+    const params = new URLSearchParams({ locale: this.locale });
+    if (this.options.model) params.set('model', this.options.model);
+    if (this.options.keyterms?.length) params.set('keyterms', this.options.keyterms.join(','));
+    return `${origin}/ws/speech-to-text?${params.toString()}`;
   }
 
-  /**
-   * Handle incoming WebSocket messages.
-   * Parses JSON text frames and dispatches events.
-   */
   private handleMessage(data: ArrayBuffer | string): void {
-    console.log('[STT WS] Received message:', typeof data === 'string' ? data.substring(0, 100) : 'binary');
+    if (typeof data !== 'string') return; // server only sends JSON text frames
+    let msg: any;
     try {
-      // Binary frames (unexpected, log but ignore)
-      if (data instanceof ArrayBuffer) {
-        console.warn('[STT WS] Received binary frame (unexpected)');
-        return;
+      msg = JSON.parse(data);
+    } catch {
+      this.emit('error', 'Malformed message from speech-to-text service');
+      return;
+    }
+    switch (msg.type) {
+      case 'ready':
+        this.emit('ready', { request_id: msg.request_id });
+        break;
+      case 'partial':
+        this.emit('partial', { utterance: Number(msg.utterance ?? 0), text: String(msg.text ?? '') });
+        break;
+      case 'final': {
+        const ev = { utterance: Number(msg.utterance ?? 0), text: String(msg.text ?? '') };
+        this.emit('final', ev);
+        this.emit('transcript', ev.text);
+        break;
       }
-
-      // Parse JSON text frame
-      const msg = JSON.parse(data);
-      const type = msg.type;
-      console.log('[STT WS] Parsed message type:', type);
-
-      switch (type) {
-        case 'transcript':
-          console.log('[STT WS] Emitting transcript event with text:', msg.text);
-          this.emit('transcript', msg.text || '');
-          break;
-        case 'speech_start':
-          this.emit('speech_start', null);
-          break;
-        case 'speech_end':
-          this.emit('speech_end', null);
-          break;
-        case 'error':
-          this.emit('error', msg.message || 'Unknown error from server');
-          break;
-        default:
-          console.warn('[STT WS] Unknown message type:', type, msg);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown parse error';
-      console.error('[STT WS] Message parse error:', msg, data);
-      this.emit('error', `Failed to parse server message: ${msg}`);
+      case 'transcript': // old backend protocol — treat as a single final
+        this.emit('final', { utterance: 0, text: String(msg.text ?? '') });
+        this.emit('transcript', String(msg.text ?? ''));
+        break;
+      case 'error':
+        this.emit('error', String(msg.message || 'Unknown error from speech-to-text service'));
+        break;
+      case 'end':
+        this.ended = true;
+        this.emit('end', { audio_duration_s: msg.audio_duration_s, total_utterances: msg.total_utterances });
+        break;
+      default:
+        console.warn('[STT WS] Unknown message type:', msg.type, msg);
     }
   }
 
-  /**
-   * Emit an event to all registered listeners.
-   */
-  private emit(event: EventType, data: any): void {
+  private emit<K extends EventType>(event: K, data: EventMap[K]): void {
     const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      callbacks.forEach(cb => {
-        try {
-          cb(data);
-        } catch (err) {
-          console.error(`[STT WS] Error in ${event} callback:`, err);
-        }
-      });
+    if (!callbacks) return;
+    for (const cb of [...callbacks]) {
+      try {
+        cb(data);
+      } catch (err) {
+        console.error(`[STT WS] Error in ${event} listener:`, err);
+      }
     }
   }
 }
