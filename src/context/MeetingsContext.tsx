@@ -20,6 +20,7 @@ export interface ClosureRow {
   id: number; name: string; designation: string; gpName: string;
   phone: string; email: string;
   status: ClosureStatus; biometric: BiometricStatus; reason: string;
+  gender?: 'woman' | 'man' | 'other';
 }
 
 // ─── Shared review types ───────────────────────────────────────────────────────

@@ -145,7 +145,7 @@ function BiometricModal({ row, agendaItems, savedVotes, onClose, onTakeBiometric
           {/* Member identity box */}
           <div className="flex items-center gap-[14px] bg-[#f5f5f5] rounded-[10px] px-[18px] py-[14px] mb-[24px]">
             <img
-              src={(row as any).gender === 'woman' ? '/avatar-woman.PNG' : '/avatar-man.PNG'}
+              src={row.gender === 'woman' ? '/avatar-woman.PNG' : '/avatar-man.PNG'}
               alt={row.name}
               className="size-[50px] object-contain shrink-0"
             />
