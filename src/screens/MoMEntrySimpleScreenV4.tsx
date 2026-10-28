@@ -322,7 +322,6 @@ export default function MoMEntrySimpleScreenV4() {
             { text: 'ದುರಸ್ತಿ ಅಗತ್ಯವಿರುವ ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು ನಮೂದಿಸಿ.', highlight: 'ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳವನ್ನು' },
           ],
           rewrite: '[ವಾರ್ಡ್ ಸಂಖ್ಯೆ ಅಥವಾ ಸ್ಥಳ]ದ ಮುಖ್ಯ ರಸ್ತೆಯಲ್ಲಿ ಗುಂಡಿಗಳ ಸಮಸ್ಯೆಯನ್ನು ಸದಸ್ಯರು ಚರ್ಚಿಸಿದರು. ರಸ್ತೆ ದುರಸ್ತಿಗಾಗಿ ಅಂದಾಜು ತಯಾರಿಸಿ ಜಿಲ್ಲಾ ಕಚೇರಿಗೆ [ಕಾಲಮಿತಿ]ರ ವೇಳೆಗೆ ಪ್ರಸ್ತಾವನೆ ಸಲ್ಲಿಸಲು ತೀರ್ಮಾನಿಸಲಾಯಿತು. [ನಿಯೋಜಿತ ಸದಸ್ಯರ ಹೆಸರು] ಅವರನ್ನು ಅಂದಾಜು ತಯಾರಿಸಲು ನಿಯೋಜಿಸಲಾಯಿತು. ಅಂದಾಜು ವೆಚ್ಚ [ಅಂದಾಜು ವೆಚ್ಚದ ವ್ಯಾಪ್ತಿ] ಎಂದು ಚರ್ಚಿಸಲಾಯಿತು, ದೃಢೀಕರಣಕ್ಕೆ ಒಳಪಟ್ಟಿದೆ.',
-          round: 1,
         });
       } else {
         setFeedbackResult({
@@ -335,7 +334,6 @@ export default function MoMEntrySimpleScreenV4() {
             { text: 'Mention the ward number or location where the repair is needed.', highlight: 'ward number or location' },
           ],
           rewrite: 'Members discussed the issue of potholes on the main street in [ward number or location]. It was resolved to prepare an estimate for road repair and submit a proposal to the district office by [concrete timeline]. [Names of members assigned] were assigned to prepare the estimate. The approximate cost was discussed as [estimated cost range], subject to confirmation.',
-          round: 1,
         });
       }
       setFeedbackCompleted(true);

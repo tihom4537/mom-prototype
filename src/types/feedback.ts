@@ -14,8 +14,6 @@ export interface FeedbackResult {
   feedback: FeedbackItem[];
   /** Full rewrite with [[placeholder]] markers, or null. */
   rewrite: string | null;
-  /** 1 for a fresh round, 2/3 for follow-ups. */
-  round: number;
 }
 
 /** Split a feedback point into [before, highlight, after] for rendering; highlight may be null. */

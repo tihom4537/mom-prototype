@@ -121,7 +121,6 @@ async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_au
         message=outcome.message if good_to_go else None,
         feedback=[] if good_to_go else [FeedbackItem(text=t, highlight=h) for t, h in outcome.items],
         rewrite=outcome.rewrite,
-        round=round_no,
     )
 
     logger.info(

@@ -39,7 +39,6 @@ class FeedbackResult(BaseModel):
     message: Optional[str] = None
     feedback: List[FeedbackItem] = []
     rewrite: Optional[str] = None
-    round: int = 1
 
 
 class SpeechToTextRequest(BaseModel):

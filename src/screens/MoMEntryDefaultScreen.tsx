@@ -160,7 +160,6 @@ export default function MoMEntryDefaultScreen() {
           { text: 'Good detail on the range of topics the secretary informed members about.', highlight: null },
         ],
         rewrite: 'The secretary informed members about the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward] with [number of participants] participants, the Onagalu Day observance held on [date], and the COVID-19 JN.1 precautionary measures advised by [name of authority/circular].',
-        round: 1,
       };
       setIsFetchingFeedback(false);
       navigate('/mom-entry/simple-v4', {

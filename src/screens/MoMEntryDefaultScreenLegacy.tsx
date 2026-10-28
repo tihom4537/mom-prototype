@@ -190,7 +190,6 @@ export default function MoMEntryDefaultScreenLegacy() {
           { text: 'Good detail on the range of topics covered in the meeting.', highlight: null },
         ],
         rewrite: 'Information was provided regarding the Swachh Saturday village cleanliness activities conducted on [date] in [location/ward] with [number of participants] participants, the Onagalu Day observance held on [date], and the COVID-19 JN.1 precautionary measures advised by [name of authority/circular].',
-        round: 1,
       };
       setIsFetchingFeedback(false);
       navigate('/mom-entry/simple-v4', { state: { agenda, discussionText, feedbackResult, feedbackCompleted: true, meetingId } });
