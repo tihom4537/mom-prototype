@@ -23,6 +23,8 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-2.5-flash}
       - SARVAMAI_API_KEY=${SARVAMAI_API_KEY}
       - DATABASE_URL=postgresql://mom:${POSTGRES_PASSWORD}@postgres:5432/mom
+      # uvicorn worker processes (one per vCPU); each holds its own DB pool and HTTP client
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-2}
       # JWT verification (verify-only; the private key lives with the caller)
       - JWT_ALGORITHM=RS256
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env}

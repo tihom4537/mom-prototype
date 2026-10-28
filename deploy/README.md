@@ -59,6 +59,13 @@ caller signs with the private key. `JWT_AUDIENCE=mom-api` is enforced.
   attaches the token for any caller, it is effectively open. Gate it (basic auth on the SPA
   server block) or remove it before the URL is shared beyond the evaluation team.
 
+## Workers
+
+The backend runs `WEB_CONCURRENCY` uvicorn worker processes (default 2, one per vCPU;
+set in `docker-compose.yml`). Each worker holds its own asyncpg pool (max 5) and HTTP
+client; the app is stateless across workers because feedback rounds live in Postgres.
+Measured on the t3.micro: 2 workers ≈ 166 MiB total.
+
 ## Database
 
 `docker-compose.yml` runs `postgres:17-alpine` on the named volume `mom_mom-pgdata`
