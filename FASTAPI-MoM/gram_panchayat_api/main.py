@@ -28,7 +28,7 @@ from .db import (
     insert_ai_feedback,
     insert_stt_session,
 )
-from .feedback import GOOD_TO_GO_MESSAGE, get_feedback as run_feedback
+from .feedback import GOOD_TO_GO_MESSAGE, get_feedback as run_feedback, is_fresh_start
 from .models import (
     FeedbackItem,
     FeedbackRequest,
@@ -81,32 +81,29 @@ async def health() -> dict:
     return {"status": "ok"}
 
 
-# After this many rounds for one agenda item the backend answers good_to_go
-# regardless, so the loop always terminates.
-MAX_FEEDBACK_ROUNDS = 3
-
-
 @app.post("/feedback", response_model=FeedbackResult)
 async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_auth)) -> FeedbackResult:
     """
     AI feedback on one agenda item's minutes.
 
     Round one classifies the item and reviews it against the category checklist.
-    If feedback was already stored for this `agenda_id` (and `reset` is false),
-    the call becomes a follow-up round: the model checks which earlier points
-    the updated minutes address and returns only what is still open, or
-    `status: "good_to_go"` once roughly 70% has been addressed. After
-    MAX_FEEDBACK_ROUNDS the backend returns good_to_go unconditionally.
+    If feedback was already stored for this `agenda_id` and the new minutes are
+    an edit of the previous text, the call becomes a follow-up round: the model
+    checks which earlier points are now addressed and returns only what is still
+    open, or `status: "good_to_go"` once roughly 70% has been addressed. If the
+    minutes were replaced rather than edited (word overlap with the previous
+    round below 20%), the backend starts a fresh round 1 on its own.
 
     Classification (category, reason) is kept in the audit table, not returned.
     """
-    previous = None if body.reset else await fetch_last_feedback(body.agenda_id)
+    previous = await fetch_last_feedback(body.agenda_id)
+    round_no, previous_points = 1, None
     if previous and previous["status"] == "feedback" and previous["feedback"]:
-        round_no = int(previous["round"]) + 1
-        previous_points = previous["feedback"]
-    else:
-        round_no = 1
-        previous_points = None
+        if is_fresh_start(previous.get("mom_discussion", ""), body.mom_discussion):
+            logger.info("Agenda %s: minutes replaced since round %s; starting fresh", body.agenda_id, previous["round"])
+        else:
+            round_no = int(previous["round"]) + 1
+            previous_points = previous["feedback"]
 
     outcome = await run_feedback(
         body.agenda_subject,
@@ -115,7 +112,7 @@ async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_au
         previous_feedback=previous_points,
     )
 
-    good_to_go = outcome.good_to_go or (round_no >= MAX_FEEDBACK_ROUNDS and not outcome.failed)
+    good_to_go = outcome.good_to_go
     if good_to_go and not outcome.message:
         outcome.message = GOOD_TO_GO_MESSAGE.get(body.feedback_language, GOOD_TO_GO_MESSAGE["en"])
 

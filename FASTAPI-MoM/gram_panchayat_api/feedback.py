@@ -59,6 +59,28 @@ def split_highlight(point: str) -> Tuple[str, Optional[str]]:
     return text, highlight or None
 
 
+_TOKEN_SPLIT = re.compile(r"[\s\.,;:!?()\[\]{}\"'\u0964\u0965/\-]+")
+
+# Below this share of common words the new minutes are treated as a fresh entry,
+# not an edit of the previous round. Calibrated on real rounds: genuine follow-ups
+# (even re-dictated or rewrite-accepted ones) share 0.28–0.44; unrelated text ≈ 0.10.
+FRESH_START_MAX_SIMILARITY = 0.20
+
+
+def text_similarity(a: str, b: str) -> float:
+    """Jaccard overlap of lowercase word tokens (script-agnostic, works for Kannada)."""
+    ta = {t for t in _TOKEN_SPLIT.split(a.lower()) if t}
+    tb = {t for t in _TOKEN_SPLIT.split(b.lower()) if t}
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def is_fresh_start(previous_text: str, new_text: str) -> bool:
+    """True when the minutes were replaced rather than edited since the last round."""
+    return text_similarity(previous_text, new_text) < FRESH_START_MAX_SIMILARITY
+
+
 def _model_name() -> str:
     return os.getenv("LLM_MODEL_NAME") or "gemini-2.5-flash"
 

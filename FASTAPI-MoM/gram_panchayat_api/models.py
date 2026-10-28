@@ -8,8 +8,6 @@ class FeedbackRequest(BaseModel):
     agenda_subject: str
     mom_discussion: str
     feedback_language: Literal["en", "kn"] = "en"
-    # Ignore any earlier feedback stored for this agenda_id and start a fresh round.
-    reset: bool = False
 
     @field_validator("agenda_id", "agenda_subject", "mom_discussion")
     @classmethod

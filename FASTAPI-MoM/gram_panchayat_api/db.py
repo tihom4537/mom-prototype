@@ -103,14 +103,14 @@ async def fetch_last_feedback(agenda_id: str) -> Optional[Dict[str, Any]]:
     """
     Latest feedback row for an agenda item, or None.
 
-    Returns {"status", "round", "feedback": [point texts], "created_at"}.
+    Returns {"status", "round", "feedback": [point texts], "mom_discussion", "created_at"}.
     """
     if _POOL is None:
         return None
     async with _POOL.acquire() as conn:
         row = await conn.fetchrow(
             """
-            SELECT status, round, output, created_at
+            SELECT status, round, input, output, created_at
             FROM ai_feedback
             WHERE agenda_id = $1
             ORDER BY created_at DESC, id DESC
@@ -123,11 +123,15 @@ async def fetch_last_feedback(agenda_id: str) -> Optional[Dict[str, Any]]:
     output = row["output"]
     if isinstance(output, str):
         output = json.loads(output)
+    inp = row["input"]
+    if isinstance(inp, str):
+        inp = json.loads(inp)
     points = [item.get("text", "") for item in (output.get("feedback") or []) if isinstance(item, dict)]
     return {
         "status": row["status"] or output.get("status"),
         "round": row["round"] or 1,
         "feedback": [p for p in points if p],
+        "mom_discussion": (inp or {}).get("mom_discussion", ""),
         "created_at": row["created_at"],
     }
 
