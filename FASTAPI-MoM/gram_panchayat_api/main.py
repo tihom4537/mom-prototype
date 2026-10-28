@@ -16,9 +16,11 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, status
+import jwt
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
+from .auth import decode_token, require_auth
 from .db import (
     close_db_pool,
     fetch_last_feedback,
@@ -85,7 +87,7 @@ MAX_FEEDBACK_ROUNDS = 3
 
 
 @app.post("/feedback", response_model=FeedbackResult)
-async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
+async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_auth)) -> FeedbackResult:
     """
     AI feedback on one agenda item's minutes.
 
@@ -153,7 +155,7 @@ async def get_feedback(body: FeedbackRequest) -> FeedbackResult:
 
 
 @app.post("/speech-to-text", response_model=SpeechToTextResponse)
-async def speech_to_text(body: SpeechToTextRequest) -> SpeechToTextResponse:
+async def speech_to_text(body: SpeechToTextRequest, _claims: dict = Depends(require_auth)) -> SpeechToTextResponse:
     """
     Transcribe short audio using SarvamAI Speech-to-Text REST API.
 
@@ -169,7 +171,7 @@ async def speech_to_text(body: SpeechToTextRequest) -> SpeechToTextResponse:
 
 
 @app.post("/translate", response_model=TranslateResponse)
-async def translate(body: TranslateRequest) -> TranslateResponse:
+async def translate(body: TranslateRequest, _claims: dict = Depends(require_auth)) -> TranslateResponse:
     """
     Translate meeting minutes text between English (en) and Kannada (kn).
     Uses the LLM to preserve proper nouns and official document style.
@@ -179,7 +181,7 @@ async def translate(body: TranslateRequest) -> TranslateResponse:
 
 
 @app.post("/ocr", response_model=OCRResponse)
-async def ocr(body: OCRRequest) -> OCRResponse:
+async def ocr(body: OCRRequest, _claims: dict = Depends(require_auth)) -> OCRResponse:
     """
     Extract text from an image using Google Cloud Vision API.
 
@@ -195,6 +197,7 @@ async def websocket_speech_to_text(
     websocket: WebSocket,
     locale: str = "kn",
     agenda_id: Optional[str] = None,
+    token: Optional[str] = None,
 ) -> None:
     """
     Real-time transcription over a WebSocket, relayed to Sarvam AI's realtime
@@ -205,6 +208,8 @@ async def websocket_speech_to_text(
     - `locale`: "kn" (default) or "en".
     - `agenda_id`: optional; recorded in the audit row so a transcript can be
       traced to the agenda item it was dictated for.
+    - `token`: the JWT, for clients that cannot set a header on the handshake.
+      Backends should send `Authorization: Bearer <JWT>` on the handshake instead.
 
     Client -> server: binary frames of raw 16 kHz mono 16-bit PCM, then a text
     frame `{"type": "end"}`.
@@ -214,15 +219,30 @@ async def websocket_speech_to_text(
     await websocket.accept()
     started_at = datetime.now(timezone.utc)
 
+    if not token:
+        scheme, _, credentials = websocket.headers.get("authorization", "").partition(" ")
+        if scheme.lower() == "bearer":
+            token = credentials.strip()
+    try:
+        if not token:
+            raise jwt.InvalidTokenError("Not authenticated")
+        decode_token(token)
+    except jwt.ExpiredSignatureError:
+        await _reject_stream(websocket, "unauthorized", "Token has expired")
+        return
+    except jwt.InvalidTokenError as exc:
+        await _reject_stream(websocket, "unauthorized", f"Invalid token: {exc}")
+        return
+    except RuntimeError as exc:
+        logger.error("JWT verification misconfigured: %s", exc)
+        await _reject_stream(websocket, "unauthorized", "Authentication is not configured correctly")
+        return
+
     if locale not in _LANGUAGE_CODE_MAP:
-        problem = f"Unsupported locale {locale!r}; expected one of {sorted(_LANGUAGE_CODE_MAP)}"
-        try:
-            await websocket.send_json(
-                {"type": "error", "code": "invalid_start", "message": problem, "fatal": True}
-            )
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        except (WebSocketDisconnect, RuntimeError):
-            pass
+        await _reject_stream(
+            websocket, "invalid_start",
+            f"Unsupported locale {locale!r}; expected one of {sorted(_LANGUAGE_CODE_MAP)}",
+        )
         return
 
     summary = await relay_realtime_transcription(
@@ -249,6 +269,15 @@ async def websocket_speech_to_text(
         )
     except Exception as exc:  # pragma: no cover - best-effort audit
         logger.exception("Failed to insert stt_session: %s", exc)
+
+
+async def _reject_stream(websocket: WebSocket, code: str, message: str) -> None:
+    """Tell the client why the stream was refused, then close (1008 = policy violation)."""
+    try:
+        await websocket.send_json({"type": "error", "code": code, "message": message, "fatal": True})
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    except (WebSocketDisconnect, RuntimeError):
+        pass
 
 
 # If you want to run with: `python -m gram_panchayat_api.main`

@@ -12,6 +12,8 @@ RUN npm run build
 # Stage 2: serve with nginx
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Served through the image's envsubst step so ${API_TOKEN} is filled at container start.
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+ENV NGINX_ENVSUBST_FILTER=^API_TOKEN$
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

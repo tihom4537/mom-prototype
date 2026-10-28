@@ -37,6 +37,20 @@ HTTPS on a hostname. Live at `https://mom.monitoringandautomationsolution.site` 
 Push to `main`, wait for the "Build and push Docker images" workflow to go
 green, then on the VM run `/opt/mom/deploy.sh` (pull + up + prune).
 
+## Authentication (RS256 JWT, verify-only)
+
+The backend verifies a JWT on `/feedback`, `/speech-to-text`, `/translate`, `/ocr`
+and the WebSocket; `/health` stays open. We generated the keypair; the backend holds
+only the public key (`JWT_PUBLIC_KEY` in `.env`, one line with literal `\n`), the
+caller signs with the private key. `JWT_AUDIENCE=mom-api` is enforced.
+
+- The frontend container attaches a long-lived token (`FRONTEND_API_TOKEN`) in its
+  Nginx proxy config, so the browser bundle never holds a secret.
+- Mint tokens with `FASTAPI-MoM/scripts/make_test_token.py <private.pem>`
+  (`JWT_AUDIENCE=mom-api TEST_TOKEN_TTL=<seconds> TEST_TOKEN_SUB=<name>`).
+- Rotate: generate a new pair with `scripts/generate_jwt_keys.py`, update
+  `JWT_PUBLIC_KEY` and `FRONTEND_API_TOKEN`, redeploy, hand the new private key to the caller.
+
 ## Database
 
 `docker-compose.yml` runs `postgres:17-alpine` on the named volume `mom_mom-pgdata`

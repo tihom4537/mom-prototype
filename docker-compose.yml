@@ -23,6 +23,10 @@ services:
       - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-2.5-flash}
       - SARVAMAI_API_KEY=${SARVAMAI_API_KEY}
       - DATABASE_URL=postgresql://mom:${POSTGRES_PASSWORD}@postgres:5432/mom
+      # JWT verification (verify-only; the private key lives with the caller)
+      - JWT_ALGORITHM=RS256
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:?set JWT_PUBLIC_KEY in .env}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-mom-api}
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,6 +34,9 @@ services:
 
   frontend:
     image: ghcr.io/tihom4537/mom-frontend:latest
+    environment:
+      # Long-lived JWT the frontend's Nginx attaches when proxying to the backend
+      - API_TOKEN=${FRONTEND_API_TOKEN:?set FRONTEND_API_TOKEN in .env}
     ports:
       # Host Nginx terminates TLS and proxies to this port (see deploy/README.md)
       - "127.0.0.1:8081:80"

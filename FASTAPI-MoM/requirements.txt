@@ -7,3 +7,4 @@ asyncpg
 sarvamai>=0.1.35
 google-generativeai
 
+pyjwt[crypto]>=2.8
