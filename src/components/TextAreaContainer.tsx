@@ -238,21 +238,23 @@ export default function TextAreaContainer({
 
       {/* Bottom action row */}
       <div className="flex items-center justify-between px-[10px] pb-[10px]">
-        {/* Left: Scan Photo */}
+        {/* Left: Scan Photo — only on screens that implement it (pass onScanPhoto) */}
         <div className="flex items-center gap-[8px]">
-          <button
-            type="button"
-            onClick={onScanPhoto}
-            className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
-          >
-            <Icon name="photo_camera" size="small" color="#6a3e31" />
-            <span
-              className="text-[#6a3e31] text-[12px] font-medium leading-5"
-              style={NS}
+          {onScanPhoto && (
+            <button
+              type="button"
+              onClick={onScanPhoto}
+              className="flex items-center gap-[6px] bg-[#dfc2b9] rounded-[8px] px-[10px] py-[6px] border-none cursor-pointer hover:opacity-80 transition-opacity"
             >
-              {scanPhotoLabel}
-            </span>
-          </button>
+              <Icon name="photo_camera" size="small" color="#6a3e31" />
+              <span
+                className="text-[#6a3e31] text-[12px] font-medium leading-5"
+                style={NS}
+              >
+                {scanPhotoLabel}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Right: read-aloud + mic / stop / processing */}
