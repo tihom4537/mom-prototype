@@ -20,7 +20,7 @@ services:
     image: ghcr.io/tihom4537/mom-backend:latest
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-2.5-flash}
+      - LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-3.1-flash-lite}
       - SARVAMAI_API_KEY=${SARVAMAI_API_KEY}
       - DATABASE_URL=postgresql://mom:${POSTGRES_PASSWORD}@postgres:5432/mom
       # uvicorn worker processes (one per vCPU); each holds its own DB pool and HTTP client
