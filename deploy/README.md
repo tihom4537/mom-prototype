@@ -51,6 +51,14 @@ caller signs with the private key. `JWT_AUDIENCE=mom-api` is enforced.
 - Rotate: generate a new pair with `scripts/generate_jwt_keys.py`, update
   `JWT_PUBLIC_KEY` and `FRONTEND_API_TOKEN`, redeploy, hand the new private key to the caller.
 
+### Two entry points on the host Nginx
+
+- `/api/...` → backend directly (`127.0.0.1:8000`), JWT required. **This is the integrator path.**
+- `/feedback`, `/ws/...` etc. (no prefix) → frontend container → backend, with the frontend's
+  Nginx attaching `FRONTEND_API_TOKEN`. This exists for the demo SPA only; because the proxy
+  attaches the token for any caller, it is effectively open. Gate it (basic auth on the SPA
+  server block) or remove it before the URL is shared beyond the evaluation team.
+
 ## Database
 
 `docker-compose.yml` runs `postgres:17-alpine` on the named volume `mom_mom-pgdata`
