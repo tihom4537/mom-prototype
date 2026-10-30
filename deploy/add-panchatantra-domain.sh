@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run ON the MoM VM (13.127.29.249) as ubuntu. Idempotent.
+# Run ON the MoM VM (15.252.254.225) as ubuntu. Idempotent.
 # Adds panchatantra.bharatdigital.org to the host Nginx site, installs the
 # Cloudflare real-IP snippet, and extends the Let's Encrypt cert to cover it.
 set -euo pipefail

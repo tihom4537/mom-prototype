@@ -1,4 +1,4 @@
-# Deploying the prototype to the VM (13.127.29.249)
+# Deploying the prototype to the VM (15.252.254.225)
 
 The VM is a t3.micro (≈900 MiB RAM, 8 GB disk) that already runs another
 stack behind host Nginx on :80/:443. It cannot build the images: GitHub
@@ -17,14 +17,14 @@ VM and run `deploy/add-panchatantra-domain.sh` there, then set Cloudflare SSL/TL
 1. **Grow the disk** (AWS console → EC2 → Volumes → the 8 GB volume of
    `i-0fbd95ff447f828c6` in ap-south-1 → Modify → 20 GB). Then on the VM:
    `sudo growpart /dev/nvme0n1 1 && sudo resize2fs /dev/nvme0n1p1`. Online, no reboot.
-2. **DNS**: add an `A` record `mom` → `13.127.29.249` at the domain's DNS
+2. **DNS**: add an `A` record `mom` → `15.252.254.225` at the domain's DNS
    provider (dns-parking.com / Hostinger for monitoringandautomationsolution.site).
 3. **Files on the VM**:
    ```bash
    sudo mkdir -p /opt/mom && sudo chown ubuntu:ubuntu /opt/mom
    # from your machine:
-   scp -i ~/Downloads/mom_feedback_api.pem docker-compose.yml deploy/deploy.sh ubuntu@13.127.29.249:/opt/mom/
-   scp -i ~/Downloads/mom_feedback_api.pem deploy/.env.example ubuntu@13.127.29.249:/opt/mom/.env   # then fill in the keys, chmod 600
+   scp -i ~/Downloads/mom_feedback_api.pem docker-compose.yml deploy/deploy.sh ubuntu@15.252.254.225:/opt/mom/
+   scp -i ~/Downloads/mom_feedback_api.pem deploy/.env.example ubuntu@15.252.254.225:/opt/mom/.env   # then fill in the keys, chmod 600
    ```
 4. **Host Nginx + TLS** (on the VM):
    ```bash
