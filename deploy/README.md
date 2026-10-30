@@ -7,7 +7,10 @@ Actions (`.github/workflows/build-and-push.yml`) builds and pushes
 public) on every push to `main`; the VM only pulls.
 
 Microphone capture needs a secure context, so the app must be served over
-HTTPS on a hostname. Live at `https://mom.monitoringandautomationsolution.site` (Let's Encrypt, auto-renews via certbot) and, with a self-signed warning, `https://13.127.29.249`.
+HTTPS on a hostname. Live at `https://panchatantra.bharatdigital.org` (DNS proxied through Cloudflare) and
+`https://mom.monitoringandautomationsolution.site`; both names are on one Let's Encrypt cert that
+auto-renews via certbot. To add the Cloudflare-fronted name to an existing VM, copy `deploy/` to the
+VM and run `deploy/add-panchatantra-domain.sh` there, then set Cloudflare SSL/TLS mode to **Full (strict)**.
 
 ## One-time setup
 
