@@ -25,6 +25,8 @@ logger = logging.getLogger(__name__)
 
 _POOL: Optional[asyncpg.Pool] = None
 
+_SCHEMA_LOCK_ID = 731200411  # arbitrary, app-wide
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS agenda_categorisations (
     id            BIGSERIAL PRIMARY KEY,
@@ -94,12 +96,22 @@ async def init_db_pool() -> None:
 
     try:
         _POOL = await asyncpg.create_pool(dsn, min_size=1, max_size=5, command_timeout=30)
-        async with _POOL.acquire() as conn:
-            await conn.execute(_SCHEMA)
-        logger.info("PostgreSQL connection pool initialised and schema verified.")
     except Exception as exc:
         logger.warning("Could not connect to database: %s — audit rows will not be persisted.", exc)
         _POOL = None
+        return
+
+    # Several uvicorn workers start at once; serialise the idempotent DDL with a
+    # transaction-scoped advisory lock so they cannot race on CREATE TABLE. If it
+    # still fails, keep the pool: the schema almost certainly exists already.
+    try:
+        async with _POOL.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute("SELECT pg_advisory_xact_lock($1)", _SCHEMA_LOCK_ID)
+                await conn.execute(_SCHEMA)
+        logger.info("PostgreSQL connection pool initialised and schema verified.")
+    except Exception as exc:
+        logger.warning("Schema check failed (another worker may have applied it): %s", exc)
 
 
 async def close_db_pool() -> None:
