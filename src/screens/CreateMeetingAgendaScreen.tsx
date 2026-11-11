@@ -172,8 +172,8 @@ export default function CreateMeetingAgendaScreen() {
   const [templateTab,        setTemplateTab]        = useState<'paper' | 'word'>('paper');
 
   // ── Proceedings PDF (rendered by the backend) ─────────────────────────────
-  // Agendas 1-9 are the locked statutory sheets; anything else is classified
-  // by the backend and printed on its category sheet.
+  // The backend always prints the nine statutory sheets itself; only the
+  // user-added agendas (id >= 10) are sent, classified and printed after them.
   const [pdfUrl,     setPdfUrl]     = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError,   setPdfError]   = useState('');
@@ -188,11 +188,10 @@ export default function CreateMeetingAgendaScreen() {
         time:  (meeting.time as string) || (meeting.meetingTime as string) || '',
         venue: (meeting.venue as string) || '',
       },
-      agendas: items.map(a => ({
+      agendas: items.filter(a => a.id >= 10).map(a => ({
         id: String(a.id),
         title: a.title.trim() || '—',
-        description: a.id <= 9 ? '' : a.description.trim(),
-        ...(a.id <= 9 ? { template: `statutory_${a.id}` } : {}),
+        description: a.description.trim(),
       })),
     };
   }

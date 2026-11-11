@@ -174,22 +174,15 @@ AgendaCategory = Literal[
     "Other / Can't Categorize",
 ]
 
-StatutoryTemplate = Literal[
-    "statutory_1", "statutory_2", "statutory_3", "statutory_4", "statutory_5",
-    "statutory_6", "statutory_7", "statutory_8", "statutory_9",
-]
-
-
 class AgendaInput(BaseModel):
     """
-    One agenda item as the caller holds it. `template` names one of the nine
-    fixed statutory sheets; omit it for a user-added agenda, which is classified.
+    One user-added agenda item as the caller holds it. The nine statutory
+    agendas are never sent: the server always prints their fixed sheets first.
     """
 
     id: str = Field(min_length=1, max_length=100)
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(default="", max_length=5000)
-    template: Optional[StatutoryTemplate] = None
 
     @field_validator("id", "title")
     @classmethod
@@ -242,10 +235,10 @@ class MeetingInput(BaseModel):
 class ProceedingsPdfRequest(BaseModel):
     """
     Everything needed to print the notesheet: the meeting header plus the
-    agendas in the order they should appear. Statutory agendas carry
-    `template`; the rest are classified and get their category sheet.
+    user-added agendas in the order they should appear after the nine
+    statutory sheets. Each is classified and printed on its category sheet.
     """
 
     meeting: MeetingInput
-    agendas: List[AgendaInput] = Field(min_length=1, max_length=60)
+    agendas: List[AgendaInput] = Field(default_factory=list, max_length=60)
     orientation: Literal["landscape", "portrait"] = "landscape"

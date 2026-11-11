@@ -17,7 +17,6 @@ from gram_panchayat_api.prompts import CATEGORIES
 
 COLUMN_KEYS = {"key", "label_kn", "label_en", "width_pct", "kind"}
 
-STATUTORY = [{"id": f"d{i}", "title": f"Default {i}", "template": f"statutory_{i}"} for i in range(1, 10)]
 CUSTOM = [
     {"id": "c1", "title": "Ward 3 street lights not working", "description": "Six lights out for two months."},
     {"id": "c2", "title": "ಗ್ರಾಮ ಉತ್ಸವ ಸಿದ್ಧತೆ", "description": "ಸಿದ್ಧತೆ ಮತ್ತು ಸಮಿತಿ ರಚನೆ."},
@@ -65,29 +64,34 @@ def test_categorise_shape_and_model_isolation(client, token, monkeypatch):
             {"id": "c2", "category": "Planning / Preparatory", "reason": "event prep"},
         ]
     }, seen))
-    r = client.post("/categorise-agendas", json={"agendas": STATUTORY + CUSTOM}, headers=auth(token))
+    r = client.post("/categorise-agendas", json={"agendas": CUSTOM}, headers=auth(token))
     assert r.status_code == 200
     data = r.json()
     CategoriseResponse.model_validate(data)
-    assert [a["id"] for a in data["agendas"]] == [a["id"] for a in STATUTORY + CUSTOM]
+    assert [a["id"] for a in data["agendas"]] == [a["id"] for a in CUSTOM]
     by_id = {a["id"]: a for a in data["agendas"]}
     assert by_id["c1"]["category"] == "Issue / Grievance"
     assert by_id["c2"]["category"] == "Planning / Preparatory"
     # Columns are attached from the catalogue, never from the model.
     assert by_id["c1"]["columns"] == CATALOGUE["Issue / Grievance"]["columns"]
     assert "reason" not in by_id["c1"], "reason is audit-only"
-    # Statutory items never reach the model.
-    assert '"d1"' not in seen["prompt"] and '"c1"' in seen["prompt"]
+    assert '"c1"' in seen["prompt"]
     assert seen["generation_config"]["responseSchema"]["properties"]["items"]["items"]["properties"]["category"]["enum"] == CATEGORIES
 
 
-def test_statutory_only_skips_the_model(client, token, monkeypatch):
+def test_pdf_without_custom_agendas_skips_the_model(client, token, monkeypatch):
     async def boom(*a, **k):
         raise AssertionError("model must not be called")
     monkeypatch.setattr(cat_mod, "generate_text", boom)
-    r = client.post("/categorise-agendas", json={"agendas": STATUTORY}, headers=auth(token))
+    import gram_panchayat_api.main as main_mod
+    captured = {}
+    async def fake_render(html):
+        captured["html"] = html
+        return b"%PDF-1.7"
+    monkeypatch.setattr(main_mod, "render_pdf", fake_render)
+    r = client.post("/proceedings-pdf", json={"meeting": {"title": "Sabha"}}, headers=auth(token))
     assert r.status_code == 200
-    assert len(r.json()["agendas"]) == 9
+    assert captured["html"].count("<section") == 9, "the nine statutory sheets always print"
 
 
 @pytest.mark.parametrize("raw", [
@@ -114,7 +118,6 @@ def test_model_failure_is_502(client, token, monkeypatch):
 def test_categorise_validation(client, token):
     assert client.post("/categorise-agendas", json={"agendas": []}, headers=auth(token)).status_code == 422
     assert client.post("/categorise-agendas", json={"agendas": [{"id": "x", "title": "  "}]}, headers=auth(token)).status_code == 422
-    assert client.post("/categorise-agendas", json={"agendas": [{"id": "x", "title": "a", "template": "statutory_10"}]}, headers=auth(token)).status_code == 422
     assert client.post("/categorise-agendas", json={"agendas": [{"id": "x", "title": "a"}, {"id": "x", "title": "b"}]}, headers=auth(token)).status_code == 422
     assert client.post("/categorise-agendas", json={"agendas": CUSTOM}).status_code == 401
 
@@ -123,7 +126,7 @@ def test_categorise_validation(client, token):
 
 PDF_BODY = {
     "meeting": {"title": "GP General Body Meeting - Ordinary", "date": "15/11/2026", "time": "11:00 AM"},
-    "agendas": STATUTORY + CUSTOM,
+    "agendas": CUSTOM,
 }
 
 
@@ -145,7 +148,7 @@ def test_pdf_envelope(client, token, monkeypatch):
     assert r.content.startswith(b"%PDF")
     html = captured["html"]
     assert "size: A4 landscape" in html
-    assert html.count("<section") == 11
+    assert html.count("<section") == 11  # 9 statutory + 2 custom
     assert "Ward 3 street lights not working" in html
     assert "ಗ್ರಾಮ ಉತ್ಸವ ಸಿದ್ಧತೆ" in html
     assert "Final / Subject to approval" in html  # planning sheet placeholder
@@ -160,10 +163,10 @@ def test_pdf_portrait_and_validation(client, token, monkeypatch):
         captured["html"] = html
         return b"%PDF-1.7"
     monkeypatch.setattr(main_mod, "render_pdf", fake_render)
-    body = {"meeting": {"title": "Sabha"}, "agendas": STATUTORY[:2], "orientation": "portrait"}
+    body = {"meeting": {"title": "Sabha"}, "agendas": [], "orientation": "portrait"}
     assert client.post("/proceedings-pdf", json=body, headers=auth(token)).status_code == 200
     assert "size: A4 portrait" in captured["html"]
-    assert client.post("/proceedings-pdf", json={"meeting": {"title": ""}, "agendas": STATUTORY[:1]}, headers=auth(token)).status_code == 422
+    assert client.post("/proceedings-pdf", json={"meeting": {"title": ""}}, headers=auth(token)).status_code == 422
     assert client.post("/proceedings-pdf", json=PDF_BODY).status_code == 401
 
 

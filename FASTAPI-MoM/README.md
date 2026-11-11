@@ -372,14 +372,14 @@ category label; columns and layout are server code):
 
 - `GET /agenda-categories` — the six categories and the columns each prints with
   (`key`, `label_kn`, `label_en`, `width_pct`, `kind`). Frozen in `tests/contracts/category_catalogue.data.json`.
-- `POST /categorise-agendas` — `{agendas:[{id, title, description?, template?}]}` →
-  `{agendas:[{id, category, columns:[...]}]}`. One Gemini call for all custom agendas;
-  items carrying `template: "statutory_N"` (N = 1..9, the locked default agendas) are
-  not sent to the model. 502 when the model is unavailable.
-- `POST /proceedings-pdf` — same agendas plus `meeting:{title, date?, time?, venue?}` and
-  optional `orientation` (`landscape` default) → `application/pdf`. Statutory agendas print
-  their fixed sheet (`proceedings/statutory/NN.html`, ported from the approved mockup);
-  every other agenda prints its category sheet from `proceedings/catalogue.py`.
+- `POST /categorise-agendas` — `{agendas:[{id, title, description?}]}` →
+  `{agendas:[{id, category, columns:[...]}]}`. One Gemini call for all agendas. 502 when
+  the model is unavailable.
+- `POST /proceedings-pdf` — `meeting:{title, date?, time?, venue?}` plus the user-added
+  agendas (may be empty) and optional `orientation` (`landscape` default) → `application/pdf`.
+  The nine statutory sheets (`proceedings/statutory/NN.html`, ported from the approved mockup)
+  are always printed first by the server; the caller never sends them. Every agenda in the
+  request is classified and printed after them on its category sheet from `proceedings/catalogue.py`.
 
 Rendering: Jinja2 → WeasyPrint with the bundled Noto Sans / Noto Sans Kannada fonts
 (`proceedings/fonts/`), one render at a time per worker (`asyncio.Semaphore`). The image

@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AgendaInput": {
-      "description": "One agenda item as the caller holds it. `template` names one of the nine\nfixed statutory sheets; omit it for a user-added agenda, which is classified.",
+      "description": "One user-added agenda item as the caller holds it. The nine statutory\nagendas are never sent: the server always prints their fixed sheets first.",
       "properties": {
         "id": {
           "maxLength": 100,
@@ -20,29 +20,6 @@
           "maxLength": 5000,
           "title": "Description",
           "type": "string"
-        },
-        "template": {
-          "anyOf": [
-            {
-              "enum": [
-                "statutory_1",
-                "statutory_2",
-                "statutory_3",
-                "statutory_4",
-                "statutory_5",
-                "statutory_6",
-                "statutory_7",
-                "statutory_8",
-                "statutory_9"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Template"
         }
       },
       "required": [

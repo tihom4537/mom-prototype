@@ -52,7 +52,7 @@ from .models import (
     TranslateResponse,
 )
 from .ocr import process_image_ocr
-from .proceedings.catalogue import CATALOGUE, sheet_for
+from .proceedings.catalogue import CATALOGUE, STATUTORY_COUNT, sheet_for
 from .proceedings.categorise import (
     AgendaToCategorise,
     CategorisationError,
@@ -305,7 +305,7 @@ async def _classify(agendas: List[AgendaInput], request_ref: Optional[str]) -> D
     result. Raises 502 when the model is unavailable: a wrong sheet is worse
     than a retry.
     """
-    custom = [AgendaToCategorise(a.id, a.title, a.description) for a in agendas if a.template is None]
+    custom = [AgendaToCategorise(a.id, a.title, a.description) for a in agendas]
     if not custom:
         return {}
     try:
@@ -343,37 +343,30 @@ async def agenda_categories(_claims: dict = Depends(require_auth)) -> CategoryCa
 @app.post("/categorise-agendas", response_model=CategoriseResponse)
 async def categorise(body: CategoriseRequest, _claims: dict = Depends(require_auth)) -> CategoriseResponse:
     """
-    Classify agenda items and return, for each, its category and the proceedings
-    columns to print. Agendas sent with a statutory `template` are not sent to
-    the model; they come back with the category their sheet belongs to.
+    Classify user-added agenda items and return, for each, its category and the
+    proceedings columns to print.
     """
     _reject_duplicate_ids(body.agendas)
     classified = await _classify(body.agendas, request_ref=None)
-    out = []
-    for a in body.agendas:
-        if a.template is not None:
-            category = _STATUTORY_CATEGORY[a.template]
-        else:
-            category = classified[a.id].category
-        out.append(CategorisedAgenda(id=a.id, category=category, columns=_catalogue_columns(category)))
-    return CategoriseResponse(agendas=out)
+    return CategoriseResponse(agendas=[
+        CategorisedAgenda(id=a.id, category=classified[a.id].category,
+                          columns=_catalogue_columns(classified[a.id].category))
+        for a in body.agendas
+    ])
 
 
 @app.post("/proceedings-pdf", responses={200: {"content": {"application/pdf": {}}}})
 async def proceedings_pdf(body: ProceedingsPdfRequest, _claims: dict = Depends(require_auth)) -> Response:
     """
     The meeting's proceedings notesheet as a PDF (A4, landscape by default):
-    the nine statutory sheets for agendas that carry a `template`, and a
-    category sheet for every other agenda, in the order given.
+    the nine statutory sheets always come first, then a category sheet for
+    every user-added agenda in the order given.
     """
     _reject_duplicate_ids(body.agendas)
     classified = await _classify(body.agendas, request_ref=body.meeting.title[:120])
-    sheets = []
+    sheets = [SheetSpec(title="", statutory_no=n) for n in range(1, STATUTORY_COUNT + 1)]
     for a in body.agendas:
-        if a.template is not None:
-            sheets.append(SheetSpec(title=a.title, statutory_no=int(a.template.split("_")[1])))
-        else:
-            sheets.append(SheetSpec(title=a.title, category=classified[a.id].category, subtitle=a.description[:400]))
+        sheets.append(SheetSpec(title=a.title, category=classified[a.id].category, subtitle=a.description[:400]))
     html = render_html(
         MeetingHeader(title=body.meeting.title, date=body.meeting.date, time=body.meeting.time, venue=body.meeting.venue),
         sheets,
@@ -392,19 +385,6 @@ async def proceedings_pdf(body: ProceedingsPdfRequest, _claims: dict = Depends(r
     )
 
 
-# The statutory sheets are fixed layouts, but each still belongs to a category
-# (used only when a caller asks /categorise-agendas about a statutory item).
-_STATUTORY_CATEGORY = {
-    "statutory_1": "Review / Status",             # action taken on previous proceedings
-    "statutory_2": "Information / Intimation",    # government orders and circulars
-    "statutory_3": "Review / Status",             # standing committee proceedings approval
-    "statutory_4": "Issue / Grievance",           # water / sanitation / street lights
-    "statutory_5": "Review / Status",             # tax, rates and fees collection
-    "statutory_6": "Review / Status",             # receipts and expenditure
-    "statutory_7": "Review / Status",             # scheme progress
-    "statutory_8": "Issue / Grievance",           # Sakala / public grievance applications
-    "statutory_9": "Multi-Topic / Miscellaneous", # Section 58 functions
-}
 
 
 def _reject_duplicate_ids(agendas: List[AgendaInput]) -> None:
