@@ -26,6 +26,20 @@ logger = logging.getLogger(__name__)
 _POOL: Optional[asyncpg.Pool] = None
 
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS agenda_categorisations (
+    id            BIGSERIAL PRIMARY KEY,
+    request_ref   TEXT,
+    agenda_id     TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    description   TEXT,
+    category      TEXT NOT NULL,
+    reason        TEXT,
+    model         TEXT,
+    latency_ms    INTEGER,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS agenda_categorisations_created_idx ON agenda_categorisations (created_at);
+
 CREATE TABLE IF NOT EXISTS ai_feedback (
     id          BIGSERIAL PRIMARY KEY,
     agenda_id   TEXT NOT NULL,
@@ -210,4 +224,28 @@ async def insert_stt_session(
             outcome,
             error_code,
             started_at,
+        )
+
+
+async def insert_agenda_categorisations(
+    *,
+    request_ref: Optional[str],
+    rows: List[Dict[str, Any]],
+    model: str,
+    latency_ms: int,
+) -> None:
+    """One audit row per classified agenda item. No-op when the DB is not configured."""
+    if _POOL is None or not rows:
+        return
+    async with _POOL.acquire() as conn:
+        await conn.executemany(
+            """
+            INSERT INTO agenda_categorisations
+                (request_ref, agenda_id, title, description, category, reason, model, latency_ms)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            """,
+            [
+                (request_ref, r["id"], r["title"], r.get("description"), r["category"], r.get("reason"), model, latency_ms)
+                for r in rows
+            ],
         )

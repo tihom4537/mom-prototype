@@ -1,0 +1,275 @@
+{
+  "Issue / Grievance": {
+    "category": "Issue / Grievance",
+    "title_kn": "ಸಮಸ್ಯೆ / ಕುಂದುಕೊರತೆ",
+    "title_en": "Issue / Grievance",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "subject",
+        "label_kn": "ವಿಷಯ / ಸಮಸ್ಯೆ / ಕುಂದುಕೊರತೆ",
+        "label_en": "Issue / Grievance / Subject",
+        "width_pct": 20,
+        "kind": "text"
+      },
+      {
+        "key": "discussion_information",
+        "label_kn": "ಚರ್ಚೆ / ಮಾಹಿತಿ",
+        "label_en": "Discussion / Information",
+        "width_pct": 27,
+        "kind": "text"
+      },
+      {
+        "key": "decision_action",
+        "label_kn": "ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ",
+        "label_en": "Decision / Action to be taken",
+        "width_pct": 24,
+        "kind": "text"
+      },
+      {
+        "key": "responsible",
+        "label_kn": "ಜವಾಬ್ದಾರಿ ಇರುವ ವ್ಯಕ್ತಿ ಅಥವಾ ಸಂಸ್ಥೆ",
+        "label_en": "Responsible person / org",
+        "width_pct": 12,
+        "kind": "text"
+      },
+      {
+        "key": "timeline",
+        "label_kn": "ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ",
+        "label_en": "Timeline / Follow-up",
+        "width_pct": 12,
+        "kind": "text"
+      }
+    ]
+  },
+  "Review / Status": {
+    "category": "Review / Status",
+    "title_kn": "ಪರಿಶೀಲನೆ / ಪ್ರಗತಿ ಸ್ಥಿತಿ",
+    "title_en": "Review / Status",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "subject",
+        "label_kn": "ವಿಷಯ / ಸಮಸ್ಯೆ / ಕುಂದುಕೊರತೆ",
+        "label_en": "Issue / Grievance / Subject",
+        "width_pct": 18,
+        "kind": "text"
+      },
+      {
+        "key": "progress_status",
+        "label_kn": "ಪ್ರಗತಿ / ಸ್ಥಿತಿ",
+        "label_en": "Progress / Status",
+        "width_pct": 20,
+        "kind": "text"
+      },
+      {
+        "key": "delays_gaps",
+        "label_kn": "ವಿಳಂಬ / ಅಂತರ / ಆತಂಕಗಳು",
+        "label_en": "Delays / gaps / concerns",
+        "width_pct": 21,
+        "kind": "text"
+      },
+      {
+        "key": "decision_action",
+        "label_kn": "ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ",
+        "label_en": "Decision / Action to be taken",
+        "width_pct": 25,
+        "kind": "text"
+      },
+      {
+        "key": "further_review",
+        "label_kn": "ಮತ್ತಷ್ಟು ಪರಿಶೀಲನೆ ಅಗತ್ಯವೇ?",
+        "label_en": "Further review required?",
+        "width_pct": 11,
+        "kind": "yes_no"
+      }
+    ]
+  },
+  "Planning / Preparatory": {
+    "category": "Planning / Preparatory",
+    "title_kn": "ಯೋಜನೆ / ಪೂರ್ವಸಿದ್ಧತೆ",
+    "title_en": "Planning / Preparatory",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "activity_planned",
+        "label_kn": "ಯೋಜಿಸುತ್ತಿರುವ ಚಟುವಟಿಕೆ / ಕಾರ್ಯಕ್ರಮ",
+        "label_en": "Activity / event being planned",
+        "width_pct": 22,
+        "kind": "text"
+      },
+      {
+        "key": "discussion_information",
+        "label_kn": "ಚರ್ಚೆ / ಮಾಹಿತಿ",
+        "label_en": "Discussion / Information",
+        "width_pct": 33,
+        "kind": "text"
+      },
+      {
+        "key": "responsible",
+        "label_kn": "ಜವಾಬ್ದಾರಿ ಇರುವ ವ್ಯಕ್ತಿ ಅಥವಾ ಸಂಸ್ಥೆ",
+        "label_en": "Responsible person / org",
+        "width_pct": 14,
+        "kind": "text"
+      },
+      {
+        "key": "timeline",
+        "label_kn": "ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ",
+        "label_en": "Timeline / Follow-up",
+        "width_pct": 13,
+        "kind": "text"
+      },
+      {
+        "key": "final_or_approval",
+        "label_kn": "ಅಂತಿಮವೇ ಅಥವಾ ಅನುಮೋದನೆಗೆ ಒಳಪಟ್ಟಿದೆಯೇ?",
+        "label_en": "Final or subject to approval?",
+        "width_pct": 13,
+        "kind": "final_or_approval"
+      }
+    ]
+  },
+  "Information / Intimation": {
+    "category": "Information / Intimation",
+    "title_kn": "ಮಾಹಿತಿ / ಸೂಚನೆ",
+    "title_en": "Information / Intimation",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "information_shared",
+        "label_kn": "ಹಂಚಿಕೊಂಡ ಮಾಹಿತಿ / ನವೀಕರಣ",
+        "label_en": "Information / update shared",
+        "width_pct": 28,
+        "kind": "text"
+      },
+      {
+        "key": "source",
+        "label_kn": "ಮೂಲ",
+        "label_en": "Source",
+        "width_pct": 13,
+        "kind": "text"
+      },
+      {
+        "key": "discussion",
+        "label_kn": "ಚರ್ಚೆ",
+        "label_en": "Discussion",
+        "width_pct": 27,
+        "kind": "text"
+      },
+      {
+        "key": "decision_action",
+        "label_kn": "ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ",
+        "label_en": "Decision / Action to be taken",
+        "width_pct": 27,
+        "kind": "text"
+      }
+    ]
+  },
+  "Multi-Topic / Miscellaneous": {
+    "category": "Multi-Topic / Miscellaneous",
+    "title_kn": "ಬಹುವಿಷಯ / ವಿವಿಧ",
+    "title_en": "Multi-Topic / Miscellaneous",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "subject",
+        "label_kn": "ವಿಷಯ / ಸಮಸ್ಯೆ / ಕುಂದುಕೊರತೆ",
+        "label_en": "Issue / Grievance / Subject",
+        "width_pct": 28,
+        "kind": "text"
+      },
+      {
+        "key": "decision_action",
+        "label_kn": "ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ",
+        "label_en": "Decision / Action to be taken",
+        "width_pct": 42,
+        "kind": "text"
+      },
+      {
+        "key": "timeline",
+        "label_kn": "ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ",
+        "label_en": "Timeline / Follow-up",
+        "width_pct": 25,
+        "kind": "text"
+      }
+    ]
+  },
+  "Other / Can't Categorize": {
+    "category": "Other / Can't Categorize",
+    "title_kn": "ಇತರೆ",
+    "title_en": "Other",
+    "columns": [
+      {
+        "key": "sl_no",
+        "label_kn": "ಕ್ರ.ಸಂ",
+        "label_en": "Sl.No",
+        "width_pct": 5,
+        "kind": "serial"
+      },
+      {
+        "key": "subject",
+        "label_kn": "ವಿಷಯ / ಸಮಸ್ಯೆ / ಕುಂದುಕೊರತೆ",
+        "label_en": "Issue / Grievance / Subject",
+        "width_pct": 18,
+        "kind": "text"
+      },
+      {
+        "key": "discussion_information",
+        "label_kn": "ಚರ್ಚೆ / ಮಾಹಿತಿ",
+        "label_en": "Discussion / Information",
+        "width_pct": 28,
+        "kind": "text"
+      },
+      {
+        "key": "decision_action",
+        "label_kn": "ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ",
+        "label_en": "Decision / Action to be taken",
+        "width_pct": 25,
+        "kind": "text"
+      },
+      {
+        "key": "responsible",
+        "label_kn": "ಜವಾಬ್ದಾರಿ ಇರುವ ವ್ಯಕ್ತಿ ಅಥವಾ ಸಂಸ್ಥೆ",
+        "label_en": "Responsible person / org",
+        "width_pct": 12,
+        "kind": "text"
+      },
+      {
+        "key": "timeline",
+        "label_kn": "ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ",
+        "label_en": "Timeline / Follow-up",
+        "width_pct": 12,
+        "kind": "text"
+      }
+    ]
+  }
+}

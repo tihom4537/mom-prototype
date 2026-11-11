@@ -1,0 +1,24 @@
+<section class="custom">
+  <h2 class="agenda-title"><span class="no">{{ no }}.</span><span>{{ title }}</span></h2>
+  {% if subtitle %}<div class="agenda-sub">{{ subtitle }}</div>{% endif %}
+  <table>
+    <colgroup>{% for c in columns %}<col style="width:{{ c.width_pct }}%">{% endfor %}</colgroup>
+    <thead><tr>
+      {% for c in columns %}
+      <th><span class="kn">{{ c.label_kn }}</span><span class="en">{{ c.label_en }}</span></th>
+      {% endfor %}
+    </tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        {% for c in columns %}
+        {% if c.kind == 'serial' %}<td>{{ r }}</td>
+        {% elif c.kind in cell_text %}<td class="yn{% if c.kind == 'yes_no' %} short{% endif %}"><span class="kn">{{ cell_text[c.kind][0] }}</span><span class="en">{{ cell_text[c.kind][1] }}</span></td>
+        {% else %}<td></td>
+        {% endif %}
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>

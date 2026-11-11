@@ -2,8 +2,16 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# ca-certificates for outbound HTTPS; Pango/HarfBuzz/FreeType are WeasyPrint's
+# native text stack (the Noto fonts it uses are bundled in the package).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libharfbuzz0b \
+    libharfbuzz-subset0 \
+    libfontconfig1 \
+    libfreetype6 \
  && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

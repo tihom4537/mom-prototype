@@ -10,13 +10,23 @@ from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from gram_panchayat_api.models import FeedbackRequest, FeedbackResult, SttEvent
+from gram_panchayat_api.models import (
+    CategoriseRequest, CategoriseResponse, CategoryCatalogueResponse,
+    FeedbackRequest, FeedbackResult, ProceedingsPdfRequest, SttEvent,
+)
+from gram_panchayat_api.proceedings.catalogue import CATALOGUE
 
 CONTRACTS = Path(__file__).parent / "contracts"
 SCHEMAS = {
     "feedback_request.schema.json": lambda: FeedbackRequest.model_json_schema(),
     "feedback_response.schema.json": lambda: FeedbackResult.model_json_schema(),
     "stt_events.schema.json": lambda: TypeAdapter(SttEvent).json_schema(),
+    "categorise_request.schema.json": lambda: CategoriseRequest.model_json_schema(),
+    "categorise_response.schema.json": lambda: CategoriseResponse.model_json_schema(),
+    "category_catalogue.schema.json": lambda: CategoryCatalogueResponse.model_json_schema(),
+    "proceedings_pdf_request.schema.json": lambda: ProceedingsPdfRequest.model_json_schema(),
+    # Not a schema but part of the contract: the actual column catalogue.
+    "category_catalogue.data.json": lambda: CATALOGUE,
 }
 
 

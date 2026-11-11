@@ -14,6 +14,7 @@ import {
 } from '../components';
 import MeetingShellLayout from '../layouts/MeetingShellLayout';
 import { startLiveTranscription, joinText, microphoneErrorMessage, type LiveTranscriptionSession } from '../utils/liveTranscription';
+import { PROCEEDINGS_PDF_API } from '../config/api';
 
 const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" };
 
@@ -170,166 +171,78 @@ export default function CreateMeetingAgendaScreen() {
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
   const [templateTab,        setTemplateTab]        = useState<'paper' | 'word'>('paper');
 
-  // ── Paper template: category-specific 4-column layout per agenda item ──
-  type ColDef = { kn: string; en: string; width?: string };
+  // ── Proceedings PDF (rendered by the backend) ─────────────────────────────
+  // Agendas 1-9 are the locked statutory sheets; anything else is classified
+  // by the backend and printed on its category sheet.
+  const [pdfUrl,     setPdfUrl]     = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError,   setPdfError]   = useState('');
+  const pdfUrlRef = useRef<string | null>(null);
 
-  const COMMON_COLS: ColDef[] = [
-    { kn: 'ಚರ್ಚೆ / ಮಾಹಿತಿ',        en: 'Discussion / Information' },
-    { kn: 'ತೀರ್ಮಾನ / ನಿರ್ಣಯ',      en: 'Decision / Resolution' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ', en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                en: 'Timeline / Follow-up',     width: '14%' },
-  ];
+  function proceedingsPayload(items: AgendaItem[], meeting: Record<string, unknown>) {
+    const title = (meeting.title as string) || (meeting.meetingTitle as string) || (meeting.meetingType as string) || 'Meeting';
+    return {
+      meeting: {
+        title,
+        date:  (meeting.date as string) || (meeting.meetingDate as string) || '',
+        time:  (meeting.time as string) || (meeting.meetingTime as string) || '',
+        venue: (meeting.venue as string) || '',
+      },
+      agendas: items.map(a => ({
+        id: String(a.id),
+        title: a.title.trim() || '—',
+        description: a.id <= 9 ? '' : a.description.trim(),
+        ...(a.id <= 9 ? { template: `statutory_${a.id}` } : {}),
+      })),
+    };
+  }
 
-  // Category col-sets, matching the source Notice/Proceedings sheets
-  const REVIEW_STATUS_COLS: ColDef[] = [
-    { kn: 'ನಡಾವಳಿ / ಎಟಿಆರ್ ಸಾರಾಂಶ',   en: 'Minutes / ATR summary' },
-    { kn: 'ದೃಢೀಕರಣ / ಕೈಗೊಂಡ ಕ್ರಮ',    en: 'Confirmation / action taken' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const INFO_INTIMATION_COLS: ColDef[] = [
-    { kn: 'ಸುತ್ತೋಲೆ ವಿವರಗಳು',         en: 'Circular details' },
-    { kn: 'ಮುಖ್ಯಾಂಶಗಳು / ಅಗತ್ಯ ಕ್ರಮ', en: 'Key points / action required' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const ISSUE_GRIEVANCE_COLS: ColDef[] = [
-    { kn: 'ಸಮಸ್ಯೆ / ಸ್ಥಳ',            en: 'Issue / location' },
-    { kn: 'ಕೈಗೊಂಡ ಕ್ರಮ',              en: 'Action decided' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const MULTI_TOPIC_COLS: ColDef[] = [
-    { kn: 'ವಿಷಯ / ಕಾರ್ಯ',            en: 'Matter / function' },
-    { kn: 'ಚರ್ಚೆ / ಕೈಗೊಂಡ ಕ್ರಮ',      en: 'Discussion / action taken' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
+  async function generateProceedingsPdf() {
+    setPdfLoading(true);
+    setPdfError('');
+    try {
+      const res = await fetch(PROCEEDINGS_PDF_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proceedingsPayload(sortedForTemplate(agendas), meetingData)),
+      });
+      if (!res.ok) throw new Error(res.status === 502 ? 'Categorisation service is busy, please try again.' : `Server returned ${res.status}`);
+      const blob = await res.blob();
+      if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+      const url = URL.createObjectURL(blob);
+      pdfUrlRef.current = url;
+      setPdfUrl(url);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'Could not generate the PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  }
 
-  // Special-cased columns for items 3 (approval, "amount/status"-style) and 5/6 differ slightly per sheet
-  const COLLECTION_COLS: ColDef[] = [
-    { kn: 'ಸಂಗ್ರಹ ವಿವರಗಳು',           en: 'Collection details' },
-    { kn: 'ಮೊತ್ತ / ಸ್ಥಿತಿ',           en: 'Amount / status' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const INCOME_EXPENDITURE_COLS: ColDef[] = [
-    { kn: 'ಯೋಜನೆ / ನಿಧಿ ಶೀರ್ಷಿಕೆ',    en: 'Scheme / fund head' },
-    { kn: 'ಆದಾಯ ಮತ್ತು ವೆಚ್ಚ',          en: 'Income & expenditure' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const PROCEEDINGS_APPROVAL_COLS: ColDef[] = [
-    { kn: 'ನಡಾವಳಿ ವಿವರಗಳು',          en: 'Proceedings details' },
-    { kn: 'ಅನುಮೋದನೆ / ಶಿಫಾರಸು',      en: 'Approval / recommendation' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const SCHEME_PROGRESS_COLS: ColDef[] = [
-    { kn: 'ಯೋಜನೆ ವಿವರಗಳು',           en: 'Scheme details' },
-    { kn: 'ಪ್ರಗತಿ / ಸ್ಥಿತಿ',          en: 'Progress / status' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
-  const APPLICATION_GRIEVANCE_COLS: ColDef[] = [
-    { kn: 'ಅರ್ಜಿ / ದೂರು ವಿವರಗಳು',    en: 'Application / grievance details' },
-    { kn: 'ಪರಿಹಾರ / ಕೈಗೊಂಡ ಕ್ರಮ',    en: 'Resolution / action taken' },
-    { kn: 'ಜವಾಬ್ದಾರಾದವರು / ಸಂಸ್ಥೆ',  en: 'Responsible person / org', width: '22%' },
-    { kn: 'ಕಾಲಾವಧಿ',                  en: 'Timeline / Follow-up',     width: '14%' },
-  ];
+  // Generate when the Print / Paper tab is shown; the result is reused until the modal closes.
+  useEffect(() => {
+    if (templateModalOpen && templateTab === 'paper' && !pdfUrl && !pdfLoading && !pdfError) {
+      void generateProceedingsPdf();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateModalOpen, templateTab]);
 
-  // Agenda id → column set, per source sheet categorisation (items 1-9 are the GP General Body defaults)
-  const COLS_BY_AGENDA_ID: Record<number, ColDef[]> = {
-    1: REVIEW_STATUS_COLS,           // Reading & confirmation of minutes
-    2: INFO_INTIMATION_COLS,         // Govt circulars
-    3: PROCEEDINGS_APPROVAL_COLS,    // Standing Committee proceedings approval
-    4: ISSUE_GRIEVANCE_COLS,         // Drinking water / sanitation / street lights
-    5: COLLECTION_COLS,              // Tax, rates, fees collection
-    6: INCOME_EXPENDITURE_COLS,      // Income & expenditure of schemes/funds
-    7: SCHEME_PROGRESS_COLS,         // Centrally/state sponsored schemes progress
-    8: APPLICATION_GRIEVANCE_COLS,   // Sakala / public grievance redressal
-    9: MULTI_TOPIC_COLS,             // Section 58 functions — multi-topic/misc
-  };
+  useEffect(() => () => { if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current); }, []);
 
-  const colsForAgenda = (id: number): ColDef[] => COLS_BY_AGENDA_ID[id] ?? COMMON_COLS;
+  function closeTemplateModal() {
+    setTemplateModalOpen(false);
+    if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
+    pdfUrlRef.current = null;
+    setPdfUrl(null);
+    setPdfError('');
+  }
 
-  // ── Build paper (print) HTML ──────────────────────────────────────────────
-  function buildPaperHTML(items: AgendaItem[], meeting: Record<string, unknown>): string {
-    const title        = (meeting.title as string) || (meeting.meetingTitle as string) || 'Meeting';
-    const date         = (meeting.date as string) || (meeting.meetingDate as string) || '';
-    const time         = (meeting.time as string) || (meeting.meetingTime as string) || '';
-    const participants = (meeting.participants as unknown[])?.length ?? 0;
-    const metaParts    = [date, time, participants > 0 ? `${participants} participants` : ''].filter(Boolean).join('  ·  ');
-
-    // Instruction box text (Kannada, matches reference image style)
-    const instructionText = `[ನಿರ್ದಿಷ್ಟ ವಾರ್ಡ್ / ಗ್ರಾಮ / ಪ್ರದೇಶ]ದಲ್ಲಿರುವ [ನಿರ್ದಿಷ್ಟ ಸಮಸ್ಯೆ]ಗೆ ಸಂಬಂಧಿಸಿದ ವಿಷಯವನ್ನು ಸಭೆಯಲ್ಲಿ [ಸದಸ್ಯರು / ನಾಗರಿಕರು / ನಿರ್ದಿಷ್ಟ ಗುಂಪು] ಮುಂದಿಟ್ಟರು. ಈ ವಿಷಯದ ಬಗ್ಗೆ ಚರ್ಚೆ ನಡೆಸಿದ ನಂತರ, ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲು [ಪ್ರಸ್ತಾವಿತ ಪರಿಹಾರ ಕ್ರಮ / ತಿದ್ದುಪಡಿ ಕ್ರಮ] ಕೈಗೊಳ್ಳಲು ತೀರ್ಮಾನಿಸಲಾಯಿತು.`;
-
-    const agendaSections = items.map((a, i) => {
-      const cols = colsForAgenda(a.id);
-
-      // Build colgroup widths
-      const colgroup = cols.map(c => `<col style="width:${c.width ?? 'auto'}">`).join('');
-
-      // Single header row: Kannada bold + English small below, no separator line between them
-      const thCells = cols.map((c, ci) => {
-        const borderLeft = ci === 0 ? '1px solid #D13644' : '1px solid #D13644';
-        return `<th style="border:1px solid #D13644;padding:8px 10px;text-align:left;background:#f5f5f5;vertical-align:top;">
-          <div style="font-size:13px;font-weight:600;color:#19203D;font-family:'Noto Sans Kannada','Noto Sans',sans-serif;">${c.kn}</div>
-          <div style="font-size:10px;font-weight:400;color:#616161;margin-top:2px;">${c.en}</div>
-        </th>`;
-      }).join('');
-
-      // Empty ruled rows — count matches col count
-      const emptyRows = Array.from({ length: 8 }, () => {
-        const tds = cols.map(() =>
-          `<td style="border:1px solid #e8e8e8;height:28px;padding:0;"></td>`
-        ).join('');
-        return `<tr>${tds}</tr>`;
-      }).join('');
-
-      return `
-        <div style="margin-bottom:28px;page-break-inside:avoid;">
-          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:8px;">
-            <span style="font-size:15px;font-weight:700;color:#D13644;min-width:22px;">${i + 1}.</span>
-            <span style="font-size:15px;font-weight:700;color:#19203D;">${a.title || '—'}</span>
-          </div>
-          <table style="width:100%;border-collapse:collapse;border:1px solid #D13644;">
-            <colgroup>${colgroup}</colgroup>
-            <thead><tr>${thCells}</tr></thead>
-            <tbody>${emptyRows}</tbody>
-          </table>
-        </div>`;
-    }).join('');
-
-    return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"/>
-<title>Minutes Notesheet — ${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet"/>
-<style>
-  * { box-sizing: border-box; }
-  body { font-family: 'Noto Sans', 'Times New Roman', serif; color: #19203D; margin: 0; padding: 32px 40px; font-size: 13px; }
-  @media print { body { padding: 20px 28px; } .no-break { page-break-inside: avoid; } }
-</style>
-</head><body>
-
-  <!-- Top row: title left, instruction box right -->
-  <div style="display:flex;gap:24px;align-items:flex-start;margin-bottom:28px;">
-
-    <div style="flex:0 0 auto;max-width:260px;">
-      <div style="font-size:11px;font-weight:400;color:#616161;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">Meeting Proceedings &nbsp;·&nbsp; ಸಭೆಯ ನಡಾವಳಿಗಳು</div>
-      <div style="font-size:16px;font-weight:700;color:#19203D;line-height:1.3;">${title}</div>
-      ${(date || time || participants > 0) ? `<div style="font-size:11px;color:#616161;margin-top:6px;">${[date, time, participants > 0 ? `${participants} participants` : ''].filter(Boolean).join('  ·  ')}</div>` : ''}
-    </div>
-
-    <div style="flex:1;border:1.5px solid #D13644;border-radius:6px;padding:12px 14px;font-size:11px;color:#19203D;line-height:1.7;">
-      ${instructionText}
-    </div>
-  </div>
-
-  <!-- Agenda sections -->
-  ${agendaSections}
-
-</body></html>`;
+  function downloadProceedingsPdf() {
+    if (!pdfUrl) return;
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.download = 'proceedings_notesheet.pdf';
+    link.click();
   }
 
   // ── Build Word-style HTML ─────────────────────────────────────────────────
@@ -339,8 +252,14 @@ export default function CreateMeetingAgendaScreen() {
     const time         = (meeting.time as string) || (meeting.meetingTime as string) || '';
     const participants = (meeting.participants as unknown[])?.length ?? 0;
 
+    const WORD_FIELDS: { kn: string; en: string }[] = [
+      { kn: 'ಚರ್ಚೆ / ಮಾಹಿತಿ',                 en: 'Discussion / Information' },
+      { kn: 'ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ',    en: 'Decision / Action to be taken' },
+      { kn: 'ಜವಾಬ್ದಾರಿ ಇರುವ ವ್ಯಕ್ತಿ ಅಥವಾ ಸಂಸ್ಥೆ', en: 'Responsible person / org' },
+      { kn: 'ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ',          en: 'Timeline / Follow-up' },
+    ];
     const agendaTables = items.map((a, i) => {
-      const cols = colsForAgenda(a.id);
+      const cols = WORD_FIELDS;
       const fieldRows = cols.map(c => `
         <tr>
           <td style="width:32%;background:#f5f5f5;border:1px solid #C6C6C6;padding:7px 10px;vertical-align:top;">
@@ -570,12 +489,7 @@ export default function CreateMeetingAgendaScreen() {
                     onClick={() => setSampleModalOpen(true)}
                     className="h-[294px] w-full rounded-[10px] overflow-hidden border border-[#C6C6C6] cursor-pointer hover:opacity-90 transition-opacity relative"
                   >
-                    <iframe
-                      srcDoc={buildPaperHTML(sortedForTemplate(agendas), meetingData)}
-                      title="Template thumbnail"
-                      className="absolute top-0 left-0 border-none bg-white"
-                      style={{ width: '150%', height: '150%', transform: 'scale(0.667)', transformOrigin: 'top left', pointerEvents: 'none' }}
-                    />
+                    <img src={TEMPLATE_PREVIEW_IMG} alt="Proceedings notesheet sample" className="absolute top-0 left-0 w-full h-full object-cover object-top" />
                   </button>
                   <div className="flex items-start gap-[8px]">
                     <Icon name="info" size="small" color="#727272" />
@@ -639,7 +553,7 @@ export default function CreateMeetingAgendaScreen() {
               <span className="font-semibold text-[20px] leading-[24px] text-[#6a3e31]" style={NS}>
                 {t('template_modal_title')}
               </span>
-              <button type="button" onClick={() => setTemplateModalOpen(false)} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
+              <button type="button" onClick={closeTemplateModal} className="flex items-center justify-center size-[30px] rounded hover:bg-[#f5ede9] transition-colors shrink-0">
                 <Icon name="close" size="small" color="#6a3e31" />
               </button>
             </div>
@@ -672,13 +586,38 @@ export default function CreateMeetingAgendaScreen() {
                 />
               </div>
 
-              {/* Single iframe preview */}
-              <iframe
-                srcDoc={templateTab === 'paper' ? buildPaperHTML(sortedForTemplate(agendas), meetingData) : buildWordHTML(sortedForTemplate(agendas), meetingData)}
-                title="Minutes Template"
-                className="w-full rounded-[10px] border border-[#C6C6C6] bg-white"
-                style={{ height: '500px' }}
-              />
+              {/* Preview: backend-rendered PDF for paper, HTML for Word */}
+              {templateTab === 'paper' ? (
+                pdfUrl ? (
+                  <iframe
+                    src={pdfUrl}
+                    title="Proceedings notesheet"
+                    className="w-full rounded-[10px] border border-[#C6C6C6] bg-white"
+                    style={{ height: '500px' }}
+                  />
+                ) : (
+                  <div className="w-full rounded-[10px] border border-[#C6C6C6] bg-[#fafafa] flex flex-col items-center justify-center gap-[10px]" style={{ height: '500px' }}>
+                    {pdfLoading ? (
+                      <>
+                        <Icon name="schedule" size="medium" color="#727272" />
+                        <span className="text-[13px] text-[#727272]" style={NS}>Preparing the proceedings notesheet…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[13px] text-[#b3261e] text-center px-[24px]" style={NS}>{pdfError || 'Could not generate the PDF'}</span>
+                        <Button variant="outlined" iconPlacement="none" text="Try again" onClick={() => { setPdfError(''); void generateProceedingsPdf(); }} />
+                      </>
+                    )}
+                  </div>
+                )
+              ) : (
+                <iframe
+                  srcDoc={buildWordHTML(sortedForTemplate(agendas), meetingData)}
+                  title="Minutes Template"
+                  className="w-full rounded-[10px] border border-[#C6C6C6] bg-white"
+                  style={{ height: '500px' }}
+                />
+              )}
 
               {/* Actions row */}
               <div className="flex items-center justify-center gap-[10px] shrink-0">
@@ -686,16 +625,17 @@ export default function CreateMeetingAgendaScreen() {
                   variant="outlined"
                   iconPlacement="none"
                   text={t('btn_close')}
-                  onClick={() => setTemplateModalOpen(false)}
+                  onClick={closeTemplateModal}
                 />
                 <Button
                   variant="filled"
                   iconPlacement="left"
-                  iconName={templateTab === 'paper' ? 'print' : 'download'}
-                  text={templateTab === 'paper' ? 'Download / Print' : (templateDownloaded ? 'Re-download .docx' : 'Download .docx')}
+                  iconName="download"
+                  text={templateTab === 'paper' ? 'Download PDF' : (templateDownloaded ? 'Re-download .docx' : 'Download .docx')}
+                  state={templateTab === 'paper' && !pdfUrl ? 'disabled' : 'default'}
                   onClick={() => {
                     if (templateTab === 'paper') {
-                      downloadHTML(buildPaperHTML(sortedForTemplate(agendas), meetingData), 'minutes_notesheet.html');
+                      downloadProceedingsPdf();
                     } else {
                       handleDownloadTemplate();
                     }
@@ -723,12 +663,7 @@ export default function CreateMeetingAgendaScreen() {
             {/* Body */}
             <div className="bg-white rounded-bl-[20px] rounded-br-[20px] flex flex-col gap-[16px] px-[25px] pt-[20px] pb-[25px] overflow-y-auto">
               <div className="relative w-full rounded-[10px] border border-[#C6C6C6] overflow-hidden" style={{ height: '520px' }}>
-                <iframe
-                  srcDoc={buildPaperHTML(sortedForTemplate(agendas), meetingData)}
-                  title="Template preview"
-                  className="absolute top-0 left-0 border-none bg-white"
-                  style={{ width: '150%', height: '150%', transform: 'scale(0.667)', transformOrigin: 'top left', pointerEvents: 'none' }}
-                />
+                <img src={TEMPLATE_PREVIEW_IMG} alt="Proceedings notesheet sample" className="absolute top-0 left-0 w-full h-full object-contain object-top bg-white" />
               </div>
               <div className="flex items-center justify-end shrink-0">
                 <Button

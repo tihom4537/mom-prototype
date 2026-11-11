@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="kn">
+<head>
+<meta charset="UTF-8">
+<title>{{ meeting.title }}</title>
+<style>
+{{ font_css | safe }}
+@page { size: A4 {{ orientation }}; margin: 10mm; }
+{{ sheet_css | safe }}
+.meta { font-size: 13px; color: var(--muted); margin: -28px 0 32px; }
+.custom .agenda-title span:not(.no) { font-family: 'Noto Sans', 'Noto Sans Kannada', sans-serif; font-weight: 600; }
+td.yn { vertical-align: middle; text-align: center; color: var(--muted); }
+td.yn .kn, td.yn .en { font-size: 13px; color: var(--muted); }
+td.yn.short span { white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="eyebrow">Meeting Proceedings &nbsp;·&nbsp; ಸಭೆಯ ನಡಾವಳಿಗಳು</div>
+  <h1 class="doc-title">{{ meeting.title }}</h1>
+  {% set meta = [meeting.date, meeting.time, meeting.venue] | select | list %}
+  {% if meta %}<div class="meta">{{ meta | join('  ·  ') }}</div>{% endif %}
+  {% for section in sections %}
+  {{ section | safe }}
+  {% endfor %}
+</div>
+</body>
+</html>

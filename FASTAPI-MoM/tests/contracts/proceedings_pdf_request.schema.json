@@ -1,0 +1,119 @@
+{
+  "$defs": {
+    "AgendaInput": {
+      "description": "One agenda item as the caller holds it. `template` names one of the nine\nfixed statutory sheets; omit it for a user-added agenda, which is classified.",
+      "properties": {
+        "id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "maxLength": 5000,
+          "title": "Description",
+          "type": "string"
+        },
+        "template": {
+          "anyOf": [
+            {
+              "enum": [
+                "statutory_1",
+                "statutory_2",
+                "statutory_3",
+                "statutory_4",
+                "statutory_5",
+                "statutory_6",
+                "statutory_7",
+                "statutory_8",
+                "statutory_9"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Template"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "AgendaInput",
+      "type": "object"
+    },
+    "MeetingInput": {
+      "properties": {
+        "title": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "date": {
+          "default": "",
+          "maxLength": 50,
+          "title": "Date",
+          "type": "string"
+        },
+        "time": {
+          "default": "",
+          "maxLength": 50,
+          "title": "Time",
+          "type": "string"
+        },
+        "venue": {
+          "default": "",
+          "maxLength": 200,
+          "title": "Venue",
+          "type": "string"
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "title": "MeetingInput",
+      "type": "object"
+    }
+  },
+  "description": "Everything needed to print the notesheet: the meeting header plus the\nagendas in the order they should appear. Statutory agendas carry\n`template`; the rest are classified and get their category sheet.",
+  "properties": {
+    "meeting": {
+      "$ref": "#/$defs/MeetingInput"
+    },
+    "agendas": {
+      "items": {
+        "$ref": "#/$defs/AgendaInput"
+      },
+      "maxItems": 60,
+      "minItems": 1,
+      "title": "Agendas",
+      "type": "array"
+    },
+    "orientation": {
+      "default": "landscape",
+      "enum": [
+        "landscape",
+        "portrait"
+      ],
+      "title": "Orientation",
+      "type": "string"
+    }
+  },
+  "required": [
+    "meeting",
+    "agendas"
+  ],
+  "title": "ProceedingsPdfRequest",
+  "type": "object"
+}

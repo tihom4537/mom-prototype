@@ -11,13 +11,14 @@ curl -X POST "http://localhost:8000/feedback" \
 """
 
 import logging
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 import jwt
-from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import decode_token, require_auth
@@ -25,16 +26,25 @@ from .db import (
     close_db_pool,
     fetch_last_feedback,
     init_db_pool,
+    insert_agenda_categorisations,
     insert_ai_feedback,
     insert_stt_session,
 )
 from .feedback import GOOD_TO_GO_MESSAGE, get_feedback as run_feedback, is_fresh_start
 from .models import (
+    AgendaInput,
+    CategoriseRequest,
+    CategoriseResponse,
+    CategorisedAgenda,
+    CategoryCatalogueResponse,
+    CategorySheetDef,
+    ColumnDef,
     FeedbackItem,
     FeedbackRequest,
     FeedbackResult,
     OCRRequest,
     OCRResponse,
+    ProceedingsPdfRequest,
     SpeechToTextRequest,
     SpeechToTextResponse,
     SttErrorEvent,
@@ -42,6 +52,14 @@ from .models import (
     TranslateResponse,
 )
 from .ocr import process_image_ocr
+from .proceedings.catalogue import CATALOGUE, sheet_for
+from .proceedings.categorise import (
+    AgendaToCategorise,
+    CategorisationError,
+    Categorised,
+    categorise_agendas,
+)
+from .proceedings.pdf import MeetingHeader, SheetSpec, render_html, render_pdf
 from .speech_to_text import transcribe_audio_data_uri
 from .speech_to_text import _LANGUAGE_CODE_MAP
 from .speech_to_text_streaming import DEFAULT_STREAM_MODEL, relay_realtime_transcription
@@ -55,6 +73,9 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+# httpx logs every request URL at INFO, which for Gemini includes the API key.
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("weasyprint").setLevel(logging.WARNING)
 
 
 @asynccontextmanager
@@ -266,6 +287,132 @@ async def websocket_speech_to_text(
         )
     except Exception as exc:  # pragma: no cover - best-effort audit
         logger.exception("Failed to insert stt_session: %s", exc)
+
+
+
+# ---------------------------------------------------------------------------
+# Agenda categorisation + proceedings notesheet PDF
+# ---------------------------------------------------------------------------
+
+
+def _catalogue_columns(category: str) -> List[ColumnDef]:
+    return [ColumnDef(**c) for c in sheet_for(category)["columns"]]
+
+
+async def _classify(agendas: List[AgendaInput], request_ref: Optional[str]) -> Dict[str, Categorised]:
+    """
+    Classify the non-statutory agendas with one model call and record the
+    result. Raises 502 when the model is unavailable: a wrong sheet is worse
+    than a retry.
+    """
+    custom = [AgendaToCategorise(a.id, a.title, a.description) for a in agendas if a.template is None]
+    if not custom:
+        return {}
+    try:
+        result = await categorise_agendas(custom)
+    except CategorisationError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="Agenda categorisation is temporarily unavailable") from exc
+
+    by_id = {c.id: c for c in result.items}
+    try:
+        await insert_agenda_categorisations(
+            request_ref=request_ref,
+            rows=[
+                {"id": a.id, "title": a.title, "description": a.description,
+                 "category": by_id[a.id].category, "reason": by_id[a.id].reason}
+                for a in custom if a.id in by_id
+            ],
+            model=result.model,
+            latency_ms=result.latency_ms,
+        )
+    except Exception as exc:  # pragma: no cover - best-effort audit
+        logger.exception("Failed to insert agenda_categorisations: %s", exc)
+    logger.info("Categorised %d agenda(s) in %d ms: %s", len(custom), result.latency_ms,
+                {c.id: c.category for c in result.items})
+    return by_id
+
+
+@app.get("/agenda-categories", response_model=CategoryCatalogueResponse)
+async def agenda_categories(_claims: dict = Depends(require_auth)) -> CategoryCatalogueResponse:
+    """The six agenda categories and the proceedings columns each one prints with."""
+    return CategoryCatalogueResponse(
+        categories=[CategorySheetDef(**sheet) for sheet in CATALOGUE.values()]
+    )
+
+
+@app.post("/categorise-agendas", response_model=CategoriseResponse)
+async def categorise(body: CategoriseRequest, _claims: dict = Depends(require_auth)) -> CategoriseResponse:
+    """
+    Classify agenda items and return, for each, its category and the proceedings
+    columns to print. Agendas sent with a statutory `template` are not sent to
+    the model; they come back with the category their sheet belongs to.
+    """
+    _reject_duplicate_ids(body.agendas)
+    classified = await _classify(body.agendas, request_ref=None)
+    out = []
+    for a in body.agendas:
+        if a.template is not None:
+            category = _STATUTORY_CATEGORY[a.template]
+        else:
+            category = classified[a.id].category
+        out.append(CategorisedAgenda(id=a.id, category=category, columns=_catalogue_columns(category)))
+    return CategoriseResponse(agendas=out)
+
+
+@app.post("/proceedings-pdf", responses={200: {"content": {"application/pdf": {}}}})
+async def proceedings_pdf(body: ProceedingsPdfRequest, _claims: dict = Depends(require_auth)) -> Response:
+    """
+    The meeting's proceedings notesheet as a PDF (A4, landscape by default):
+    the nine statutory sheets for agendas that carry a `template`, and a
+    category sheet for every other agenda, in the order given.
+    """
+    _reject_duplicate_ids(body.agendas)
+    classified = await _classify(body.agendas, request_ref=body.meeting.title[:120])
+    sheets = []
+    for a in body.agendas:
+        if a.template is not None:
+            sheets.append(SheetSpec(title=a.title, statutory_no=int(a.template.split("_")[1])))
+        else:
+            sheets.append(SheetSpec(title=a.title, category=classified[a.id].category, subtitle=a.description[:400]))
+    html = render_html(
+        MeetingHeader(title=body.meeting.title, date=body.meeting.date, time=body.meeting.time, venue=body.meeting.venue),
+        sheets,
+        orientation=body.orientation,
+    )
+    try:
+        pdf = await render_pdf(html)
+    except Exception as exc:
+        logger.exception("PDF render failed: %s", exc)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not render the PDF") from exc
+    filename = "proceedings-" + re.sub(r"[^A-Za-z0-9]+", "-", body.meeting.title).strip("-").lower()[:60] + ".pdf"
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename or "proceedings.pdf"}"'},
+    )
+
+
+# The statutory sheets are fixed layouts, but each still belongs to a category
+# (used only when a caller asks /categorise-agendas about a statutory item).
+_STATUTORY_CATEGORY = {
+    "statutory_1": "Review / Status",             # action taken on previous proceedings
+    "statutory_2": "Information / Intimation",    # government orders and circulars
+    "statutory_3": "Review / Status",             # standing committee proceedings approval
+    "statutory_4": "Issue / Grievance",           # water / sanitation / street lights
+    "statutory_5": "Review / Status",             # tax, rates and fees collection
+    "statutory_6": "Review / Status",             # receipts and expenditure
+    "statutory_7": "Review / Status",             # scheme progress
+    "statutory_8": "Issue / Grievance",           # Sakala / public grievance applications
+    "statutory_9": "Multi-Topic / Miscellaneous", # Section 58 functions
+}
+
+
+def _reject_duplicate_ids(agendas: List[AgendaInput]) -> None:
+    seen = set()
+    for a in agendas:
+        if a.id in seen:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"duplicate agenda id {a.id!r}")
+        seen.add(a.id)
 
 
 async def _reject_stream(websocket: WebSocket, code: str, message: str) -> None:

@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FeedbackRequest(BaseModel):
@@ -159,3 +159,93 @@ class SttEndEvent(BaseModel):
 
 
 SttEvent = Union[SttReadyEvent, SttPartialEvent, SttFinalEvent, SttErrorEvent, SttEndEvent]
+
+
+# ---------------------------------------------------------------------------
+# Agenda categorisation and the proceedings notesheet PDF.
+# ---------------------------------------------------------------------------
+
+AgendaCategory = Literal[
+    "Issue / Grievance",
+    "Review / Status",
+    "Planning / Preparatory",
+    "Information / Intimation",
+    "Multi-Topic / Miscellaneous",
+    "Other / Can't Categorize",
+]
+
+StatutoryTemplate = Literal[
+    "statutory_1", "statutory_2", "statutory_3", "statutory_4", "statutory_5",
+    "statutory_6", "statutory_7", "statutory_8", "statutory_9",
+]
+
+
+class AgendaInput(BaseModel):
+    """
+    One agenda item as the caller holds it. `template` names one of the nine
+    fixed statutory sheets; omit it for a user-added agenda, which is classified.
+    """
+
+    id: str = Field(min_length=1, max_length=100)
+    title: str = Field(min_length=1, max_length=500)
+    description: str = Field(default="", max_length=5000)
+    template: Optional[StatutoryTemplate] = None
+
+    @field_validator("id", "title")
+    @classmethod
+    def must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("must not be empty or whitespace")
+        return value.strip()
+
+
+class CategoriseRequest(BaseModel):
+    agendas: List[AgendaInput] = Field(min_length=1, max_length=50)
+
+
+class ColumnDef(BaseModel):
+    key: str
+    label_kn: str
+    label_en: str
+    width_pct: int
+    kind: Literal["serial", "text", "yes_no", "final_or_approval"]
+
+
+class CategorisedAgenda(BaseModel):
+    id: str
+    category: AgendaCategory
+    columns: List[ColumnDef]
+
+
+class CategoriseResponse(BaseModel):
+    agendas: List[CategorisedAgenda]
+
+
+class CategorySheetDef(BaseModel):
+    category: AgendaCategory
+    title_kn: str
+    title_en: str
+    columns: List[ColumnDef]
+
+
+class CategoryCatalogueResponse(BaseModel):
+    categories: List[CategorySheetDef]
+
+
+class MeetingInput(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    date: str = Field(default="", max_length=50)
+    time: str = Field(default="", max_length=50)
+    venue: str = Field(default="", max_length=200)
+
+
+class ProceedingsPdfRequest(BaseModel):
+    """
+    Everything needed to print the notesheet: the meeting header plus the
+    agendas in the order they should appear. Statutory agendas carry
+    `template`; the rest are classified and get their category sheet.
+    """
+
+    meeting: MeetingInput
+    agendas: List[AgendaInput] = Field(min_length=1, max_length=60)
+    orientation: Literal["landscape", "portrait"] = "landscape"

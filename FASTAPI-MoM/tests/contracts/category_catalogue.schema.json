@@ -1,0 +1,96 @@
+{
+  "$defs": {
+    "CategorySheetDef": {
+      "properties": {
+        "category": {
+          "enum": [
+            "Issue / Grievance",
+            "Review / Status",
+            "Planning / Preparatory",
+            "Information / Intimation",
+            "Multi-Topic / Miscellaneous",
+            "Other / Can't Categorize"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "title_kn": {
+          "title": "Title Kn",
+          "type": "string"
+        },
+        "title_en": {
+          "title": "Title En",
+          "type": "string"
+        },
+        "columns": {
+          "items": {
+            "$ref": "#/$defs/ColumnDef"
+          },
+          "title": "Columns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "category",
+        "title_kn",
+        "title_en",
+        "columns"
+      ],
+      "title": "CategorySheetDef",
+      "type": "object"
+    },
+    "ColumnDef": {
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label_kn": {
+          "title": "Label Kn",
+          "type": "string"
+        },
+        "label_en": {
+          "title": "Label En",
+          "type": "string"
+        },
+        "width_pct": {
+          "title": "Width Pct",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "serial",
+            "text",
+            "yes_no",
+            "final_or_approval"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key",
+        "label_kn",
+        "label_en",
+        "width_pct",
+        "kind"
+      ],
+      "title": "ColumnDef",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "categories": {
+      "items": {
+        "$ref": "#/$defs/CategorySheetDef"
+      },
+      "title": "Categories",
+      "type": "array"
+    }
+  },
+  "required": [
+    "categories"
+  ],
+  "title": "CategoryCatalogueResponse",
+  "type": "object"
+}
