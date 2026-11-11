@@ -13,6 +13,23 @@ CATEGORIES = [
 
 DEFAULT_CATEGORY = "Other / Can't Categorize"
 
+# Gemini `generationConfig.responseSchema` for both feedback prompts. The model
+# is constrained to this shape regardless of which Gemini model LLM_MODEL_NAME
+# names, so a model switch cannot change what feedback.py has to parse. The
+# client-facing contract (models.FeedbackResult) is built from this, never
+# returned raw.
+FEEDBACK_RESPONSE_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "category": {"type": "STRING", "enum": CATEGORIES},
+        "good_to_go": {"type": "BOOLEAN"},
+        "message": {"type": "STRING"},
+        "feedback": {"type": "ARRAY", "items": {"type": "STRING"}},
+        "rewrite": {"type": "STRING"},
+    },
+    "required": ["category", "good_to_go", "feedback", "rewrite"],
+}
+
 
 def build_categorization_prompt(agenda_subject: str, mom_discussion: str) -> str:
     """Build the prompt for LLM-based categorization."""
@@ -91,8 +108,9 @@ def build_single_call_prompt(agenda_subject: str, mom_discussion: str, feedback_
     Build the prompt for a single LLM call that both classifies the agenda item
     and produces constructive, question/suggestion-style feedback plus a rewrite.
 
-    NOTE: this backend passes no responseSchema to the model, so the JSON output
-    shape must be specified in the prompt text itself (see the format block below).
+    The output shape is enforced twice: by FEEDBACK_RESPONSE_SCHEMA (passed as the
+    Gemini responseSchema) and by the format block below, so a model that ignores
+    one still has the other.
     `feedback_language` ('{feedback_language}') determines the language for all output.
     """
     # CRITICAL: Put language instruction at the very beginning

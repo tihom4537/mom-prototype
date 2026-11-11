@@ -30,6 +30,14 @@ from fastapi import WebSocket, WebSocketDisconnect
 from sarvamai import AsyncSarvamAI, RealtimeAudioInput, RealtimeEnd
 from sarvamai.core.api_error import ApiError
 
+from .models import (
+    SttEndEvent,
+    SttErrorEvent,
+    SttEvent,
+    SttFinalEvent,
+    SttPartialEvent,
+    SttReadyEvent,
+)
 from .speech_to_text import _LANGUAGE_CODE_MAP
 
 
@@ -49,10 +57,10 @@ DEFAULT_STREAM_MODEL = "saaras:v3-realtime"
 _FINAL_FLUSH_TIMEOUT = 15.0
 
 
-async def _send(websocket: WebSocket, payload: dict) -> None:
-    """Send a JSON event to the client, ignoring a client that already left."""
+async def _send(websocket: WebSocket, event: SttEvent) -> None:
+    """Send one contract event to the client, ignoring a client that already left."""
     try:
-        await websocket.send_json(payload)
+        await websocket.send_json(event.model_dump())
     except (WebSocketDisconnect, RuntimeError):
         pass
 
@@ -111,26 +119,12 @@ async def _forward_transcripts(sarvam, websocket: WebSocket, summary: SessionSum
 
         if event == "session.begin":
             summary.request_id = message.request_id
-            await _send(websocket, {"type": "ready", "request_id": message.request_id})
+            await _send(websocket, SttReadyEvent(request_id=message.request_id))
         elif event == "transcript.partial":
-            await _send(
-                websocket,
-                {
-                    "type": "partial",
-                    "utterance": message.utterance_idx,
-                    "text": message.text,
-                },
-            )
+            await _send(websocket, SttPartialEvent(utterance=message.utterance_idx, text=message.text))
         elif event == "transcript.final":
             summary.finals[message.utterance_idx] = message.text
-            await _send(
-                websocket,
-                {
-                    "type": "final",
-                    "utterance": message.utterance_idx,
-                    "text": message.text,
-                },
-            )
+            await _send(websocket, SttFinalEvent(utterance=message.utterance_idx, text=message.text))
         elif event == "error":
             logger.error(
                 "Sarvam realtime STT error (%s, fatal=%s): %s",
@@ -140,12 +134,7 @@ async def _forward_transcripts(sarvam, websocket: WebSocket, summary: SessionSum
             )
             await _send(
                 websocket,
-                {
-                    "type": "error",
-                    "code": message.code,
-                    "message": message.message,
-                    "fatal": message.is_fatal,
-                },
+                SttErrorEvent(code=str(message.code), message=str(message.message), fatal=bool(message.is_fatal)),
             )
             if message.is_fatal:
                 summary.outcome = "provider_error"
@@ -157,11 +146,10 @@ async def _forward_transcripts(sarvam, websocket: WebSocket, summary: SessionSum
             summary.outcome = "completed"
             await _send(
                 websocket,
-                {
-                    "type": "end",
-                    "audio_duration_s": message.audio_duration_s,
-                    "total_utterances": message.total_utterances,
-                },
+                SttEndEvent(
+                    audio_duration_s=message.audio_duration_s,
+                    total_utterances=message.total_utterances,
+                ),
             )
             return
 
@@ -210,15 +198,7 @@ async def relay_realtime_transcription(
     if not api_key:
         logger.error("SarvamAI API key is not set.")
         summary.outcome, summary.error_code = "server_error", "server_misconfigured"
-        await _send(
-            websocket,
-            {
-                "type": "error",
-                "code": "server_misconfigured",
-                "message": "Server configuration error: Missing API key.",
-                "fatal": True,
-            },
-        )
+        await _send(websocket, SttErrorEvent(code="server_misconfigured", message="Server configuration error: Missing API key.", fatal=True))
         return summary
 
     client = AsyncSarvamAI(api_subscription_key=api_key)
@@ -242,25 +222,9 @@ async def relay_realtime_transcription(
             exc.status_code,
             exc.body,
         )
-        await _send(
-            websocket,
-            {
-                "type": "error",
-                "code": "provider_unavailable",
-                "message": "Speech-to-text provider rejected the connection",
-                "fatal": True,
-            },
-        )
+        await _send(websocket, SttErrorEvent(code="provider_unavailable", message="Speech-to-text provider rejected the connection", fatal=True))
     except Exception as exc:
         summary.outcome, summary.error_code = "provider_error", "provider_failed"
         logger.exception("Realtime speech-to-text relay failed: %s", exc)
-        await _send(
-            websocket,
-            {
-                "type": "error",
-                "code": "provider_failed",
-                "message": "Speech-to-text provider failed",
-                "fatal": True,
-            },
-        )
+        await _send(websocket, SttErrorEvent(code="provider_failed", message="Speech-to-text provider failed", fatal=True))
     return summary

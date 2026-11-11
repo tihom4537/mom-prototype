@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "SttEndEvent": {
+      "description": "Session finished after the client's `{\"type\": \"end\"}` frame was flushed.",
+      "properties": {
+        "type": {
+          "const": "end",
+          "default": "end",
+          "title": "Type",
+          "type": "string"
+        },
+        "audio_duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audio Duration S"
+        },
+        "total_utterances": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Utterances"
+        }
+      },
+      "title": "SttEndEvent",
+      "type": "object"
+    },
+    "SttErrorEvent": {
+      "description": "Something went wrong. `fatal` true means the server will close the socket.\n\nCodes the server itself emits: unauthorized, invalid_start, server_misconfigured,\nprovider_unavailable, provider_failed. Non-fatal provider codes (for example\nchunk_too_large) are passed through verbatim.",
+      "properties": {
+        "type": {
+          "const": "error",
+          "default": "error",
+          "title": "Type",
+          "type": "string"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "fatal": {
+          "title": "Fatal",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "fatal"
+      ],
+      "title": "SttErrorEvent",
+      "type": "object"
+    },
+    "SttFinalEvent": {
+      "description": "Final text for one utterance (after a pause).",
+      "properties": {
+        "type": {
+          "const": "final",
+          "default": "final",
+          "title": "Type",
+          "type": "string"
+        },
+        "utterance": {
+          "title": "Utterance",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "utterance",
+        "text"
+      ],
+      "title": "SttFinalEvent",
+      "type": "object"
+    },
+    "SttPartialEvent": {
+      "description": "Interim text for the utterance currently being spoken.",
+      "properties": {
+        "type": {
+          "const": "partial",
+          "default": "partial",
+          "title": "Type",
+          "type": "string"
+        },
+        "utterance": {
+          "title": "Utterance",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "utterance",
+        "text"
+      ],
+      "title": "SttPartialEvent",
+      "type": "object"
+    },
+    "SttReadyEvent": {
+      "description": "Session open; `request_id` identifies the session in the audit table.",
+      "properties": {
+        "type": {
+          "const": "ready",
+          "default": "ready",
+          "title": "Type",
+          "type": "string"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        }
+      },
+      "title": "SttReadyEvent",
+      "type": "object"
+    }
+  },
+  "anyOf": [
+    {
+      "$ref": "#/$defs/SttReadyEvent"
+    },
+    {
+      "$ref": "#/$defs/SttPartialEvent"
+    },
+    {
+      "$ref": "#/$defs/SttFinalEvent"
+    },
+    {
+      "$ref": "#/$defs/SttErrorEvent"
+    },
+    {
+      "$ref": "#/$defs/SttEndEvent"
+    }
+  ]
+}

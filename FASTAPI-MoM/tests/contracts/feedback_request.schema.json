@@ -1,0 +1,32 @@
+{
+  "properties": {
+    "agenda_id": {
+      "title": "Agenda Id",
+      "type": "string"
+    },
+    "agenda_subject": {
+      "title": "Agenda Subject",
+      "type": "string"
+    },
+    "mom_discussion": {
+      "title": "Mom Discussion",
+      "type": "string"
+    },
+    "feedback_language": {
+      "default": "en",
+      "enum": [
+        "en",
+        "kn"
+      ],
+      "title": "Feedback Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "agenda_id",
+    "agenda_subject",
+    "mom_discussion"
+  ],
+  "title": "FeedbackRequest",
+  "type": "object"
+}

@@ -10,6 +10,7 @@ from .json_utils import parse_first_json_object
 from .prompts import (
     CATEGORIES,
     DEFAULT_CATEGORY,
+    FEEDBACK_RESPONSE_SCHEMA,
     build_refeedback_prompt,
     build_single_call_prompt,
 )
@@ -114,7 +115,11 @@ async def get_feedback(
     outcome = FeedbackOutcome(model=_model_name())
     started = time.monotonic()
     try:
-        raw = await generate_text(prompt, response_mime_type="application/json")
+        raw = await generate_text(
+            prompt,
+            response_mime_type="application/json",
+            generation_config={"responseSchema": FEEDBACK_RESPONSE_SCHEMA},
+        )
         outcome.latency_ms = int((time.monotonic() - started) * 1000)
         data = parse_first_json_object(raw)
 

@@ -1,0 +1,78 @@
+{
+  "$defs": {
+    "FeedbackItem": {
+      "description": "One feedback point. `highlight` is a verbatim substring of `text` (or null).",
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "highlight": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Highlight"
+        }
+      },
+      "required": [
+        "text"
+      ],
+      "title": "FeedbackItem",
+      "type": "object"
+    }
+  },
+  "description": "Client-facing feedback contract.\n\n`status` is \"feedback\" when there are points to act on and \"good_to_go\" when\nthe minutes are complete (or the previous round's feedback was addressed).\nClassification (category / reason) is recorded in the audit table only.",
+  "properties": {
+    "status": {
+      "enum": [
+        "feedback",
+        "good_to_go"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "message": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Message"
+    },
+    "feedback": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FeedbackItem"
+      },
+      "title": "Feedback",
+      "type": "array"
+    },
+    "rewrite": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Rewrite"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "FeedbackResult",
+  "type": "object"
+}

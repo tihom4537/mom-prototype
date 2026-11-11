@@ -37,6 +37,7 @@ from .models import (
     OCRResponse,
     SpeechToTextRequest,
     SpeechToTextResponse,
+    SttErrorEvent,
     TranslateRequest,
     TranslateResponse,
 )
@@ -270,7 +271,7 @@ async def websocket_speech_to_text(
 async def _reject_stream(websocket: WebSocket, code: str, message: str) -> None:
     """Tell the client why the stream was refused, then close (1008 = policy violation)."""
     try:
-        await websocket.send_json({"type": "error", "code": code, "message": message, "fatal": True})
+        await websocket.send_json(SttErrorEvent(code=code, message=message, fatal=True).model_dump())
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
     except (WebSocketDisconnect, RuntimeError):
         pass

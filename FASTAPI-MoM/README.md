@@ -340,3 +340,27 @@ sequenceDiagram
     M-->>R: Response model instance
     R-->>C: 200 OK<br/>{ transcription }
 ```
+
+
+## API contract stability
+
+The shapes handed to integrators are fixed in code, independent of which model sits behind them:
+
+- `POST /feedback` → `models.FeedbackResult` (`status`, `message`, `feedback[{text, highlight}]`, `rewrite`).
+  The model's raw JSON is never returned; `feedback.py` maps it onto this model, and the Gemini call
+  carries `prompts.FEEDBACK_RESPONSE_SCHEMA` so any Gemini model is constrained to the same fields.
+- `WS /ws/speech-to-text` → the `Stt*Event` models in `models.py` (`ready`, `partial`, `final`,
+  `error`, `end`). The relay translates the provider's events onto these; the provider's names never
+  reach the client.
+
+`tests/` runs without network or keys (fake model, fake provider) and asserts the exact key sets,
+including when the model returns garbage. `tests/contracts/*.schema.json` are the frozen JSON Schemas;
+`test_frozen_schemas.py` fails if `models.py` changes them. To change the contract on purpose:
+
+```bash
+python -m tests.test_frozen_schemas --write   # regenerate the frozen schemas
+```
+
+then re-issue the integration document. CI (`.github/workflows/build-and-push.yml`) runs the tests
+before building images. Switching `LLM_MODEL_NAME` or the Sarvam model is a config change and needs no
+contract update; switching provider means rewriting `llm_client.py` / the relay while keeping these models.

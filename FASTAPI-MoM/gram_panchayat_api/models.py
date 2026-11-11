@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, field_validator
 
@@ -100,3 +100,62 @@ class OCRResponse(BaseModel):
     detected_language: Literal["en", "kn"]
     confidence: float
     error: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Live speech-to-text WebSocket events (server -> client).
+#
+# This is the public contract for `WS /ws/speech-to-text`. The relay maps the
+# provider's own event names/fields onto these models, so swapping the STT
+# model or provider must never change what the client receives. Changing any
+# field here breaks tests/contracts/stt_events.schema.json on purpose.
+# ---------------------------------------------------------------------------
+
+
+class SttReadyEvent(BaseModel):
+    """Session open; `request_id` identifies the session in the audit table."""
+
+    type: Literal["ready"] = "ready"
+    request_id: Optional[str] = None
+
+
+class SttPartialEvent(BaseModel):
+    """Interim text for the utterance currently being spoken."""
+
+    type: Literal["partial"] = "partial"
+    utterance: int
+    text: str
+
+
+class SttFinalEvent(BaseModel):
+    """Final text for one utterance (after a pause)."""
+
+    type: Literal["final"] = "final"
+    utterance: int
+    text: str
+
+
+class SttErrorEvent(BaseModel):
+    """
+    Something went wrong. `fatal` true means the server will close the socket.
+
+    Codes the server itself emits: unauthorized, invalid_start, server_misconfigured,
+    provider_unavailable, provider_failed. Non-fatal provider codes (for example
+    chunk_too_large) are passed through verbatim.
+    """
+
+    type: Literal["error"] = "error"
+    code: str
+    message: str
+    fatal: bool
+
+
+class SttEndEvent(BaseModel):
+    """Session finished after the client's `{"type": "end"}` frame was flushed."""
+
+    type: Literal["end"] = "end"
+    audio_duration_s: Optional[float] = None
+    total_utterances: Optional[int] = None
+
+
+SttEvent = Union[SttReadyEvent, SttPartialEvent, SttFinalEvent, SttErrorEvent, SttEndEvent]

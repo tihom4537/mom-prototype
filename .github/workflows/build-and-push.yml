@@ -11,7 +11,27 @@ env:
   BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/mom-backend
 
 jobs:
+  backend-contract-tests:
+    # The request/response shapes of /feedback and /ws/speech-to-text are the
+    # handed-over contract. These tests fail if a code change moves them.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: FASTAPI-MoM
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            FASTAPI-MoM/requirements.txt
+            FASTAPI-MoM/requirements-dev.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: python -m pytest -q
+
   build-and-push:
+    needs: backend-contract-tests
     runs-on: ubuntu-latest
     permissions:
       contents: read
