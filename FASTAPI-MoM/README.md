@@ -364,3 +364,25 @@ python -m tests.test_frozen_schemas --write   # regenerate the frozen schemas
 then re-issue the integration document. CI (`.github/workflows/build-and-push.yml`) runs the tests
 before building images. Switching `LLM_MODEL_NAME` or the Sarvam model is a config change and needs no
 contract update; switching provider means rewriting `llm_client.py` / the relay while keeping these models.
+
+## Agenda categorisation and the proceedings notesheet PDF
+
+Three JWT-protected routes, model-switchable like the rest (the model only picks a
+category label; columns and layout are server code):
+
+- `GET /agenda-categories` — the six categories and the columns each prints with
+  (`key`, `label_kn`, `label_en`, `width_pct`, `kind`). Frozen in `tests/contracts/category_catalogue.data.json`.
+- `POST /categorise-agendas` — `{agendas:[{id, title, description?, template?}]}` →
+  `{agendas:[{id, category, columns:[...]}]}`. One Gemini call for all custom agendas;
+  items carrying `template: "statutory_N"` (N = 1..9, the locked default agendas) are
+  not sent to the model. 502 when the model is unavailable.
+- `POST /proceedings-pdf` — same agendas plus `meeting:{title, date?, time?, venue?}` and
+  optional `orientation` (`landscape` default) → `application/pdf`. Statutory agendas print
+  their fixed sheet (`proceedings/statutory/NN.html`, ported from the approved mockup);
+  every other agenda prints its category sheet from `proceedings/catalogue.py`.
+
+Rendering: Jinja2 → WeasyPrint with the bundled Noto Sans / Noto Sans Kannada fonts
+(`proceedings/fonts/`), one render at a time per worker (`asyncio.Semaphore`). The image
+needs Pango/HarfBuzz (see `Dockerfile`); locally on macOS run with
+`DYLD_FALLBACK_LIBRARY_PATH=$(brew --prefix)/lib` after `brew install pango`.
+Each classified agenda is appended to `agenda_categorisations` (category + reason) for review.
