@@ -15,6 +15,7 @@ interface InputFieldProps {
   className?: string;
   type?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 export default function InputField({
@@ -29,6 +30,7 @@ export default function InputField({
   className,
   type = 'text',
   disabled = false,
+  autoFocus = false,
 }: InputFieldProps) {
   const [focused, setFocused] = useState(false);
 
@@ -88,6 +90,7 @@ export default function InputField({
           onFocus={() => !disabled && setFocused(true)}
           onBlur={() => setFocused(false)}
           disabled={disabled}
+          autoFocus={autoFocus}
           placeholder={placeholder}
           className="flex-1 min-w-0 bg-transparent py-[10px] pl-3 pr-2 text-sm text-[#212121] placeholder-[#9e9e9e] outline-none"
           style={{ fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 100" }}

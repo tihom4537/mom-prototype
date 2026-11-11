@@ -320,9 +320,13 @@ export default function CreateMeetingAgendaScreen() {
   const sortedForTemplate = (items: AgendaItem[]) =>
     [...items].sort((a, b) => (a.id <= 9 ? -1 : 1) - (b.id <= 9 ? -1 : 1));
 
+  // Title field of the most recently added agenda gets the cursor.
+  const [focusAgendaId, setFocusAgendaId] = useState<number | null>(null);
+
   function addAgenda() {
     const id = nextId.current++;
     setAgendas(prev => [...prev, { id, description: '', title: '' }]);
+    setFocusAgendaId(id);
   }
 
   function removeAgenda(id: number) {
@@ -426,6 +430,8 @@ export default function CreateMeetingAgendaScreen() {
                               required
                               value={agenda.title}
                               onChange={val => updateAgenda(agenda.id, 'title', val)}
+                              disabled={agenda.id <= 9}
+                              autoFocus={agenda.id === focusAgendaId}
                             />
                             <div>
                               <DescriptionField
@@ -434,6 +440,7 @@ export default function CreateMeetingAgendaScreen() {
                                 required
                                 value={agenda.description}
                                 onChange={val => updateAgenda(agenda.id, 'description', val)}
+                                disabled={agenda.id <= 9}
                                 onMicClick={() => handleAgendaMicClick(agenda.id)}
                                 micRecording={!!agendaRecording[agenda.id]}
                                 micAnalyserNode={agendaAnalyserRefs.current[agenda.id] ?? undefined}
@@ -444,7 +451,7 @@ export default function CreateMeetingAgendaScreen() {
                             </div>
                           </div>
 
-                          {/* Remove button — visible for user-added agendas, invisible spacer for defaults */}
+                          {/* Default agendas 1-9 are the statutory sheets: locked (no edit, no remove) */}
                           {agenda.id >= 10 ? (
                             <button
                               type="button"
@@ -454,7 +461,9 @@ export default function CreateMeetingAgendaScreen() {
                               <Icon name="close" size="medium" color="#424242" />
                             </button>
                           ) : (
-                            <div className="shrink-0 size-9" />
+                            <div className="shrink-0 size-9 flex items-center justify-center" title="Default agenda (locked)">
+                              <Icon name="lock" size="small" color="#9e9e9e" />
+                            </div>
                           )}
                         </div>
                       </div>
