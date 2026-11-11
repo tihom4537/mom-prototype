@@ -27,7 +27,12 @@ jobs:
           cache-dependency-path: |
             FASTAPI-MoM/requirements.txt
             FASTAPI-MoM/requirements-dev.txt
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0
+      - name: Install WeasyPrint native libraries (mirror hiccups are retried)
+        run: |
+          for i in 1 2 3; do
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz0b libharfbuzz-subset0 && break
+            echo "apt attempt $i failed; retrying in 20s"; sleep 20
+          done
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: python -m pytest -q
 
