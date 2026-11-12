@@ -176,7 +176,7 @@ AgendaCategory = Literal[
 
 class AgendaInput(BaseModel):
     """
-    One user-added agenda item as the caller holds it. The nine statutory
+    One user-added agenda item as the caller holds it. The thirteen statutory
     agendas are never sent: the server always prints their fixed sheets first.
     """
 
@@ -235,7 +235,7 @@ class MeetingInput(BaseModel):
 class ProceedingsPdfRequest(BaseModel):
     """
     Everything needed to print the notesheet: the meeting header plus the
-    user-added agendas in the order they should appear after the nine
+    user-added agendas in the order they should appear after the thirteen
     statutory sheets. Each is classified and printed on its category sheet.
     """
 

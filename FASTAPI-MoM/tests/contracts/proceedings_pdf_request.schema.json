@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AgendaInput": {
-      "description": "One user-added agenda item as the caller holds it. The nine statutory\nagendas are never sent: the server always prints their fixed sheets first.",
+      "description": "One user-added agenda item as the caller holds it. The thirteen statutory\nagendas are never sent: the server always prints their fixed sheets first.",
       "properties": {
         "id": {
           "maxLength": 100,
@@ -63,7 +63,7 @@
       "type": "object"
     }
   },
-  "description": "Everything needed to print the notesheet: the meeting header plus the\nuser-added agendas in the order they should appear after the nine\nstatutory sheets. Each is classified and printed on its category sheet.",
+  "description": "Everything needed to print the notesheet: the meeting header plus the\nuser-added agendas in the order they should appear after the thirteen\nstatutory sheets. Each is classified and printed on its category sheet.",
   "properties": {
     "meeting": {
       "$ref": "#/$defs/MeetingInput"

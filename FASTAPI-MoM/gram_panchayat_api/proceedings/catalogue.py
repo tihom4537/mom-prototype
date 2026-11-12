@@ -135,4 +135,4 @@ CELL_TEXT = {
     "final_or_approval": ("ಅಂತಿಮ / ಅನುಮೋದನೆಗೆ ಒಳಪಟ್ಟಿದೆ", "Final / Subject to approval"),
 }
 
-STATUTORY_COUNT = 9
+STATUTORY_COUNT = 13

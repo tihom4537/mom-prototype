@@ -106,7 +106,7 @@ export default function DescriptionField({
 
       {/* Textarea box */}
       <div
-        className={`relative bg-white border rounded-lg w-full transition-all duration-150 ${borderClass} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+        className={`relative border rounded-lg w-full transition-all duration-150 ${disabled ? 'bg-[#F3F3F3] border-[#c6c6c6] pointer-events-none' : `bg-white ${borderClass}`}`}
         onMouseEnter={() => !disabled && setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

@@ -49,6 +49,12 @@ class SheetSpec:
     subtitle: str = ""
 
 
+_WEB_FONT_CSS = (
+    "@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700"
+    "&family=Noto+Sans+Kannada:wght@400;500;600;700&display=swap');"
+)
+
+
 def _font_css() -> str:
     fonts = _HERE / "fonts"
     faces = [
@@ -66,7 +72,15 @@ def _font_css() -> str:
     )
 
 
-def render_html(meeting: MeetingHeader, sheets: List[SheetSpec], *, orientation: str = "landscape") -> str:
+def render_html(
+    meeting: MeetingHeader,
+    sheets: List[SheetSpec],
+    *,
+    orientation: str = "landscape",
+    web_fonts: bool = False,
+) -> str:
+    """web_fonts=True links Google Fonts instead of the bundled files, for HTML
+    that will be opened in a browser or Word rather than by WeasyPrint."""
     sections = []
     for no, spec in enumerate(sheets, start=1):
         if spec.statutory_no is not None:
@@ -89,7 +103,7 @@ def render_html(meeting: MeetingHeader, sheets: List[SheetSpec], *, orientation:
     return _ENV.get_template("document.html").render(
         meeting=meeting,
         sections=sections,
-        font_css=_font_css(),
+        font_css=_WEB_FONT_CSS if web_fonts else _font_css(),
         sheet_css=(_HERE / "sheet.css").read_text(encoding="utf-8"),
         orientation="portrait" if orientation == "portrait" else "landscape",
     )

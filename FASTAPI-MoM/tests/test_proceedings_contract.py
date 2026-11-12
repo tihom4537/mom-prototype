@@ -12,7 +12,7 @@ import pytest
 import gram_panchayat_api.proceedings.categorise as cat_mod
 import gram_panchayat_api.proceedings.pdf as pdf_mod
 from gram_panchayat_api.models import CategoriseResponse, CategoryCatalogueResponse
-from gram_panchayat_api.proceedings.catalogue import CATALOGUE
+from gram_panchayat_api.proceedings.catalogue import CATALOGUE, STATUTORY_COUNT
 from gram_panchayat_api.prompts import CATEGORIES
 
 COLUMN_KEYS = {"key", "label_kn", "label_en", "width_pct", "kind"}
@@ -91,7 +91,7 @@ def test_pdf_without_custom_agendas_skips_the_model(client, token, monkeypatch):
     monkeypatch.setattr(main_mod, "render_pdf", fake_render)
     r = client.post("/proceedings-pdf", json={"meeting": {"title": "Sabha"}}, headers=auth(token))
     assert r.status_code == 200
-    assert captured["html"].count("<section") == 9, "the nine statutory sheets always print"
+    assert captured["html"].count("<section") == STATUTORY_COUNT == 13, "the thirteen statutory sheets always print"
 
 
 @pytest.mark.parametrize("raw", [
@@ -148,11 +148,27 @@ def test_pdf_envelope(client, token, monkeypatch):
     assert r.content.startswith(b"%PDF")
     html = captured["html"]
     assert "size: A4 landscape" in html
-    assert html.count("<section") == 11  # 9 statutory + 2 custom
+    assert html.count("<section") == STATUTORY_COUNT + 2  # 13 statutory + 2 custom
     assert "Ward 3 street lights not working" in html
     assert "ಗ್ರಾಮ ಉತ್ಸವ ಸಿದ್ಧತೆ" in html
     assert "Final / Subject to approval" in html  # planning sheet placeholder
     assert "{{" not in html
+
+
+def test_html_format_returns_same_document(client, token, monkeypatch):
+    monkeypatch.setattr(cat_mod, "generate_text", fake_llm({"items": [
+        {"id": "c1", "category": "Issue / Grievance"}, {"id": "c2", "category": "Planning / Preparatory"}]}))
+    async def boom(html):
+        raise AssertionError("html format must not render a PDF")
+    import gram_panchayat_api.main as main_mod
+    monkeypatch.setattr(main_mod, "render_pdf", boom)
+    r = client.post("/proceedings-pdf?format=html", json=PDF_BODY, headers=auth(token))
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/html")
+    assert r.text.count("<section") == STATUTORY_COUNT + 2
+    assert "fonts.googleapis.com" in r.text and "file://" not in r.text
+    assert "ಅಧ್ಯಕ್ಷರ ಅಪ್ಪಣೆ ಮೇರೆಗೆ" in r.text  # statutory sheet 13
+    assert client.post("/proceedings-pdf?format=docx", json=PDF_BODY, headers=auth(token)).status_code == 422
 
 
 def test_pdf_portrait_and_validation(client, token, monkeypatch):

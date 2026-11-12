@@ -625,6 +625,10 @@ export const translations = {
     default_agenda_title_7: "Progress of centrally and state-sponsored development schemes",
     default_agenda_title_8: "Pending applications under Sakala / public grievance redressal",
     default_agenda_title_9: "Matters relating to Section 58 functions of the Gram Panchayat",
+    default_agenda_title_10: "Insurance of the Solid Waste Management vehicle",
+    default_agenda_title_11: "Payment of salary to the Koosina Mane (creche) caretaker",
+    default_agenda_title_12: "Newspaper and internet facilities at the Arivu Kendra",
+    default_agenda_title_13: "With the permission of the President",
 
     default_agenda_desc_3: "Proceedings of the Finance, Audit and Planning, General, and Social Justice Standing Committee meetings held since the last General Body meeting will be placed for approval.",
     default_agenda_desc_4: "Status of drinking water supply, village sanitation, and street light maintenance will be reviewed, including applications received, disposed, and pending.",
@@ -633,6 +637,10 @@ export const translations = {
     default_agenda_desc_7: "Physical and financial progress of schemes such as MGNREGS, 15th Finance Commission grant, Swachh Bharat Mission - Gramin, own funds, and housing schemes will be reviewed.",
     default_agenda_desc_8: "Applications pending approval under Sakala and public grievance services — including building licence, trade licence, and Form 9/11A/11B — will be reviewed.",
     default_agenda_desc_9: "Matters relating to child labour, bonded labour, manual scavenging, child marriage prohibition, and other Section 58 functions will be discussed as applicable.",
+    default_agenda_desc_10: "Availability of the Solid Waste Management vehicle, its vehicle number, and the date its insurance was last renewed will be reviewed.",
+    default_agenda_desc_11: "Availability of a Koosina Mane (creche) in the Gram Panchayat and whether the caretaker's salary for the previous month has been paid will be reviewed.",
+    default_agenda_desc_12: "The number of newspapers available at the Arivu Kendra (knowledge centre) and whether internet facility is available there will be reviewed.",
+    default_agenda_desc_13: "Any other matter raised with the permission of the President will be discussed and decided.",
 
     // --- SendToPresidentScreen mock tasks ---
     mock_task_stp_1: "Repair street lights on Ward 4",
@@ -1839,6 +1847,10 @@ export const translations = {
     default_agenda_title_7: "ಕೇಂದ್ರ ಮತ್ತು ರಾಜ್ಯ ಪುರಸ್ಕೃತ ಅಭಿವೃದ್ಧಿ ಯೋಜನೆಗಳ ಪ್ರಗತಿ",
     default_agenda_title_8: "ಸಕಾಲ / ಸಾರ್ವಜನಿಕ ಕುಂದುಕೊರತೆ ಬಾಕಿ ಅರ್ಜಿಗಳು",
     default_agenda_title_9: "ಪ್ರಕರಣ 58ರ ಗ್ರಾಮ ಪಂಚಾಯತಿ ಪ್ರಕಾರ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ವಿಷಯಗಳು",
+    default_agenda_title_10: "ಘನ ತ್ಯಾಜ್ಯ ನಿರ್ವಹಣೆಯ ವಾಹನದ ವಿಮೆ",
+    default_agenda_title_11: "ಕೂಸಿನ ಮನೆ ಕೇರ್ ಟೇಕರ್ ನ ವೇತನ ಪಾವತಿ",
+    default_agenda_title_12: "ಅರಿವು ಕೇಂದ್ರದಲ್ಲಿ ದಿನಪತ್ರಿಕೆ ಹಾಗೂ ಅಂತರ್ಜಾಲ ಸೌಲಭ್ಯ",
+    default_agenda_title_13: "ಅಧ್ಯಕ್ಷರ ಅಪ್ಪಣೆ ಮೇರೆಗೆ",
 
     default_agenda_desc_3: "ಕಳೆದ ಸಾಮಾನ್ಯ ಸಭೆಯ ನಂತರ ನಡೆದ ಹಣಕಾಸು, ಲೆಕ್ಕಪರಿಶೋಧನೆ ಮತ್ತು ಯೋಜನಾ, ಸಾಮಾನ್ಯ, ಸಾಮಾಜಿಕ ನ್ಯಾಯ ಸ್ಥಾಯಿ ಸಮಿತಿ ಸಭೆಗಳ ನಡವಳಿಗಳನ್ನು ಅನುಮೋದನೆಗೆ ಮಂಡಿಸಲಾಗುವುದು.",
     default_agenda_desc_4: "ಸ್ವೀಕೃತ, ವಿಲೇವಾರಿ ಮತ್ತು ಬಾಕಿ ಅರ್ಜಿಗಳು ಸೇರಿದಂತೆ ಕುಡಿಯುವ ನೀರು ಸರಬರಾಜು, ಗ್ರಾಮ ನೈರ್ಮಲ್ಯ ಮತ್ತು ಬೀದಿ ದೀಪಗಳ ನಿರ್ವಹಣೆಯ ಸ್ಥಿತಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
@@ -1847,6 +1859,10 @@ export const translations = {
     default_agenda_desc_7: "ಮಹಾತ್ಮ ಗಾಂಧಿ ರಾಷ್ಟ್ರೀಯ ಗ್ರಾಮೀಣ ಉದ್ಯೋಗ ಖಾತ್ರಿ ಯೋಜನೆ, 15ನೇ ಹಣಕಾಸು ಆಯೋಗ ಅನುದಾನ, ಸ್ವಚ್ಛ ಭಾರತ್ ಅಭಿಯಾನ-ಗ್ರಾಮೀಣ, ಸ್ವಂತ ನಿಧಿ ಮತ್ತು ವಸತಿ ಯೋಜನೆಗಳ ಭೌತಿಕ ಮತ್ತು ಆರ್ಥಿಕ ಪ್ರಗತಿಯನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
     default_agenda_desc_8: "ಕಟ್ಟಡ ನಿರ್ಮಾಣ ಲೈಸೆನ್ಸ್, ವ್ಯಾಪಾರ ಪರವಾನಗಿ, ನಮೂನೆ 9/11ಎ/11ಬಿ ಸೇರಿದಂತೆ ಸಕಾಲ ಮತ್ತು ಸಾರ್ವಜನಿಕ ಕುಂದುಕೊರತೆ ಸೇವೆಗಳ ಅಡಿಯಲ್ಲಿ ಅನುಮೋದನೆಗೆ ಬಾಕಿ ಇರುವ ಅರ್ಜಿಗಳನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
     default_agenda_desc_9: "ಬಾಲ ಕಾರ್ಮಿಕ, ಜೀತ ಪದ್ಧತಿ, ತಲೆ ಮೇಲೆ ಮಲ ಹೊರುವ ಪದ್ಧತಿ ನಿಷೇಧ, ಬಾಲ್ಯ ವಿವಾಹ ನಿಷೇಧ ಮತ್ತು ಇತರೆ ಪ್ರಕರಣ 58ರ ಪ್ರಕಾರ್ಯಗಳಿಗೆ ಸಂಬಂಧಿಸಿದ ವಿಷಯಗಳನ್ನು ಅಗತ್ಯಾನುಸಾರ ಚರ್ಚಿಸಲಾಗುವುದು.",
+    default_agenda_desc_10: "ಘನ ತ್ಯಾಜ್ಯ ನಿರ್ವಹಣೆಯ ವಾಹನದ ಲಭ್ಯತೆ, ವಾಹನದ ಸಂಖ್ಯೆ ಮತ್ತು ವಿಮೆ ಮಾಡಿಸಲಾದ ದಿನಾಂಕವನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
+    default_agenda_desc_11: "ಗ್ರಾಮ ಪಂಚಾಯಿತಿಯಲ್ಲಿ ಕೂಸಿನ ಮನೆಯ ಲಭ್ಯತೆ ಮತ್ತು ಕೇರ್ ಟೇಕರ್ ನ ಹಿಂದಿನ ಮಾಹೆಯ ವೇತನ ಪಾವತಿಯಾಗಿದೆಯೇ ಎಂಬುದನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
+    default_agenda_desc_12: "ಅರಿವು ಕೇಂದ್ರದಲ್ಲಿ ಲಭ್ಯವಿರುವ ದಿನಪತ್ರಿಕೆಗಳ ಸಂಖ್ಯೆ ಮತ್ತು ಅಂತರ್ಜಾಲ ಸೌಲಭ್ಯವಿದೆಯೇ ಎಂಬುದನ್ನು ಪರಿಶೀಲಿಸಲಾಗುವುದು.",
+    default_agenda_desc_13: "ಅಧ್ಯಕ್ಷರ ಅಪ್ಪಣೆ ಮೇರೆಗೆ ಮಂಡಿಸಲಾದ ಇತರೆ ಯಾವುದೇ ವಿಷಯಗಳನ್ನು ಚರ್ಚಿಸಿ ನಿರ್ಣಯಿಸಲಾಗುವುದು.",
 
     // --- SendToPresidentScreen mock tasks ---
     mock_task_stp_1: "ವಾರ್ಡ್ 4ರಲ್ಲಿ ಬೀದಿ ದೀಪಗಳ ದುರಸ್ತಿ",

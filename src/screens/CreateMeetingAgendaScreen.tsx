@@ -20,6 +20,11 @@ const NS = { fontFamily: 'Noto Sans', fontVariationSettings: "'CTGR' 0, 'wdth' 1
 
 const TEMPLATE_PREVIEW_IMG = '/minutes template.jpg';
 
+// The first STATUTORY_COUNT agendas are the fixed statutory agendas: locked in
+// the UI and printed by the backend itself, so they are never sent to it.
+const STATUTORY_COUNT = 13;
+const isStatutory = (id: number) => id <= STATUTORY_COUNT;
+
 interface AgendaItem {
   id: number;
   description: string;
@@ -96,6 +101,10 @@ function buildDefaultAgendas(meetingType: string, prevMeetingDate: string | unde
     { id: 7, title: t('default_agenda_title_7'), description: t('default_agenda_desc_7') },
     { id: 8, title: t('default_agenda_title_8'), description: t('default_agenda_desc_8') },
     { id: 9, title: t('default_agenda_title_9'), description: t('default_agenda_desc_9') },
+    { id: 10, title: t('default_agenda_title_10'), description: t('default_agenda_desc_10') },
+    { id: 11, title: t('default_agenda_title_11'), description: t('default_agenda_desc_11') },
+    { id: 12, title: t('default_agenda_title_12'), description: t('default_agenda_desc_12') },
+    { id: 13, title: t('default_agenda_title_13'), description: t('default_agenda_desc_13') },
   ];
 }
 
@@ -109,12 +118,12 @@ export default function CreateMeetingAgendaScreen() {
   const isEditMode = editMeetingId !== undefined;
   const existingAgendas = isEditMode ? meetingAgendas[editMeetingId] : undefined;
 
-  // ── Agenda items — first nine pre-populated (default agendas), or the
+  // ── Agenda items — the statutory agendas pre-populated (default agendas), or the
   // meeting's already-saved agendas when editing an existing upcoming meeting ──
   const initialAgendas = existingAgendas && existingAgendas.length > 0
     ? existingAgendas.map(a => ({ id: a.id, title: a.title, description: a.description }))
     : buildDefaultAgendas(meetingData.meetingType ?? '', meetingData.date, t);
-  const nextId = useRef(Math.max(10, ...initialAgendas.map(a => a.id)) + 1);
+  const nextId = useRef(Math.max(STATUTORY_COUNT + 1, ...initialAgendas.map(a => a.id)) + 1);
   const [agendas, setAgendas] = useState<AgendaItem[]>(initialAgendas);
 
 
@@ -172,8 +181,8 @@ export default function CreateMeetingAgendaScreen() {
   const [templateTab,        setTemplateTab]        = useState<'paper' | 'word'>('paper');
 
   // ── Proceedings PDF (rendered by the backend) ─────────────────────────────
-  // The backend always prints the nine statutory sheets itself; only the
-  // user-added agendas (id >= 10) are sent, classified and printed after them.
+  // The backend always prints the statutory sheets itself; only the
+  // user-added agendas are sent, classified and printed after them.
   const [pdfUrl,     setPdfUrl]     = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError,   setPdfError]   = useState('');
@@ -188,7 +197,7 @@ export default function CreateMeetingAgendaScreen() {
         time:  (meeting.time as string) || (meeting.meetingTime as string) || '',
         venue: (meeting.venue as string) || '',
       },
-      agendas: items.filter(a => a.id >= 10).map(a => ({
+      agendas: items.filter(a => !isStatutory(a.id)).map(a => ({
         id: String(a.id),
         title: a.title.trim() || '—',
         description: a.description.trim(),
@@ -234,6 +243,8 @@ export default function CreateMeetingAgendaScreen() {
     pdfUrlRef.current = null;
     setPdfUrl(null);
     setPdfError('');
+    setWordHtml(null);
+    setWordError('');
   }
 
   function downloadProceedingsPdf() {
@@ -244,61 +255,39 @@ export default function CreateMeetingAgendaScreen() {
     link.click();
   }
 
-  // ── Build Word-style HTML ─────────────────────────────────────────────────
-  function buildWordHTML(items: AgendaItem[], meeting: Record<string, unknown>): string {
-    const title        = (meeting.title as string) || (meeting.meetingTitle as string) || 'Meeting';
-    const date         = (meeting.date as string) || (meeting.meetingDate as string) || '';
-    const time         = (meeting.time as string) || (meeting.meetingTime as string) || '';
-    const participants = (meeting.participants as unknown[])?.length ?? 0;
+  // ── Word tab: the same document from the backend as HTML (?format=html) ──
+  // Word opens an .doc that contains HTML, so the columns match the PDF exactly.
+  const [wordHtml,    setWordHtml]    = useState<string | null>(null);
+  const [wordLoading, setWordLoading] = useState(false);
+  const [wordError,   setWordError]   = useState('');
 
-    const WORD_FIELDS: { kn: string; en: string }[] = [
-      { kn: 'ಚರ್ಚೆ / ಮಾಹಿತಿ',                 en: 'Discussion / Information' },
-      { kn: 'ತೀರ್ಮಾನ / ಕೈಗೊಳ್ಳಬೇಕಾದ ಕ್ರಮ',    en: 'Decision / Action to be taken' },
-      { kn: 'ಜವಾಬ್ದಾರಿ ಇರುವ ವ್ಯಕ್ತಿ ಅಥವಾ ಸಂಸ್ಥೆ', en: 'Responsible person / org' },
-      { kn: 'ಕಾಲಮಿತಿ / ಅನುಸರಣಾ ಕ್ರಮ',          en: 'Timeline / Follow-up' },
-    ];
-    const agendaTables = items.map((a, i) => {
-      const cols = WORD_FIELDS;
-      const fieldRows = cols.map(c => `
-        <tr>
-          <td style="width:32%;background:#f5f5f5;border:1px solid #C6C6C6;padding:7px 10px;vertical-align:top;">
-            <div style="font-size:12px;font-weight:600;color:#484848;font-family:'Noto Sans Kannada','Noto Sans',sans-serif;">${c.kn}</div>
-            <div style="font-size:10px;font-weight:400;color:#616161;margin-top:2px;">${c.en}</div>
-          </td>
-          <td style="border:1px solid #C6C6C6;padding:7px 10px;font-size:12px;color:#212121;height:64px;"></td>
-        </tr>`).join('');
-
-      return `
-        <div style="margin-bottom:20px;">
-          <div style="background:#757575;color:white;padding:7px 12px;">
-            <span style="font-size:12px;font-weight:700;">${i + 1}. ${a.title || '—'}</span>
-          </div>
-          <table style="width:100%;border-collapse:collapse;">
-            <tbody>${fieldRows}</tbody>
-          </table>
-        </div>`;
-    }).join('');
-
-    const metaParts = [date, time, participants > 0 ? `${participants} participants` : ''].filter(Boolean).join('  ·  ');
-
-    return `<!DOCTYPE html>
-<html><head><meta charset="UTF-8"/><title>Minutes Template — ${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Kannada:wght@400;600;700&display=swap" rel="stylesheet"/>
-<style>
-  body { font-family: 'Noto Sans', Arial, sans-serif; color: #212121; margin: 0; padding: 32px 40px; font-size: 13px; }
-</style>
-</head><body>
-  <div style="border-bottom:2px solid #C6C6C6;padding-bottom:10px;margin-bottom:24px;">
-    <div style="font-size:11px;font-weight:400;color:#616161;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;">Meeting Proceedings &nbsp;·&nbsp; ಸಭೆಯ ನಡಾವಳಿಗಳು</div>
-    <div style="font-size:16px;font-weight:700;color:#212121;">${title}</div>
-    ${metaParts ? `<div style="font-size:11px;color:#616161;margin-top:6px;">${metaParts}</div>` : ''}
-  </div>
-  ${agendaTables}
-</body></html>`;
+  async function generateProceedingsHtml() {
+    setWordLoading(true);
+    setWordError('');
+    try {
+      const res = await fetch(`${PROCEEDINGS_PDF_API}?format=html`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(proceedingsPayload(sortedForTemplate(agendas), meetingData)),
+      });
+      if (!res.ok) throw new Error(res.status === 502 ? 'Categorisation service is busy, please try again.' : `Server returned ${res.status}`);
+      setWordHtml(await res.text());
+    } catch (err) {
+      setWordError(err instanceof Error ? err.message : 'Could not generate the document');
+    } finally {
+      setWordLoading(false);
+    }
   }
 
+  useEffect(() => {
+    if (templateModalOpen && templateTab === 'word' && !wordHtml && !wordLoading && !wordError) {
+      void generateProceedingsHtml();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateModalOpen, templateTab]);
+
   function downloadHTML(html: string, filename: string) {
-    const blob = new Blob([html], { type: 'text/html' });
+    const blob = new Blob([html], { type: 'application/msword' });
     const url  = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href  = url;
@@ -312,12 +301,13 @@ export default function CreateMeetingAgendaScreen() {
   }
 
   function handleDownloadTemplate() {
-    downloadHTML(buildWordHTML(sortedForTemplate(agendas), meetingData), 'minutes_template_word.html');
+    if (!wordHtml) return;
+    downloadHTML(wordHtml, 'proceedings_notesheet.doc');
     setTemplateDownloaded(true);
   }
 
   const sortedForTemplate = (items: AgendaItem[]) =>
-    [...items].sort((a, b) => (a.id <= 9 ? -1 : 1) - (b.id <= 9 ? -1 : 1));
+    [...items].sort((a, b) => (isStatutory(a.id) ? -1 : 1) - (isStatutory(b.id) ? -1 : 1));
 
   // Title field of the most recently added agenda gets the cursor.
   const [focusAgendaId, setFocusAgendaId] = useState<number | null>(null);
@@ -429,7 +419,7 @@ export default function CreateMeetingAgendaScreen() {
                               required
                               value={agenda.title}
                               onChange={val => updateAgenda(agenda.id, 'title', val)}
-                              disabled={agenda.id <= 9}
+                              disabled={isStatutory(agenda.id)}
                               autoFocus={agenda.id === focusAgendaId}
                             />
                             <div>
@@ -439,7 +429,7 @@ export default function CreateMeetingAgendaScreen() {
                                 required
                                 value={agenda.description}
                                 onChange={val => updateAgenda(agenda.id, 'description', val)}
-                                disabled={agenda.id <= 9}
+                                disabled={isStatutory(agenda.id)}
                                 onMicClick={() => handleAgendaMicClick(agenda.id)}
                                 micRecording={!!agendaRecording[agenda.id]}
                                 micAnalyserNode={agendaAnalyserRefs.current[agenda.id] ?? undefined}
@@ -450,8 +440,8 @@ export default function CreateMeetingAgendaScreen() {
                             </div>
                           </div>
 
-                          {/* Default agendas 1-9 are the statutory sheets: locked (no edit, no remove) */}
-                          {agenda.id >= 10 ? (
+                          {/* Statutory agendas are locked (no edit, no remove) */}
+                          {!isStatutory(agenda.id) ? (
                             <button
                               type="button"
                               onClick={() => removeAgenda(agenda.id)}
@@ -594,7 +584,7 @@ export default function CreateMeetingAgendaScreen() {
                 />
               </div>
 
-              {/* Preview: backend-rendered PDF for paper, HTML for Word */}
+              {/* Preview: the backend renders both; PDF for paper, HTML for Word */}
               {templateTab === 'paper' ? (
                 pdfUrl ? (
                   <iframe
@@ -619,12 +609,28 @@ export default function CreateMeetingAgendaScreen() {
                   </div>
                 )
               ) : (
-                <iframe
-                  srcDoc={buildWordHTML(sortedForTemplate(agendas), meetingData)}
-                  title="Minutes Template"
-                  className="w-full rounded-[10px] border border-[#C6C6C6] bg-white"
-                  style={{ height: '500px' }}
-                />
+                wordHtml ? (
+                  <iframe
+                    srcDoc={wordHtml}
+                    title="Proceedings notesheet (Word)"
+                    className="w-full rounded-[10px] border border-[#C6C6C6] bg-white"
+                    style={{ height: '500px' }}
+                  />
+                ) : (
+                  <div className="w-full rounded-[10px] border border-[#C6C6C6] bg-[#fafafa] flex flex-col items-center justify-center gap-[10px]" style={{ height: '500px' }}>
+                    {wordLoading ? (
+                      <>
+                        <Icon name="schedule" size="medium" color="#727272" />
+                        <span className="text-[13px] text-[#727272]" style={NS}>Preparing the Word document…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[13px] text-[#b3261e] text-center px-[24px]" style={NS}>{wordError || 'Could not generate the document'}</span>
+                        <Button variant="outlined" iconPlacement="none" text="Try again" onClick={() => { setWordError(''); void generateProceedingsHtml(); }} />
+                      </>
+                    )}
+                  </div>
+                )
               )}
 
               {/* Actions row */}
@@ -639,8 +645,8 @@ export default function CreateMeetingAgendaScreen() {
                   variant="filled"
                   iconPlacement="left"
                   iconName="download"
-                  text={templateTab === 'paper' ? 'Download PDF' : (templateDownloaded ? 'Re-download .docx' : 'Download .docx')}
-                  state={templateTab === 'paper' && !pdfUrl ? 'disabled' : 'default'}
+                  text={templateTab === 'paper' ? 'Download PDF' : (templateDownloaded ? 'Re-download Word (.doc)' : 'Download Word (.doc)')}
+                  state={(templateTab === 'paper' ? !pdfUrl : !wordHtml) ? 'disabled' : 'default'}
                   onClick={() => {
                     if (templateTab === 'paper') {
                       downloadProceedingsPdf();

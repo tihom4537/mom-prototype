@@ -82,7 +82,7 @@ export default function InputField({
         </label>
       )}
 
-      <div className={`input-field-wrapper flex items-center rounded-lg border ${disabled ? 'bg-[#F3F3F3] border-[#e0e0e0]' : `bg-white ${borderColor}`} ${disabled ? '' : ring} transition-all duration-150`}>
+      <div className={`input-field-wrapper flex items-center rounded-lg border ${disabled ? 'bg-[#F3F3F3] border-[#cccccc]' : `bg-white ${borderColor}`} ${disabled ? '' : ring} transition-all duration-150`}>
         <input
           type={type}
           value={value}

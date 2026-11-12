@@ -14,11 +14,11 @@ import logging
 import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from dotenv import load_dotenv
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import decode_token, require_auth
@@ -355,12 +355,17 @@ async def categorise(body: CategoriseRequest, _claims: dict = Depends(require_au
     ])
 
 
-@app.post("/proceedings-pdf", responses={200: {"content": {"application/pdf": {}}}})
-async def proceedings_pdf(body: ProceedingsPdfRequest, _claims: dict = Depends(require_auth)) -> Response:
+@app.post("/proceedings-pdf", responses={200: {"content": {"application/pdf": {}, "text/html": {}}}})
+async def proceedings_pdf(
+    body: ProceedingsPdfRequest,
+    format: Literal["pdf", "html"] = Query("pdf", description="html returns the same document as a web page (for on-screen preview / Word)"),
+    _claims: dict = Depends(require_auth),
+) -> Response:
     """
     The meeting's proceedings notesheet as a PDF (A4, landscape by default):
-    the nine statutory sheets always come first, then a category sheet for
-    every user-added agenda in the order given.
+    the thirteen statutory sheets always come first, then a category sheet for
+    every user-added agenda in the order given. `?format=html` returns the
+    identical document as HTML instead of rendering it to PDF.
     """
     _reject_duplicate_ids(body.agendas)
     classified = await _classify(body.agendas, request_ref=body.meeting.title[:120])
@@ -371,17 +376,24 @@ async def proceedings_pdf(body: ProceedingsPdfRequest, _claims: dict = Depends(r
         MeetingHeader(title=body.meeting.title, date=body.meeting.date, time=body.meeting.time, venue=body.meeting.venue),
         sheets,
         orientation=body.orientation,
+        web_fonts=(format == "html"),
     )
+    filename = "proceedings-" + re.sub(r"[^A-Za-z0-9]+", "-", body.meeting.title).strip("-").lower()[:60]
+    if format == "html":
+        return Response(
+            content=html,
+            media_type="text/html; charset=utf-8",
+            headers={"Content-Disposition": f'inline; filename="{filename or "proceedings"}.html"'},
+        )
     try:
         pdf = await render_pdf(html)
     except Exception as exc:
         logger.exception("PDF render failed: %s", exc)
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not render the PDF") from exc
-    filename = "proceedings-" + re.sub(r"[^A-Za-z0-9]+", "-", body.meeting.title).strip("-").lower()[:60] + ".pdf"
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename or "proceedings.pdf"}"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename or "proceedings"}.pdf"'},
     )
 
 
