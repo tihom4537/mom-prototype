@@ -122,7 +122,9 @@ export default function CreateMeetingAgendaScreen() {
   // meeting's already-saved agendas when editing an existing upcoming meeting ──
   const initialAgendas = existingAgendas && existingAgendas.length > 0
     ? existingAgendas.map(a => ({ id: a.id, title: a.title, description: a.description }))
-    : buildDefaultAgendas(meetingData.meetingType ?? '', meetingData.date, t);
+    // Arriving here directly (no step-one state) is treated as a GP General
+    // Body meeting, so the thirteen statutory agendas are shown by default.
+    : buildDefaultAgendas(meetingData.meetingType || t('meeting_type_gp_general_body'), meetingData.date, t);
   const nextId = useRef(Math.max(STATUTORY_COUNT + 1, ...initialAgendas.map(a => a.id)) + 1);
   const [agendas, setAgendas] = useState<AgendaItem[]>(initialAgendas);
 
@@ -189,7 +191,7 @@ export default function CreateMeetingAgendaScreen() {
   const pdfUrlRef = useRef<string | null>(null);
 
   function proceedingsPayload(items: AgendaItem[], meeting: Record<string, unknown>) {
-    const title = (meeting.title as string) || (meeting.meetingTitle as string) || (meeting.meetingType as string) || 'Meeting';
+    const title = (meeting.title as string) || (meeting.meetingTitle as string) || (meeting.meetingType as string) || t('meeting_type_gp_general_body');
     return {
       meeting: {
         title,
