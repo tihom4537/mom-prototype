@@ -98,8 +98,20 @@ def test_kannada_default_message(client, token, monkeypatch):
     assert data["message"] == "ಚೆನ್ನಾಗಿದೆ, ನೀವು ಮುಂದುವರಿಯಬಹುದು!"
 
 
+def test_model_failure_is_502_not_an_empty_200(client, token, monkeypatch):
+    """A dead or garbled model must surface as an error the caller can retry on."""
+    monkeypatch.setattr(feedback_mod, "generate_text", fake_llm("not json at all"))
+    r = client.post("/feedback", json=BODY, headers=auth(token))
+    assert r.status_code == 502
+    assert r.json() == {"detail": "Feedback is temporarily unavailable"}
+
+    async def boom(*a, **k):
+        raise RuntimeError("provider down")
+    monkeypatch.setattr(feedback_mod, "generate_text", boom)
+    assert client.post("/feedback", json=BODY, headers=auth(token)).status_code == 502
+
+
 @pytest.mark.parametrize("raw", [
-    "not json at all",
     '{"category": "Something new", "feedback": "- a\\n- b", "rewrite": 42}',
     '{"feedback": [{"suggestion": "old object shape {{x}}"}], "unknown_field": true}',
     '```json\n{"category": "Issue / Grievance", "good_to_go": false, "feedback": ["a"], "rewrite": "r"}\n```',

@@ -126,7 +126,7 @@ async def get_feedback(
         category = (data.get("category") or "").strip()
         outcome.category = category if category in CATEGORIES else DEFAULT_CATEGORY
         outcome.reason = (data.get("reason") or data.get("category_reason") or "").strip()
-        outcome.rewrite = (data.get("rewrite") or "").strip() or None
+        outcome.rewrite = str(data.get("rewrite") or "").strip() or None
 
         points = data.get("feedback") or []
         if isinstance(points, str):

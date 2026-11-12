@@ -134,6 +134,11 @@ async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_au
         previous_feedback=previous_points,
     )
 
+    # A model failure is an upstream error, never an empty "success": the
+    # caller must be able to retry instead of showing a blank feedback panel.
+    if outcome.failed:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="Feedback is temporarily unavailable")
+
     good_to_go = outcome.good_to_go
     if good_to_go and not outcome.message:
         outcome.message = GOOD_TO_GO_MESSAGE.get(body.feedback_language, GOOD_TO_GO_MESSAGE["en"])
@@ -146,28 +151,24 @@ async def get_feedback(body: FeedbackRequest, _claims: dict = Depends(require_au
     )
 
     logger.info(
-        "Agenda %r (%s) round %d -> %s, category %r%s",
+        "Agenda %r (%s) round %d -> %s, category %r",
         body.agenda_subject, body.agenda_id, round_no, result.status, outcome.category,
-        " [LLM FAILED]" if outcome.failed else "",
     )
 
-    # Only persist when the model call succeeded; a failed call must not become
-    # the "previous feedback" of the next round.
-    if not outcome.failed:
-        try:
-            await insert_ai_feedback(
-                agenda_id=body.agenda_id,
-                input_payload=body.model_dump(),
-                output_payload=result.model_dump(),
-                category=outcome.category,
-                category_reason=outcome.reason,
-                status=result.status,
-                round_no=round_no,
-                model=outcome.model,
-                latency_ms=outcome.latency_ms,
-            )
-        except Exception as exc:  # pragma: no cover - best-effort audit
-            logger.exception("Failed to insert ai_feedback for agenda_id=%s: %s", body.agenda_id, exc)
+    try:
+        await insert_ai_feedback(
+            agenda_id=body.agenda_id,
+            input_payload=body.model_dump(),
+            output_payload=result.model_dump(),
+            category=outcome.category,
+            category_reason=outcome.reason,
+            status=result.status,
+            round_no=round_no,
+            model=outcome.model,
+            latency_ms=outcome.latency_ms,
+        )
+    except Exception as exc:  # pragma: no cover - best-effort audit
+        logger.exception("Failed to insert ai_feedback for agenda_id=%s: %s", body.agenda_id, exc)
 
     return result
 
